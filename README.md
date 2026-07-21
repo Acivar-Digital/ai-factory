@@ -1,5 +1,7 @@
 # AI-Factory Framework 🚀
 
+[![Tests](https://github.com/Acivar-Digital/ai-factory/actions/workflows/test.yml/badge.svg)](https://github.com/Acivar-Digital/ai-factory/actions/workflows/test.yml)
+
 Autonomous, multi-agent AI coding factory and deterministic orchestrator framework built with Pydantic-AI.
 
 ## Overview
