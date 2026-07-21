@@ -97,11 +97,12 @@ def red_team_passed(findings: list[dict], rubric_cells: list[dict]) -> bool:
     contract documented in templates/red_team.yaml + customised/red_team.yaml.
     """
     failing = any(f.get("severity") == "blocker" for f in findings)
+    has_audit_data = bool(findings) or bool(rubric_cells)
     unresolved_global = (
         any(c.get("severity") == "blocker" and not c.get("passed") for c in rubric_cells)
         and not failing
     )
-    return not (failing or unresolved_global)
+    return has_audit_data and not (failing or unresolved_global)
 
 
 def _feedback_from_review_findings(review: "CodePassed") -> dict[str, str]:

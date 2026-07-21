@@ -1,4 +1,4 @@
-"""Regression tests for baziforecaster-0xvqo: coder tool-budget hardening.
+"""Regression tests for 0xvqo: coder tool-budget hardening.
 
 Root cause (session_crash.md): coder_1/coder_3 each re-read their 3 staging
 files 6x (redundant batch_read) then probed blind, exhausting the flat 15-call
@@ -93,7 +93,7 @@ async def test_batch_read_redundant_rejected_no_reexec() -> None:
     )
     assert _READ_REDUNDANT in res
     assert len(gt.wrapped.calls) == before  # NOT re-executed
-    # baziforecaster-0lj69: a re-read now CONSUMES the read budget
+    # 0lj69: a re-read now CONSUMES the read budget
     assert gt._read_used == 3
 
 
@@ -143,7 +143,7 @@ async def test_redundant_read_still_ticks_global_budget() -> None:
 
 
 async def test_redundant_reads_exhaust_read_budget_force_final_result() -> None:
-    # baziforecaster-0lj69 regression: a model that re-reads the SAME files over
+    # 0lj69 regression: a model that re-reads the SAME files over
     # and over (the session_crash.md hbh1 planner looped 12x on 2 files) must be
     # force-stopped. Re-reads now count against READ_BUDGET, so the Nth redundant
     # read returns _READ_FATAL ("emit final_result NOW") instead of looping until
@@ -196,7 +196,8 @@ def test_coder_budget_dynamic_scales_and_clamps() -> None:
 async def test_path_normalization_deduplication() -> None:
     from factory.infra.tools import normalize_read_path
     # test normalize_read_path directly
-    assert normalize_read_path("/home/yapilwsl/arthityap/baziforecaster/src2/core/schemas/unified.py") == "src2/core/schemas/unified.py"
+    from factory.infra.control import REPO_ROOT
+    assert normalize_read_path(f"{REPO_ROOT}/src2/core/schemas/unified.py") == "src2/core/schemas/unified.py"
     assert normalize_read_path("factory/temp/src2/core/schemas/unified.py") == "src2/core/schemas/unified.py"
     assert normalize_read_path("src2/core/schemas/unified.py") == "src2/core/schemas/unified.py"
 

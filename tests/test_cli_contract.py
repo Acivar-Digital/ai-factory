@@ -35,8 +35,9 @@ def test_coder_budget_dynamic_scales_and_clamps():
 def test_path_normalization_deduplication():
     """normalize_read_path strips staging/temp prefixes and dedups variants."""
     # absolute + staging prefix -> repo-relative
+    from factory.infra.control import REPO_ROOT
     assert normalize_read_path(
-        "/home/yapilwsl/arthityap/baziforecaster/factory/temp/src2/foo.py"
+        f"{REPO_ROOT}/factory/temp/src2/foo.py"
     ) == "src2/foo.py"
     # staging-prefixed relative -> repo-relative
     assert normalize_read_path("factory/temp/src2/foo.py") == "src2/foo.py"
