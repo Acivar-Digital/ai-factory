@@ -19,7 +19,7 @@ from factory.infra.context import (
     _real_source_paths, TaskNeedsSplitError, TASK_TOKEN_THRESHOLD, TIER_B_SLICE_THRESHOLD
 )
 from factory.infra.exchange import (
-    update_status_board, append_exchange_turn, ExchangeTurn
+    update_status_board, append_exchange_turn, ExchangeTurn, compact_exchange_transcript
 )
 from factory.infra.tools import wrap_injected_context
 
@@ -702,6 +702,10 @@ async def run_execute_phase(
             else:
                 assert isinstance(r, TaskResult)
                 results[t.id] = r
+        
+        # Roll window to prevent unbounded exchange transcript accumulation over long pipelines
+        compact_exchange_transcript(exchange, max_turns=10, bd=bd)
+        
         group_events[g.id].set()
         group_done[g.id] = True
 
