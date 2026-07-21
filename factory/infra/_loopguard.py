@@ -17,7 +17,7 @@ from typing import Any
 
 import yaml
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded
 from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
@@ -366,6 +366,21 @@ async def run_with_loopguard(
                 )
                 _log_turn(io_dir, phase, role, f"RECOVER-USAGE {turn}", "UsageLimitExceeded", current_history, recovered.new_messages())
                 return recovered
+            except ModelHTTPError as exc:
+                if exc.status_code == 400:
+                    attempts = getattr(agent, '_malformed_retries', 0) + 1
+                    agent._malformed_retries = attempts
+                    if attempts <= 3:
+                        delay = 5 * attempts
+                        print(
+                            f"[{phase or 'RUN'}] turn {turn} got 400 (attempt {attempts}/3); "
+                            f"retrying in {delay}s...",
+                            flush=True,
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+                _dump_failure(fail_dir, phase, role, current_history, limits, exc, agent_id=agent_id)
+                raise
             except Exception as exc:
                 # FAIL LOUDLY — but persist the thinking first so the failure is readable.
                 _dump_failure(fail_dir, phase, role, current_history, limits, exc, agent_id=agent_id)

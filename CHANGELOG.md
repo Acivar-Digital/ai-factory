@@ -5,6 +5,10 @@ All notable changes to the Baziforecaster Orchestrator are documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-21 — 00_fix.md: ModelHTTPError 400 retry in loopguard
+
+**ModelHTTPError 400 retry.** `_loopguard.py` now catches `ModelHTTPError(status_code=400)` inside the `while True` loop and retries up to 3 times with 5/10/15s backoff before propagating. Other status codes (401, 403, etc.) still fail loudly via the existing `except Exception` handler. Added 3 regression tests for the retry path.
+
 ## 2026-07-21 — 00_fix.md implementation: memory unification, line-number prefix, nudge on search tools, discipline cheat-sheet
 
 **Item 1 — Memory unification.** Deleted `admin/tools/remember_fact.py`, `recall_fact.py`, `list_facts.py` (dead round-trip: write to `facts/memory.jsonl`, read from non-existent `temp/facts.jsonl`). Purged all wrappers in `infra/tools.py` (function defs, `READ_ONLY_TOOLS`, `MODIFY_TOOLS`, `GuardToolset.call_tool` guard, `guard_tools` param, import, `GuardToolset` fields). Deleted orphaned `facts/memory.jsonl` (174 entries, never recallable). Removed `RECALL_BUDGET` from `control_orchestrator.py`. All agents use `remember()` only.
