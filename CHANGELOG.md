@@ -5,6 +5,34 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 2: 4 real bugs from second code review
+
+**Second wave of audit-driven fixes** in response to an independent review
+(`docs/review.md`). 5/7 claims verified; 4 real bugs fixed; 1 claim
+hallucinated; 1 debatable (re-spawn loop intent ambiguous).
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `pipeline.py:853` | Double red_team exchange append on forced pass — appended raw `rev_out` then modified audit in same call | Removed the second append; existing entry updated in-place with modified audit |
+| 2 | `pipeline.py:881-900` | `_run_subprocess_with_timeout` dropped stdout (no `stdout=PIPE`) | Added `stdout=asyncio.subprocess.PIPE`; merged stdout+stderr into returned text |
+| 3 | `control.py:317` | `verify_gateways_reachable` caught all `httpx.HTTPError` — 4xx counted as unreachable despite docstring | Changed to `except (httpx.ConnectError, httpx.TimeoutException)` |
+| 4 | `control.py:576` | `COMPACTION_CONFIG` was untyped `dict[str, object]` with no validation | Migrated to strict `CompactionConfig(BaseModel)` + `PerRoleConfig`; `_loopguard.py` updated to attribute access |
+
+**Hallucinated claim rejected:** "`passed()` silently skips falsy non-bool `approved`"
+— the `else: if not app: return False` branch correctly catches `None`/`0`/`[]`
+at any position and exits immediately.
+
+**Debatable claim noted:** "re-spawn loop runs 4 passes not 3" —
+`CODER_VALIDATION_PASSES=3` with `range(3+1)`=4 iterations is internally consistent
+(1 initial + 3 re-spawns), but whether the constant means "total passes" or
+"re-spawn attempts" is ambiguous.
+
+**False positive (ex-review):** `prior={}` falsy inversion — tests explicitly pass
+`prior_batch={}` to mean "no prior, run fresh"; the original `[] if prior else ...`
+is correct for all callers.
+
+**Tests:** 224/224 pass, ruff clean on changed files.
+
 ## 2026-07-22 — 00_fix.md audit: 7 bugfixes from third-party code review
 
 **Audit-driven fixes across `pipeline.py`, `execution.py`, and `control.py`**

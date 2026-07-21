@@ -850,7 +850,11 @@ async def run_red_team_gate(
                     marker = f"[FORCED PASS attempt {attempt} — UNVERIFIED, review files: {files}]"
                     ev.comments = (marker + " " + (ev.comments or "")).strip()
                     ev.approved = "Yes"
-            append_exchange_turn(exchange, pass_counter, "red_team", audit.model_dump_json(), bd)
+            # Update the last exchange entry in-place with the modified audit
+            # instead of appending a duplicate, to avoid corrupting the exchange
+            # history (the review's double-append bug fix).
+            if exchange and exchange[-1].role == "red_team":
+                exchange[-1].content = audit.model_dump_json()
             return batch
         if failing:
             rerun = _downstream_closure(failing, plan.workplan.groups)
@@ -883,10 +887,10 @@ async def _run_subprocess_with_timeout(
 ) -> tuple[int, str]:
     """Run an async subprocess with a hard timeout. Kills the process on timeout."""
     proc = await asyncio.create_subprocess_exec(
-        *cmd, cwd=cwd, stderr=stderr_target
+        *cmd, cwd=cwd, stdout=asyncio.subprocess.PIPE, stderr=stderr_target
     )
     try:
-        _, stderr_data = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        stdout_data, stderr_data = await asyncio.wait_for(proc.communicate(), timeout=timeout)
     except TimeoutError:
         try:
             proc.kill()
@@ -896,8 +900,10 @@ async def _run_subprocess_with_timeout(
         raise RuntimeError(
             f"[ops] subprocess {cmd[0]!r} timed out after {timeout}s — killed"
         )
+    stdout_text = stdout_data.decode("utf-8", "replace") if stdout_data else ""
     stderr_text = stderr_data.decode("utf-8", "replace") if stderr_data else ""
-    return proc.returncode or 0, stderr_text
+    merged = stdout_text + ("\n" + stderr_text if stderr_text else "")
+    return proc.returncode or 0, merged
 
 
 async def run_ops_phase(

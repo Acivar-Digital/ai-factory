@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 
 import httpx
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles.openai import OpenAIModelProfile
@@ -103,10 +105,6 @@ class SystemSettings(BaseSettings):
     # LiteRouter (Port 7766)
     literouter_url: str = Field(default="http://localhost:7766/v1")
     literouter_auth_key: str | None = Field(default='sk-lr-8f2a9e3b1c4d7e5f')
-
-    # Pydantic Gateway (Port 7768)
-    pydantic_url: str = Field(default="http://localhost:7768/v1")
-    pydantic_auth_key: str | None = Field(default='sk-lr-8f2a9e3b1c4d7e5f')
 
     # Application & Infrastructure -- DB credentials come from env (DATABASE_URL).
     database_url: str = Field(default="")
@@ -282,11 +280,6 @@ PROVIDERS: dict[str, OpenAIProvider] = {
         api_key=settings.literouter_auth_key,
         http_client=ORCH_HTTP_CLIENT,
     ),
-    "pydantic": OpenAIProvider(
-        base_url=settings.pydantic_url,
-        api_key=settings.pydantic_auth_key,
-        http_client=ORCH_HTTP_CLIENT,
-    ),
 }
 
 # =====================================================================
@@ -302,14 +295,12 @@ class GatewayProbeURLs(BaseModel):
     mcpmart: str
     antigravity: str
     literouter: str
-    pydantic: str
 
 
 GATEWAY_PROBE = GatewayProbeURLs(
     mcpmart=settings.mcpmart_base_url,
     antigravity=settings.antigravity_manager_url,
     literouter=settings.literouter_url,
-    pydantic=settings.pydantic_url,
 )
 
 
@@ -325,7 +316,7 @@ async def verify_gateways_reachable() -> None:
         for name, url in GATEWAY_PROBE.model_dump().items():
             try:
                 await client.get(url)
-            except httpx.HTTPError:
+            except (httpx.ConnectError, httpx.TimeoutException):
                 unreachable.append(name)
     if unreachable:
         raise RuntimeError(
@@ -488,14 +479,14 @@ freegem26 = OpenAIChatModel(
 
 pydantic_google = OpenAIChatModel(
     "pydantic/google",
-    provider=PROVIDERS["pydantic"],
+    provider=PROVIDERS["literouter"],
     profile=OpenAIModelProfile(openai_supports_tool_choice_required=None,
     )
 )
 
 pydantic_nvidia = OpenAIChatModel(
     "pydantic/nvidia",
-    provider=PROVIDERS["pydantic"],
+    provider=PROVIDERS["literouter"],
     profile=OpenAIModelProfile(openai_supports_tool_choice_required=None,
     )
 )
@@ -577,36 +568,41 @@ CONTROL_SHEET = load_control_sheet()
 # =====================================================================
 # 5. COMPACTION CONFIG (token-budget Context Compaction Gate, build.md §8.5)
 # =====================================================================
-# summarizer_model: key into CONTROL_SHEET (runner does CONTROL_SHEET[key]);
-#   compact_model = laguna_xs (cheapest) is the recommended small summariser.
-# compact_at_fraction: trigger when history >= this fraction of the RUNNING agent's
-#   context window (token-based, not message-count).
-# hard_max_tokens: absolute ceiling regardless of model window.
-# keep_recent_messages: tail always retained untouched.
-# token_estimate: "char_div_4" (cheap) or "tiktoken" (if available).
-COMPACTION_CONFIG: dict[str, object] = {
-    "summarizer_model": "compact_model",
-    # Global default for WORKERS. Their models expose ~100K windows, so 0.6 ≈ 60K,
-    # safely under the ~200K provider latency wall. Per-role ceilings below.
-    "compact_at_fraction": 0.6,
-    "hard_max_tokens": 70000,
-    "keep_recent_messages": 12,
-    "token_estimate": "char_div_4",
-    # Cross-turn "keep_memory" context-prepend compaction gate (build.md §8.5 addendum).
-    # Prior history is prepended into the next subagent's message_history UNCAPPED today;
-    # when it exceeds CEILING we compact it via the SAME working LLM (keep_memory loop)
-    # before prepend. FLOOR = max acceptable reseeded memory (raise loudly if exceeded
-    # after the fallback). EMPTY_EXT_RETRIES = max keep_memory passes before the
-    # summarizer fallback fires.
-    "CONTEXT_COMPACT_CEILING": 200_000,
-    "CONTEXT_COMPACT_FLOOR": 60_000,
-    "EMPTY_EXT_RETRIES": 3,
-    # Q3/Q4: orchestrator runs on the higher (~200K) window key; compact conservatively
-    # before the wall so it stays zippy. Workers share the global default above.
-    "per_role": {
-        "orchestrator": {"compact_at_fraction": 0.6, "hard_max_tokens": 140000},
-    },
-}
+
+
+class PerRoleConfig(BaseModel):
+    compact_at_fraction: float | None = None
+    hard_max_tokens: int | None = None
+
+
+class CompactionConfig(BaseModel):
+    """Pydantic model for compaction gate parameters — no plain dict access.
+
+    summarizer_model: key into CONTROL_SHEET (runner does CONTROL_SHEET[key]);
+        compact_model = laguna_xs (cheapest) is the recommended small summariser.
+    compact_at_fraction: trigger when history >= this fraction of the RUNNING agent's
+        context window (token-based, not message-count).
+    hard_max_tokens: absolute ceiling regardless of model window.
+    keep_recent_messages: tail always retained untouched.
+    token_estimate: "char_div_4" (cheap) or "tiktoken" (if available).
+    """
+
+    summarizer_model: str = "compact_model"
+    compact_at_fraction: float = 0.6
+    hard_max_tokens: int = 70000
+    keep_recent_messages: int = 12
+    token_estimate: Literal["char_div_4", "tiktoken"] = "char_div_4"
+    CONTEXT_COMPACT_CEILING: int = 200_000
+    CONTEXT_COMPACT_FLOOR: int = 60_000
+    EMPTY_EXT_RETRIES: int = 3
+    per_role: dict[str, PerRoleConfig] = Field(
+        default_factory=lambda: {
+            "orchestrator": PerRoleConfig(compact_at_fraction=0.6, hard_max_tokens=140000),
+        }
+    )
+
+
+COMPACTION_CONFIG = CompactionConfig()
 
 
 # =====================================================================
