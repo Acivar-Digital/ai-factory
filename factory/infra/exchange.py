@@ -291,3 +291,20 @@ def append_exchange_turn(
     if bd:
         save_exchange(bd, exchange)
     return n
+
+def compact_exchange_transcript(
+    exchange: list[ExchangeTurn] | None, 
+    max_turns: int = 10, 
+    bd: str = ""
+) -> None:
+    """Rolling window on the exchange transcript to prevent unbounded growth."""
+    if exchange is None:
+        return
+    if len(exchange) > max_turns:
+        # Retain the oldest 2 (e.g., initial plan/context) and the newest N-2
+        preserved = exchange[:2] + exchange[-(max_turns - 2):]
+        exchange.clear()
+        exchange.extend(preserved)
+        if bd:
+            save_exchange(bd, exchange)
+

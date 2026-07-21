@@ -130,7 +130,11 @@ def _stage_copies(file_paths: list[str], staged: list[str]) -> list[tuple[str, s
         mode = _edit_mode_for(real)
         modes.append((real, mode))
         try:
-            src = REPO_ROOT / real
+            wt_src = TEMP_DIR / "working_tree" / real
+            if wt_src.exists():
+                src = wt_src
+            else:
+                src = REPO_ROOT / real
             dst = Path(mirror)
             dst.parent.mkdir(parents=True, exist_ok=True)
             content = src.read_text(encoding="utf-8")
@@ -275,6 +279,11 @@ def _write_harness_patches(task_id: str, files_changed: list[str], bd: str) -> t
         patch_path.write_text(text + "\n", encoding="utf-8")
         written.append(str(patch_path))
         log_operator(f"[PATCH] wrote {patch_path.name} for task {task_id} ({rel})")
+        
+        # Incremental working tree: store the patched version so downstream tasks see it
+        wt_path = TEMP_DIR / "working_tree" / rel
+        wt_path.parent.mkdir(parents=True, exist_ok=True)
+        wt_path.write_text(mirror_path.read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
     return written, real_changes
 
 
