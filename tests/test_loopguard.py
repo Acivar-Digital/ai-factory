@@ -228,7 +228,7 @@ async def test_run_with_loopguard_wires_sink1(patch_summarizer, monkeypatch, tmp
 async def test_run_with_loopguard_threads_agent_id_into_persist(
     patch_summarizer, monkeypatch, tmp_path
 ):
-    """baziforecaster-chq80: a coder run must NOT write the legacy shared
+    """chq80: a coder run must NOT write the legacy shared
     ``coder.jsonl``/``coder.md``. ``run_with_loopguard`` must forward ``agent_id``
     to every ``persist_messages`` call so transcripts land in ``coderN.jsonl``."""
     monkeypatch.chdir(tmp_path)

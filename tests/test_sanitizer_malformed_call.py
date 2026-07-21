@@ -1,4 +1,4 @@
-"""Tests for the framework-rejected tool-call salvage path (baziforecaster-78j9m).
+"""Tests for the framework-rejected tool-call salvage path (78j9m).
 
 Offline, no network, no LLM keys. Verifies that when pydantic-ai's own
 tool-dispatch validator rejects a structurally-invalid ``final_result`` call

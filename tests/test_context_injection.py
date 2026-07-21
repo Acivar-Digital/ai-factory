@@ -1,4 +1,4 @@
-"""Regression tests for epic baziforecaster-gx30p: size-aware context injection.
+"""Regression tests for epic gx30p: size-aware context injection.
 
 No LLM keys required. Exercises the deterministic gate helpers and the
 `run_execute_phase` Tier-A/B injection + hard-halt paths directly.

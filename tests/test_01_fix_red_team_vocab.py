@@ -1,4 +1,4 @@
-"""Regression tests for 01_fix.md: red-team gate vocabulary crash (baziforecaster-61y93).
+"""Regression tests for 01_fix.md: red-team gate vocabulary crash (61y93).
 
 Root cause: red_team evaluated by planner's `US-*` user-story ids, but the gate
 could not map `US-3` -> `coder03` (the planner's `coder_idents` were empty), so

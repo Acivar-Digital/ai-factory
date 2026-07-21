@@ -1,4 +1,4 @@
-"""Regression tests for 01_fix.md DAG timeout fixes (baziforecaster-s49n0).
+"""Regression tests for 01_fix.md DAG timeout fixes (s49n0).
 
 No LLM keys required: coder_fn is stubbed and the ApprovedPlan is built in-process.
 """

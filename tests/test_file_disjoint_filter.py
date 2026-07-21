@@ -1,7 +1,7 @@
-"""Regression tests for baziforecaster-vw4dd.
+"""Regression tests for vw4dd.
 
 The cross-group / intra-group file-disjointness HALT (added by closed
-baziforecaster-zu9u) must NOT trip on the Planner's untrusted file_paths
+zu9u) must NOT trip on the Planner's untrusted file_paths
 claims. The Planner is reasoning-only and routinely emits derived/staging/
 hallucinated paths (e.g. ``factory/temp/src2/.../unified_patch.py``)
 into file_paths. Those are not real source files and cannot cause a

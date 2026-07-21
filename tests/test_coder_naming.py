@@ -1,4 +1,4 @@
-"""Coder naming contract (ticket baziforecaster-tqpgf).
+"""Coder naming contract (ticket tqpgf).
 
 No LLM keys required. Validates:
   * ApprovedTask.id MUST match ^coder_\\d+$ (no task_N, no concatenated, no non-numeric);

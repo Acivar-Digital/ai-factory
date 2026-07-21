@@ -22,8 +22,9 @@ def test_replace_text_raises_model_retry_on_error(monkeypatch):
         })
     
     # Mock _src_write_guard to allow write
-    monkeypatch.setattr(tools, "_src_write_guard", lambda *a: None)
-    monkeypatch.setattr(tools, "_run_tool", mock_run_tool)
+    import factory.infra.tools_shell
+    monkeypatch.setattr(factory.infra.tools_shell, "_src_write_guard", lambda *a: None)
+    monkeypatch.setattr(factory.infra.tools_shell, "_run_tool", mock_run_tool)
     
     with pytest.raises(ModelRetry) as exc_info:
         tools.replace_text("src2/a.py", "old", "new")
@@ -39,8 +40,9 @@ def test_replace_text_raises_model_retry_on_no_change(monkeypatch):
             "data": {"changed": False}
         })
     
-    monkeypatch.setattr(tools, "_src_write_guard", lambda *a: None)
-    monkeypatch.setattr(tools, "_run_tool", mock_run_tool)
+    import factory.infra.tools_shell
+    monkeypatch.setattr(factory.infra.tools_shell, "_src_write_guard", lambda *a: None)
+    monkeypatch.setattr(factory.infra.tools_shell, "_run_tool", mock_run_tool)
     
     with pytest.raises(ModelRetry) as exc_info:
         tools.replace_text("src2/a.py", "old", "new")

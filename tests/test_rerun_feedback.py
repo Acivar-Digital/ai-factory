@@ -10,7 +10,7 @@ is built in-process. Validates, end-to-end through `run_red_team_gate`:
   * R5 — every coder brief (fresh or rerun) carries the frozen
     `=== EXPECTED CODER BEHAVIOUR` appendix with the task's acceptance line.
 
-These guard the fixes from `baziforecaster-nw9ov` (R1) and `baziforecaster-6gizg`
+These guard the fixes from `nw9ov` (R1) and `6gizg`
 (R5). If a future change drops the injection, the rerun coder goes blind again
 — this test fails loudly.
 """

@@ -1,4 +1,4 @@
-"""Stop/Continue mechanism tests (baziforecaster-udylx).
+"""Stop/Continue mechanism tests (udylx).
 
 Verifies the durable-state contract the runner's `_checkpoint` relies on:
 - `current_phase` default is a valid `_PHASE_ORDER` role key (label unification).

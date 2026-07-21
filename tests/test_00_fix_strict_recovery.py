@@ -64,7 +64,7 @@ from factory.infra.pipeline import run_code_review_gate
 
 def _plan(single: bool = True) -> ExecutablePlan:
     """g1=[coder01]; when not single, g2=[coder02..coder06] depends_on g1
-    (mirrors baziforecaster-hbh1)."""
+    (mirrors hbh1)."""
     epic = Epic(title="e", deliverables=["d"], must_be_pydantic=True)
     g1 = WorkGroup(
         id="g1",

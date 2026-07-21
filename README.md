@@ -53,3 +53,7 @@ factory/
 
 ## License
 MIT License ("Freely received, freely given").
+
+## Dependency: CQRS Task Tracker (`./bd`)
+AI-Factory manages all orchestration state through an external beads CQRS task tracker via `./bd`.
+Ensure `./bd` is installed and initialized in your repository before executing tasks. The DAG executor natively creates, updates, and tracks task progress in the `.beads` database, ensuring atomicity and crash recovery.
