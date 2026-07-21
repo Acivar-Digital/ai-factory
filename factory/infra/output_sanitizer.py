@@ -336,7 +336,7 @@ def is_jsonl(text: str) -> bool:
     lines = [line.strip() for line in text_stripped.splitlines() if line.strip()]
     if len(lines) > 1:
         for line in lines:
-            if line.startswith("{") or line.startswith("[") or line.startswith("-") or line.startswith("*"):
+            if line.startswith("{") or line.startswith("["):
                 return True
     return False
 
@@ -421,7 +421,7 @@ def clean_role_output(raw: str | None, model: type[T]) -> T:
             healer_agent = Agent(
                 healer_model,
                 output_type=model,
-                system_instruction=(
+                system_prompt=(
                     "You are a structured JSON healing assistant. You receive a malformed output that failed "
                     "validation against a target Pydantic schema, along with the validation error message. "
                     "Your task is to repair the malformed output to make it valid according to the schema. "
