@@ -212,7 +212,8 @@ def test_dump_failure_golden_path(orch_runtime):
 
 
 def test_transcript_logging(orch_runtime, monkeypatch):
-    monkeypatch.setattr(tools, "ORCH_ROOT", orch_runtime)
+    import factory.infra.tools_guard
+    monkeypatch.setattr(factory.infra.tools_guard, "ORCH_ROOT", orch_runtime)
     tools.log_prompt_sent("ph", "ro", "myid", "MY_INSTRUCTIONS")
     tools.log_run_prompt("ph", "ro", "myid", "MY_PROMPT")
     runtime_dir = orch_runtime / "logs" / "runtime"

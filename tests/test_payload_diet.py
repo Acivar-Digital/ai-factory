@@ -1,4 +1,4 @@
-"""Tests for the harness payload diet (ticket baziforecaster-nz4ai).
+"""Tests for the harness payload diet (ticket nz4ai).
 
 Offline by design: no network, no LLM. Asserts that:
 - ``pydantic_ai_default_block`` is LEAN — it returns ONLY the
@@ -38,6 +38,8 @@ def test_build_repo_map_strips_envelope():
         }
     )
     saved = tools_mod._run_tool
+    import factory.infra.tools_skill
+    saved2 = factory.infra.tools_skill._run_tool
 
     def fake(name, args):
         if name == "get_repo_structure":
@@ -45,10 +47,12 @@ def test_build_repo_map_strips_envelope():
         return "[]"
 
     tools_mod._run_tool = fake
+    factory.infra.tools_skill._run_tool = fake
     try:
         mp = tools_mod._build_repo_map()
     finally:
         tools_mod._run_tool = saved
+        factory.infra.tools_skill._run_tool = saved2
     assert '"data"' not in mp
     assert '"success"' not in mp
     assert "repo/" in mp

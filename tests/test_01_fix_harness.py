@@ -1,4 +1,4 @@
-"""Tests for factory/docs/01_fix.md harness changes (baziforecaster-tzsdl).
+"""Tests for factory/docs/01_fix.md harness changes (tzsdl).
 
 Guards:
   - smoke_test.py type-construction gate (BUG 2: DictMap[str] rejecting model instances)

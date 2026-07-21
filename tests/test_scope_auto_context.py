@@ -33,7 +33,7 @@ def test_read_prompt_front_matter_scope(tmp_path: Path) -> None:
         tmp_path,
         "---\n"
         "Resume: false\n"
-        "bd: baziforecaster-xyz\n"
+        "bd: xyz\n"
         "scope:\n"
         "  - src2/core/schemas/unified.py\n"
         "  - src2/engine/\n"
@@ -195,7 +195,7 @@ def test_inject_repo_map_mixed_scope(tmp_path: Path) -> None:
 def test_inject_repo_map_strips_json_envelope() -> None:
     # Regression: the shadow tools emit {"success", "message", "data"} JSON
     # envelopes. The injected context MUST be clean text, not the raw envelope
-    # (baziforecaster-ev1gf — planner.md:72-78 showed garbage JSON).
+    # (ev1gf — planner.md:72-78 showed garbage JSON).
     out = inject_repo_map(["src2/core/schemas/unified.py"])
     assert '"success"' not in out
     assert '"message"' not in out

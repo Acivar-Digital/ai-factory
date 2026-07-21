@@ -1,4 +1,4 @@
-"""Regression tests for baziforecaster-uqj06: spawn-all coders + halt-on-block.
+"""Regression tests for uqj06: spawn-all coders + halt-on-block.
 
 No LLM keys required: coder_fn is stubbed and the ApprovedPlan is built in-process.
 
@@ -12,7 +12,7 @@ Validates end-to-end through `run_execute_phase`:
     `RuntimeError("[HALT] EXECUTE phase incomplete: <ids>")`, listing every
     incomplete task id. This guarantees incomplete work never reaches review.
 
-These guard the fix from `baziforecaster-uqj06`. If a future change re-adds the
+These guard the fix from `uqj06`. If a future change re-adds the
 skip-short-circuit, tasks 2-6 silently vanish again — this test fails loudly.
 """
 from __future__ import annotations
@@ -48,7 +48,7 @@ def _patch_harness(monkeypatch: pytest.MonkeyPatch):
 
 
 def _plan() -> ExecutablePlan:
-    """g1=[coder_1]; g2=[coder_2..coder_6] depends_on g1 (mirrors baziforecaster-hbh1)."""
+    """g1=[coder_1]; g2=[coder_2..coder_6] depends_on g1 (mirrors hbh1)."""
     epic = Epic(title="e", deliverables=["d"], must_be_pydantic=True)
     g1 = WorkGroup(
         id="g1",

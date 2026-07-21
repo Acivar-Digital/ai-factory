@@ -1,4 +1,4 @@
-"""Tests for the MD-twin per-turn re-injection bridge (ticket baziforecaster-mb1k5).
+"""Tests for the MD-twin per-turn re-injection bridge (ticket mb1k5).
 
 Offline by design: no network, no LLM keys. We build a hermetic artefacts tree
 (via the ``ORCHESTRATOR_ARTEFACTS_DIR`` env override) containing `.md` twins and

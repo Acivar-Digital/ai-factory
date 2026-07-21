@@ -1,4 +1,4 @@
-"""Regression tests for the orchestrator STATUS BOARD (baziforecaster-l4wjg).
+"""Regression tests for the orchestrator STATUS BOARD (l4wjg).
 
 Covers the two root causes the session analysis identified:
 
@@ -41,7 +41,7 @@ def _read(board: Path) -> str:
 
 def test_fresh_board_has_no_stale_coder_line(status_board):
     """RC1: a fresh status update with no coder history must not bleed coder:A."""
-    update_status_board([], "supervisor_plan", "baziforecaster-l4wjg")
+    update_status_board([], "supervisor_plan", "l4wjg")
     text = _read(status_board)
     assert "coder:A" not in text
     assert "supervisor_plan" in text
