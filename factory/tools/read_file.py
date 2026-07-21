@@ -15,8 +15,8 @@ def main():
 
     try:
         path = resolve_secure_path(args.relative_path)
-    except ValueError as e:
-        print(f"ERROR: {e}")
+    except ValueError as ex:
+        print(f"ERROR: {ex}")
         return
 
     if not path.exists():
@@ -25,8 +25,8 @@ def main():
 
     try:
         content = _normalize_content(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        print(f"ERROR: Failed to read {args.relative_path}: {e}")
+    except Exception as ex:
+        print(f"ERROR: Failed to read {args.relative_path}: {ex}")
         return
 
     lines = content.splitlines()
@@ -40,7 +40,8 @@ def main():
     # verbatim into the transcript (.md) and poisoned the model context; nothing
     # in the live harness parses it (see _run_tool: it returns stdout as-is).
     print(f"=== File read: {args.relative_path} (lines {s + 1}-{min(e, total_lines)} of {total_lines}) ===")
-    print("\n".join(paged))
+    numbered_lines = [f"{s + i + 1}: {line}" for i, line in enumerate(paged)]
+    print("\n".join(numbered_lines))
 
 
 if __name__ == "__main__":
