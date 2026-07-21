@@ -150,7 +150,7 @@ def test_red_team_passed_truth_table():
     assert runner.red_team_passed([], [{"severity": "blocker", "passed": False}]) is False
     assert runner.red_team_passed([{"severity": "blocker", "task_id": "t1"}], []) is False
     assert runner.red_team_passed([{"severity": "warn"}], [{"severity": "blocker", "passed": True}]) is True
-    assert runner.red_team_passed([], []) is True
+    assert runner.red_team_passed([], []) is False  # empty audit = no data = fail
 
 
 

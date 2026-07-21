@@ -5,6 +5,18 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 5: Guardrail Fail-Loudly, Schema Gate Logging, and Verdict Logic
+
+**Audit-driven fixes for 5 execution and validation logic bugs.** Addressed silent-pass vulnerabilities in the staging guardrails, schema gating, and red team validation.
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `runner.py:244` | Final verdict hardcoded to `"PASS" if "This Harness is Working" in last_coder else "CHECK"`, causing all real runs to emit `CHECK` | Verdict now evaluates `batch.results` statuses (`"done"` = `PASS`, else `CHECK`), falling back to history if batch is missing |
+| 2 | `execution.py:357` | Guardrail crashes (`except Exception as guard_exc`) silently `continue`d the loop, bypassing failure flags and marking the task as passed | Set `ruff_failed = True` and inject a `[GUARDRAIL CRASH]` feedback block to force a re-spawn |
+| 3 | `execution.py:368` | Unparseable guardrail output (e.g. tool emitted raw warnings instead of JSON) triggered a silent `continue` pass | Set `ruff_failed = True` and inject a `[UNPARSEABLE GUARDRAIL]` feedback block to force a re-spawn |
+| 4 | `execution.py:543` | `load_schema_gate.py` crashes were caught by a bare `except Exception: pass`, silently allowing broken schemas to proceed as `done` | Logged the exception, set `obj["status"] = "blocked"`, and appended the crash to `obj["notes"]` |
+| 5 | `validation.py:100` | `red_team_passed` returned `True` if `rubric_cells` was an empty list (LLM bypassed quality check entirely) | Replaced with `has_audit_data = bool(findings) or bool(rubric_cells)`, ensuring empty audits fail |
+
 ## 2026-07-22 — Batch 4: coder_fn signature adapter + PHASE_SUMMARIES race guard
 
 **Audit-driven fixes for 2 of 4 reported bugs.** The critical fix: `record_coder` and
@@ -142,7 +154,7 @@ dependencies with `from ... import` creating private references). All 225 tests 
 
 ## 2026-07-21 — Fix: SPAWN-ALL HALT defeats supervisor_review recovery (docs/00_fix.md, "spawn-all" fix)
 
-**Incident:** `baziforecaster-hbh1` run crashed with
+**Incident:** `hbh1` run crashed with
 `RuntimeError: [HALT] EXECUTE phase incomplete: coder03, coder07` *before*
 any review. Root cause was **not** the coder — both coders had returned
 `status:"done"`; the harness flipped them to `blocked` (B3 fake-done on the
@@ -170,7 +182,7 @@ recovery authority.
   B3 fake-done (`2079`), and the `force-pass` net all remain unchanged.
 - `test_spawn_all_halt.py` still passes (it calls `run_execute_phase` with the
   default `strict=True`, so the HALT still fires for direct callers — guarding
-  the original `baziforecaster-uqj06` SPAWN-ALL behaviour).
+  the original `uqj06` SPAWN-ALL behaviour).
 
 **Tests:** `admin/orchestrator/test/test_00_fix_strict_recovery.py`
 (`strict=False` returns incomplete instead of raising; default `strict=True` still
@@ -182,7 +194,7 @@ actually invoked once the gate recovers).
 
 ## 2026-07-21 — Fix: Staging Diff Gate spurious zero-diff HALT (docs/00_fix.md)
 
-**Incident:** `baziforecaster-hbh1` EXECUTE phase aborted with
+**Incident:** `hbh1` EXECUTE phase aborted with
 `RuntimeError: [HALT] EXECUTE phase incomplete: coder01..coder05, coder07`.
 6 of 7 coder tasks were wrongly `blocked` as "zero-diff hallucination".
 
@@ -240,7 +252,7 @@ zero-diff; new file; hallucinated path).
   - Hard-fails (`status="blocked"`) any coder that claims `done` but made zero file changes compared to the `.orig` baseline (fake-done detection).
   - Updated `coder.yaml` prompt templates to explicitly instruct the coder NOT to write diffs, but only edit the staging files.
   - Updated `user_prompt.md` to reflect the new PROPOSE-ONLY / PATCH RULE workflow.
-- **Validation gate + review prompt hardening (01_fix.md, continued — baziforecaster-tzsdl).**
+- **Validation gate + review prompt hardening (01_fix.md, continued — tzsdl).**
   - `admin/tools/smoke_test.py` (NEW): a deterministic type-construction gate that detects BUG 2 (a `DictMap[str]` rejecting model instances). Flags any `<X>Map` container whose declared value type is wide (`str`/`Any`/`object`) while a same-file `<X>` model exists but the container rejects an `<X>` instance.
   - `TaskResult` (`models.py`) now carries the `ValidationVerdict` fields (`ruff_ok`, `pyright_ok`, `exec_ok`, `verdict_errors`, `verdict_diff`, `dep_pointers`) so the harness fills the *verdict* half after the smoke + ruff + pyright gates run.
   - `guardrail_check.py` broadened to a **bounded union pyright** (≤5000 lines / ≤4 files / ≤20K lines total) and added `discover_dependencies` so per-stage pyright runs against a producer file before its dependent consumers.
@@ -250,7 +262,7 @@ zero-diff; new file; hallucinated path).
   - `supervisor_review.yaml` / `red_team.yaml` templates: removed the blanket "trust the TaskBatch" wording, now permit re-reading upstream dependencies to verify type contracts, and raised the research-call hard limit 10→15.
   - `user_prompt.md` CORRECT pattern example now uses `DictMap[ExternalPillarTrigger]` (not `DictMap[str]`).
   - Added `admin/orchestrator/test/test_01_fix_harness.py` guarding all of the above (9 tests, green).
-- **EXECUTE-phase HALT regression — over-scoped pyright gate (01_fix.md, run `baziforecaster-hbh1`).**
+- **EXECUTE-phase HALT regression — over-scoped pyright gate (01_fix.md, run `hbh1`).**
   - Root cause: the `01_fix` validation gate (`guardrail_check.py typecheck_file` / `typecheck_union`) filtered `our_errors` by file name ONLY, not by changed line. Pre-existing pyright errors anywhere in the target file (e.g. coder07 edited only `module3_interaction.py:~978` but was blocked on 34 pre-existing errors at lines 620–1398) blocked the coder, and the SPAWN-ALL HALT then fired before the recovery loop — halting coder03/coder07.
   - Architectural principle enforced (Francis, 2026-07-21): *"other coder's shit is our shit"* — a task-scoped coder must only be held accountable for errors it INTRODUCED on the lines it CHANGED.
   - **Fix A (root):** `typecheck_file` / `typecheck_union` now intersect `our_errors` with the changed-line set parsed from `diff_vs_checkpoint` (`@@ -a,b +c,d @@` hunk headers, `+`-prefixed lines → current-file line numbers). Added `_parse_pyright_error` and `_changed_line_set` helpers. Errors on unchanged lines are filtered out; the whole-file scope is used only when no checkpoint exists (legacy behaviour). New errors on changed lines are still caught and still block. This is the actual root fix; Fix C (recoverable HALT) is complementary and deferred.
@@ -259,7 +271,7 @@ zero-diff; new file; hallucinated path).
 
 ### Changed
 
-- **Test suite consolidation (baziforecaster-66szk).**
+- **Test suite consolidation (66szk).**
   - Merged the three scattered test locations (`admin/orchestrator/test/`, `admin/orchestrator/test/tools/`, `admin/orchestrator/tests/`) into a single flat `admin/orchestrator/test/` directory. `bifr/` sub-suite preserved. Removed the now-duplicate `tests/` and `test/tools/` trees.
   - Repointed stale `admin.orchestrator.tests` imports to `admin.orchestrator.test` in `test_harness_gates.py` and the three `bifr/*.py` files.
   - Added `admin/orchestrator/test/run_all.py`: a dependency-free parallel runner that fires every `test_*.py` (and `bifr/`) as its own `pytest` subprocess via a `ThreadPoolExecutor`, then prints a consolidated PASS/FAIL report. Flags `--workers` and `--per-file-timeout` (default 16 / 300s). Returns non-zero if any file fails.
@@ -267,17 +279,17 @@ zero-diff; new file; hallucinated path).
   - Added `admin/orchestrator/test/README.md`: the FROZEN-SUITE policy (tests may not be dropped/weakened without explicit approval), the go-live feature-preservation objective, a how-to-add-test guide, and a per-script registry.
 
 ### Added
-- **Dedicated timeout-fire test (baziforecaster-66szk).**
+- **Dedicated timeout-fire test (66szk).**
   - Added `admin/orchestrator/test/test_timeout_fire.py` with two tests that set `AGENT_RUN_TIMEOUT=1.0` (via monkeypatch, never touching the live `600.0` constant) and assert the harness actually trips (RuntimeError `EXECUTE phase incomplete`) instead of hanging — for both a directly-hung coder and a hung coder in a dependent group.
 
 ### Fixed
-- **DAG Timeout Crash (hbh1) fixes (baziforecaster-s49n0/01_fix.md).**
+- **DAG Timeout Crash (hbh1) fixes (s49n0/01_fix.md).**
   - Raised coder tool budget to 75 in `ROLE_TOOL_BUDGET` to support larger tasks and avoid false-block loopguard overrides.
   - Fixed runner status override logic to only set status to `"blocked"` when the task's status was not already `"done"`, avoiding override of successful coder runs.
   - Added constraints/hard rules to `planner.yaml` and `supervisor_plan.yaml` templates limiting tasks to ≤5 files and requiring disjoint file scopes.
   - Added plan invariant validation gate (`check_plan_invariants` / `PLAN_INVARIANT_RETRIES`) and retry loop in `do_role()` for planner and supervisor_plan roles.
 
-- **DAG Liveness Guard + Per-Task Timeout + add_constant Guidance (baziforecaster-s49n0).**
+- **DAG Liveness Guard + Per-Task Timeout + add_constant Guidance (s49n0).**
   - Replaced the blind 300s DAG dependency wait at `runner.py:1738` with an unbounded wait + liveness guard. The liveness guard only raises if a prerequisite group has already completed (`group_done[d]=True`) but forgot to signal its event. A slow-but-legitimate group (coder re-spawns >5min) is waited on indefinitely, matching the SPAWN-ALL halt semantics. `DAG_DEADLOCK_TIMEOUT = CODER_VALIDATION_PASSES * AGENT_RUN_TIMEOUT = 1800.0s` is the backstop.
   - Added `group_done: dict[str, bool]` alongside `group_events` and set `True` at both normal-exit and empty-to_run sites. Not set at `TaskNeedsSplitError` (deliberately abort).
   - Wrapped **both** `coder_fn` call sites (initial pass at `runner.py:1530` and re-spawn pass at `runner.py:1654`) in `asyncio.wait_for(timeout=AGENT_RUN_TIMEOUT)` so a hung coder times out individually -> marked `blocked` -> caught by SPAWN-ALL halt.
@@ -287,7 +299,7 @@ zero-diff; new file; hallucinated path).
   - Imported `AGENT_RUN_TIMEOUT` from `_loopguard` into `runner.py`.
   - Added comprehensive test suite `admin/orchestrator/tests/test_01_fix_liveness.py` (6 tests: 2 for DAG liveness, 1 for constant correctness, 1 for per-task timeout, 2 for add_constant guards). All 6 pass.
 
-- **Red-Team Gate Vocabulary Crash fix (baziforecaster-61y93 / 01_fix.md).**
+- **Red-Team Gate Vocabulary Crash fix (61y93 / 01_fix.md).**
   - Root cause: red_team evaluated by the planner's User-Story ids (`US-1/2/3`) instead of `coder_N`, but the gate could not map `US-3` -> `coder_3` (planner `coder_idents` were empty), so it raised HARD FAIL on attempt 1 and aborted the whole run — even when the cited engine shims were fine.
   - **Fix A (planner.yaml):** added the ONE FILE = ONE CODER planning-method block (understand intent/scope, identify + count files, give per-file instructions) and the standing invariant that each file belongs to exactly one coder.
   - **Fix C (runner.py `run_red_team_gate`):** replaced the empty `coder_idents`-dependent mapping with an authoritative `file_to_coder` resolver built from `plan.workplan` (file_paths -> coder_N), with rubric `coder_idents` + comment-filename backstops (`resolve_item`). Unresolvable items keyed by a planner user-story id (a vocabulary slip, e.g. `US-3`) are force-passed on the final attempt (propose-only, unpushed) instead of aborting; genuine global blockers (e.g. `rubric_global`) still HARD FAIL.
@@ -295,7 +307,7 @@ zero-diff; new file; hallucinated path).
   - **Fix D (red_team.yaml + supervisor_review.yaml):** reviewer prompts now require `item_id` to be a `coder_N` task id (or a file path) and forbid reusing the planner's `US-*` scheme.
   - Added regression test suite `admin/orchestrator/test/test_01_fix_red_team_vocab.py` (4 tests: US-* rejection does not hard-fail; forced-pass marker names the resolved file; planner intent block present; reviewer prompts require coder_N + forbid US-*). harness_smoke-free, no `src2/` edits.
 
-- **Coder loop-resilience: no more false-blocks / dumb-LLM hang-abort (baziforecaster-6yyif / 01_fix.md).**
+- **Coder loop-resilience: no more false-blocks / dumb-LLM hang-abort (6yyif / 01_fix.md).**
   - **CHANGE 1 (done):** Replaced the single global `UsageLimits(request_limit=40)` in `run_with_loopguard` (`_loopguard.py`) with a per-role map (`role_request_cap`). The hard API-call cap now aligns to each role's GuardToolset tool budget × 2 (≈2 requests per tool call): coder 75→150, planner 10→20, others 15→30. Removes the FALSE-BLOCK that killed tool-looping coders before they could emit `final_result` (the `coder_4` `UsageLimitExceeded` crash in `session_crash.md`).
   - **CHANGE 2:** Added early loop detection that the old guard missed:
     - **A-B-A-B alternation detector** (`alt_prev`/`alt_count`): two DISTINCT tool-call signatures ping-ponging (X→Y→X→Y) force RECOVER at `alt_count >= 2`, instead of burning the full request cap.
@@ -358,7 +370,7 @@ zero-diff; new file; hallucinated path).
 ## [Unreleased] - 2026-07-19
 
 ### Added
-- **Implemented Read-Memory Bridge (ticket `baziforecaster-2711x`).**
+- **Implemented Read-Memory Bridge (ticket `2711x`).**
   - Modified `GuardToolset.call_tool` to append a strict `[SYSTEM NOTE: If you found relevant facts or code patterns in this read, you must call remember/remember_fact to register them now.]` suffix to successful `batch_read` and `read_file` tool returns.
   - Hardened all five role templates (`coder.yaml`, `planner.yaml`, `red_team.yaml`, `supervisor_plan.yaml`, `supervisor_review.yaml`) by adding prompt-level `READ-MEMORY BRIDGE` instructions under the coding philosophies block.
   - Added regression unit tests to `tests/test_read_memory_bridge.py`.
@@ -392,14 +404,14 @@ zero-diff; new file; hallucinated path).
   - Added regression unit tests in `admin/orchestrator/tests/test_validation_hardening.py`.
 
 ### Fixed
-- **Planner read-budget starvation and redundant reads (ticket `baziforecaster-ogow8`).** Fixed a bug where absolute staging paths and relative live paths were tracked as different files in read tracking, leading to budget starvation.
+- **Planner read-budget starvation and redundant reads (ticket `ogow8`).** Fixed a bug where absolute staging paths and relative live paths were tracked as different files in read tracking, leading to budget starvation.
   - Implemented `normalize_read_path` helper to normalize all incoming paths in `tools.py` before adding to or checking in `self._read_paths`.
   - Reordered the identical-call deduplication check in `GuardToolset.call_tool` to run *before* the read budget checks (excluding `batch_read` and `read_file` to keep read-budget limits functional) to prevent cached tool hits from consuming budget.
   - Added new regression tests to `tests/test_guard_read_idempotency.py` to assert path normalization and cache-check-order behavior.
 - **File-disjointness HALT false-positive on Planner-claimed derived/staging
-  paths (ticket `baziforecaster-vw4dd`).** Root cause (session-ses_087c.md,
-  observed in `baziforecaster-hbh1` ~2026-07-19): the cross-group / intra-group
-  file-disjointness assertion (added by closed `baziforecaster-zu9u`,
+  paths (ticket `vw4dd`).** Root cause (session-ses_087c.md,
+  observed in `hbh1` ~2026-07-19): the cross-group / intra-group
+  file-disjointness assertion (added by closed `zu9u`,
   runner.py:1268-1316) ran over the Planner's raw `file_paths` CLAIMS. The
   Planner is reasoning-only and routinely emits non-source paths (e.g.
   `admin/orchestrator/temp/src2/.../unified_patch.py`), which the runner trusted
@@ -424,7 +436,7 @@ zero-diff; new file; hallucinated path).
     all passing).
 
 ### Added
-- **Forgiving `batch_read` ergonomics (ticket `baziforecaster-rj4ie`).**
+- **Forgiving `batch_read` ergonomics (ticket `rj4ie`).**
   Root cause (session-ses_088e.md + forensic-planner-md-2026-07-17-defects): the
   model burned its entire `read_budget` (5 calls) on malformed `batch_read`
   invocations ("no paths provided", "line_ranges REQUIRED") because the tool
@@ -467,7 +479,7 @@ zero-diff; new file; hallucinated path).
 ### Changed
 - The `run_orchestrator.sh` `bd:` grep still resolves `bd` from inside the front-matter
   block (it remains a `^bd:` line), so auto-ticket selection is unaffected.
-- **Coder tool-budget hardening (ticket `baziforecaster-0xvqo`).** Root cause of
+- **Coder tool-budget hardening (ticket `0xvqo`).** Root cause of
   `session_crash.md`: coder_1/coder_3 (3 files each) exhausted the flat 15-call budget
   by re-reading their staging files 6× (redundant `batch_read`) then probing blind.
   Two fixes in `admin/orchestrator/infra/tools.py`:
@@ -489,7 +501,7 @@ zero-diff; new file; hallucinated path).
 ## [Unreleased] - 2026-07-18
 
 ### Added
-- **Size-aware context injection for coder agents (epic `baziforecaster-gx30p`, tickets
+- **Size-aware context injection for coder agents (epic `gx30p`, tickets
   `l30qe` / `k2owt` / `qkm3p` / `fzqa2` / `vze01`).**
   - `runner.py`: new `estimate_task_tokens(file_paths)` (deterministic tiktoken
     `cl100k_base` sum, cached encoding, char/4 fallback) + `task_context_tier(...)` →
@@ -511,7 +523,7 @@ zero-diff; new file; hallucinated path).
   - Tests: `tests/test_context_injection.py` added (token calc, tier selection, staging
     copies, Tier-B map injection, and the `TaskNeedsSplitError` halt). ruff clean.
 
-- **Stop/Continue mechanism WIRED (ticket `baziforecaster-udylx`).**
+- **Stop/Continue mechanism WIRED (ticket `udylx`).**
   - `runner.py`: new `--stop-after <phase>` (choices = `_PHASE_ORDER`) and `--resume` argparse flags.
     A nested `_checkpoint(phase)` helper now calls `save_state`/`record_phase` (state.py) after every
     phase block; when `--stop-after <phase>` matches it persists state + exchange and `return`s
@@ -529,7 +541,7 @@ zero-diff; new file; hallucinated path).
   - Tests: `tests/test_stop_continue.py` added; `tests/test_state.py` updated to role keys.
     Full suite: 55 passed, 1 skipped. ruff clean.
 
-- **Spawn-all coders + halt-on-block in EXECUTE phase (ticket `baziforecaster-uqj06`).**
+- **Spawn-all coders + halt-on-block in EXECUTE phase (ticket `uqj06`).**
   - `run_execute_phase` (`runner.py`, `process_group`): REMOVED the upfront skip-short-circuit
     that axed an entire dependent DAG group when a prerequisite group produced 0 usable (blocked)
     tasks. Every group now ALWAYS spawns and executes regardless of sibling/group outcome.
@@ -540,7 +552,7 @@ zero-diff; new file; hallucinated path).
     `RuntimeError("[HALT] EXECUTE phase incomplete: <ids>")` listing every incomplete task id.
     This guarantees incomplete work never reaches supervisor_review / red_team / ops; staged
     files under `admin/orchestrator/temp/` remain for manual recovery.
-  - Root cause (run `baziforecaster-hbh1`): planner put `task_1` alone in `group-1` and tasks 2-6
+  - Root cause (run `hbh1`): planner put `task_1` alone in `group-1` and tasks 2-6
     in `group-2 depends_on group-1`; `task_1` returned `blocked` (a false read-budget/"truncation"
     excuse — the coder had the full file) which cascaded to silently skip the entire `group-2`,
     so 5 unrelated coders never spawned.
@@ -548,7 +560,7 @@ zero-diff; new file; hallucinated path).
     all incomplete ids, no-halt when all done). ruff clean.
 
 ### Changed
-- **Red-team gate Site C now FORCED-PASS on final attempt (ticket `baziforecaster-7w11i`).**
+- **Red-team gate Site C now FORCED-PASS on final attempt (ticket `7w11i`).**
   - `run_red_team_gate` (`runner.py:1589-1591`): when `attempt == MAX_RETRIES` and the gate is still
     failing, it now prints `FORCED PASS -> proceed to ops` and `return batch` instead of raising
     `RuntimeError` and aborting the whole run. Mirrors the existing supervisor attempt-3 force-pass.
@@ -561,7 +573,7 @@ zero-diff; new file; hallucinated path).
     new behavior. Full suite: 52 passed, 1 skipped.
   - OPS remains propose-only (`pushed=False`), so the blast radius is an unpushed commit + bd close.
   - `wip-harness` skill + `ops-propose-only-green-rederived` bead updated; note added to `fvv2` (C2).
-- **MD-twin per-turn re-injection wired (ticket `baziforecaster-mb1k5`).**
+- **MD-twin per-turn re-injection wired (ticket `mb1k5`).**
   - NEW `admin/orchestrator/common/md_bridge.py`: `build_md_bridge(role, agent_id=None) -> list[ModelMessage] | None`.
     Resolves the EXACT `.md` twin via `artefacts._history_filename(role, agent_id)` (+`.md`) — NO mtime-glob
     (the old `read_latest_md` glob was the coder-tagging bug). Cold spawn (no twin) → `None` (no HALT). Wraps
@@ -570,7 +582,7 @@ zero-diff; new file; hallucinated path).
     with `build_md_bridge(role, agent_id=agent_id)`. The `.md` twin is now the per-turn re-injection source fed
     as `message_history` to ALL agents EVERY spawn (token-saving ~67% lighter than jsonl + visibility assurance:
     on-screen `.md` == what the agent got). JSONL stays internal-only accumulation (pydantic-ai owns it).
-  - Per-coderN isolation (ticket `baziforecaster-a101k`) preserved BY CONSTRUCTION: `build_md_bridge` reuses
+  - Per-coderN isolation (ticket `a101k`) preserved BY CONSTRUCTION: `build_md_bridge` reuses
     `_history_filename` which already returns `coderN.jsonl` for coder+agent_id → the `.md` sibling is `coderN.md`.
   - The planner→supervisor_plan raw-JSON phase-output handoff (`RAW_OUTPUTS["supervisor_plan"]`) is unchanged
     (separate channel, still requires raw JSON in history).
@@ -579,7 +591,7 @@ zero-diff; new file; hallucinated path).
   - `wip-harness` skill references (`02_architecture.md`, `05_context_mgmt.md`, `03_state.md`,
     `06_resume_checklist.md`) corrected to describe the MD-bridge design (removed the stale "`.md` was a red
     herring / jsonl replay" claim).
-- **Skills made lazy-load (context-bloat fix, ticket `baziforecaster-1wzum`).**
+- **Skills made lazy-load (context-bloat fix, ticket `1wzum`).**
   - `.agents/skills/wip-harness/SKILL.md` — rewritten from a 555-line monolith into a thin
     LAZY-LOAD INDEX: metadata + the load-bearing §0.0 answer-workflow contract + sandbox rule +
     a contents table pointing at `references/*.md`. Deep sections (architecture, DONE/OPEN/
@@ -591,13 +603,13 @@ zero-diff; new file; hallucinated path).
     not in `control_orchestrator.py`) so an LLM reading any reference isn't confused by old
     falsehoods.
   - `.agents/skills_archive/pydantic-ai-coding/SKILL.md` — trimmed to a thin index: inline
-    BaziForecaster-specific rules (Pydantic V2 only, `OpenAIChatModel`+`OpenAIProvider`,
+    specific rules (Pydantic V2 only, `OpenAIChatModel`+`OpenAIProvider`,
     agent conventions) + a lazy-load table pointing at the existing `references/*.md`. No
     generic pattern content retained inline.
 
 Prompt-review fixes — blind rerun + adversarial supervisors + frozen contract
-(tickets `baziforecaster-nw9ov` [R1], `baziforecaster-g1lvv` [R2+R4],
-`baziforecaster-6gizg` [R5], from review `baziforecaster-g17uq`):
+(tickets `nw9ov` [R1], `g1lvv` [R2+R4],
+`6gizg` [R5], from review `g17uq`):
 
 - **R1 — coder rerun is no longer blind.** Added a `feedback` parameter to
   `run_execute_phase` (runner.py). The supervisor_review gate builds a
@@ -626,7 +638,7 @@ Prompt-review fixes — blind rerun + adversarial supervisors + frozen contract
   the window, write-root `admin/orchestrator/temp/`, "show diff not full file",
   and the role's tool allow-list. ruff clean; all templates valid YAML.
 
-Per-`coderN` isolated memory (ticket `baziforecaster-a101k`, LOCKED design from
+Per-`coderN` isolated memory (ticket `a101k`, LOCKED design from
 grill-me 2026-07-18 `orchestrator-coder-per-agent-memory-locked`): replaces the
 shared `history/coder/coder.jsonl` store that ALL parallel coder subagents read
 and wrote, which caused context bloat, redundancy (parallel coders == 1 coder ×
@@ -646,7 +658,7 @@ re-pointed at the per-`coderN` file (200K -> `keep_memory` -> rotate to
 retired; the never-prune rule is rescoped to `coderN` + `coderN.compactM`
 snapshots. Tests green (`_coder_factory` double accepts the new `task_id` arg).
 
-coder.md pollution cleanup + test-leak isolation (ticket `baziforecaster-hb8b`):
+coder.md pollution cleanup + test-leak isolation (ticket `hb8b`):
 stopped the loopguard compaction tests from writing synthetic junk into the
 live `artefacts/history/coder/coder.jsonl` + `coder.md` (which then leaked as
 the coder's D2 continuity bridge on real runs). `infra/artefacts.py`
@@ -665,7 +677,7 @@ ANY `--from <phase>` (not just `coder`), preserving predecessor artefacts;
 `run_orchestrator_continue.sh` documents all 5 resume points. Added a
 fail-loudly HALT when resuming at/after `coder` with no persisted `ApprovedPlan`.
 
-keep_memory context-prepend compaction gate (ticket `baziforecaster-wkxy`,
+keep_memory context-prepend compaction gate (ticket `wkxy`,
 LOCKED design from grill-me 2026-07-18 `context-prepend-compaction-gate`):
 bounds each role's prepended `prior_history` (the `.jsonl` message stream, NOT
 the `.md` twin) to 60K–200K so the working LLM never ingests 700K+.
@@ -708,7 +720,7 @@ the `.md` twin) to 60K–200K so the working LLM never ingests 700K+.
   now bounds it before prepend.
 
 - **Framework-rejected tool-call no longer silently drops a task (ticket
-  `baziforecaster-78j9m`).** When pydantic-ai's own tool-dispatch validator rejects
+  `78j9m`).** When pydantic-ai's own tool-dispatch validator rejects
   a structurally-invalid `final_result` call (e.g. `MALFORMED_FUNCTION_CALL`: the
   model emitted a `list` where an `object` was required), the framework discards the
   offending args and persists no valid `ToolCallPart`. Previously `extract_model_json`
@@ -745,7 +757,7 @@ gate to `TEST/agent_guardrail.py`.
   sites wrap `RuntimeError` to preserve ledger's string-return contract.
 
 ### Fixed
-- **`baziforecaster-ydiv` (P0): wire `output_sanitizer` to the model's REAL output,
+- **`ydiv` (P0): wire `output_sanitizer` to the model's REAL output,
   not the exception string.** The `model → json → fast-json-repair → normaliser →
   validator` pipeline (`output_sanitizer.clean_role_output`) existed but was
   bypassed: on `UnexpectedModelBehavior`, `load_skill` fed `e.message` (the literal
@@ -757,12 +769,12 @@ gate to `TEST/agent_guardrail.py`.
   is now only a fallback when no `final_result` tool-call exists. A role emitting
   malformed `final_result` 5× is salvaged by the sanitizer or fails with the REAL
   validation error, never the framework string.
-- **`baziforecaster-ydiv` (FIX B): bound `recall_fact`.** It was unbounded — the coder
+- **`ydiv` (FIX B): bound `recall_fact`.** It was unbounded — the coder
   spammed 11× in run `hbh1`, bloating context and degrading structured-output accuracy
   (the upstream cause of the `final_result` 5× validation failure). `GuardToolset` now
   enforces `recall_budget` (default `RECALL_BUDGET=5`, mirroring `batch_read`), returning
   the read-FATAL nudge on exhaustion to force `final_result`.
-- **`baziforecaster-bs1d` (P0): coder confined to `admin/orchestrator/temp/` only.** The
+- **`bs1d` (P0): coder confined to `admin/orchestrator/temp/` only.** The
   coder may now WRITE **only** under `temp/` (subfolders allowed) and must not create/modify/
   delete/move/overwrite anything outside it — including `src2/`. Prompt prose alone was not
   enforced; the real write confinement is `wrap_with_acl(task.file_paths)`. Added
@@ -853,7 +865,7 @@ returns stdout as-is); it was legacy cruft polluting model context.
   `=== File read: <path> (lines X-Y of N) ===` header; the
   `{"success": true, "data": {...}}` envelope is dropped entirely.
   Errors print as plain `ERROR: ...` text. (This is the actual source of the
-  `planner.md` garbage — ticket `baziforecaster-ggsq` class, root cause.)
+  `planner.md` garbage — ticket `ggsq` class, root cause.)
 - **`admin/orchestrator/infra/tools.py` `batch_read`** — joins the now-clean
   `read_file` outputs directly (no re-wrapping `=== File read: ===` header).
 - **`admin/orchestrator/infra/artefacts.py`** — added a `batch_read` eviction
@@ -874,7 +886,7 @@ returns stdout as-is); it was legacy cruft polluting model context.
   `phase_summaries`. The `prior_role_outputs` injection renders every `history`
   entry to MD at injection time, so raw JSON never leaks into prompts while
   `history` stays raw JSON for the `approved_json` parse contract at `run_phase`.
-  (Tickets `baziforecaster-p0vt` / `-31y5` JSON->MD injection mandate.)
+  (Tickets `p0vt` / `-31y5` JSON->MD injection mandate.)
 
 ## [0.1.10] - 2026-07-18
 
@@ -886,27 +898,27 @@ discovery instead of planning, and `get_repo_structure` emitting `\uXXXX` garbag
 ### Fixed
 - **`admin/tools/get_repo_structure.py`** — `json.dumps(..., ensure_ascii=False)`
   so box-drawing chars (`├──`) render instead of raw `\u251c\u2500\u2500` escapes.
-  (Ticket `baziforecaster-ggsq`.)
+  (Ticket `ggsq`.)
 - **`admin/orchestrator/infra/converter.py`** — `tool-call` args that are already a
   JSON string are rendered verbatim, not double-`json.dumps`-escaped (kills the
   `\"rejected_subtasks\"` corruption that made Pydantic reject `ApprovedPlan`).
 - **`admin/orchestrator/infra/artefacts.py`** — `_evict_dicts` now parses JSON-string
   `tool-return` content to a structured dict so it is not re-serialized as an escaped
   string on the next round-trip. Combined with the converter fix, injected/echoed
-  model JSON stays single-encoded. (Ticket `baziforecaster-p0vt` — MD-only injection
+  model JSON stays single-encoded. (Ticket `p0vt` — MD-only injection
   at the record seam for ALL roles; raw JSON lives only in `.jsonl` for
   `model_validate_json` replay, never in the injected prompt.)
 - **`admin/orchestrator/infra/runner.py` `build_role_agent`** — read-bucket
   protocol defense-in-depth (re-applied here after the dead `orchestrator.py` was
   deleted): hard-rejects any `_DISCOVERY_TOOLS` name (get_repo_structure/
   investigate/search/...) appearing in a role's `tool_allow_list`, so the planner
-  can never receive discovery tools even from a leaked spec. (Ticket `baziforecaster-c8lh`.)
+  can never receive discovery tools even from a leaked spec. (Ticket `c8lh`.)
 - **`admin/orchestrator/infra/runner.py` `load_skill`** — wired the pre-existing
   `assert_planner_emitted` guard for `planner`/`planner_sup`: if the
   `GuardToolset` budget is exhausted without a `final_result`, the run HALTS loudly
   instead of proceeding on a `None` plan (the q9lt failure mode). `build_role_agent`
   now also returns the `GuardToolset` instance so the caller can inspect
-  `guard.exhausted`. (Ticket `baziforecaster-4mn8` / M11 structural final_result guard.)
+  `guard.exhausted`. (Ticket `4mn8` / M11 structural final_result guard.)
 
 ### Changed
 - **`admin/orchestrator/infra/orchestrator.py` DELETED** — it was a Build_08
@@ -921,8 +933,8 @@ discovery instead of planning, and `get_repo_structure` emitting `\uXXXX` garbag
 
 Build from `docs/06_Implement.md` (grill-me plan): coder tool-instruction +
 harness-owned validation loop, coding-philosophy hardening, parallelism ownership.
-Tickets: `baziforecaster-wi3i`, `baziforecaster-4lrm`, `baziforecaster-zu9u`,
-`baziforecaster-ieek`.
+Tickets: `wi3i`, `4lrm`, `zu9u`,
+`ieek`.
 
 ### Added
 - **`admin/tools/guardrail_check.py` (new, harness-side)**. Post-edit gate
@@ -960,7 +972,7 @@ Tickets: `baziforecaster-wi3i`, `baziforecaster-4lrm`, `baziforecaster-zu9u`,
 
 ## [0.1.8] - 2026-07-17
 
-Global JSON-output sanitizer (ticket baziforecaster-cqjb). Kills the
+Global JSON-output sanitizer (ticket cqjb). Kills the
 empty/structurally-broken-model-output failure mode (SA4-F6 class) with a
 deterministic offline backstop instead of a silent fail-safe.
 
@@ -988,12 +1000,12 @@ deterministic offline backstop instead of a silent fail-safe.
 
 ## [0.1.7] - 2026-07-17
 
-Coder blank-completion crash incident remediation (run baziforecaster-hbh1). Traces to bead `baziforecaster-xvy0`. Model swap (A.2: coder_model gemini-3.1-pro-low -> deepseek_flash) handled by user directly; this entry covers A.1/B/C.
+Coder blank-completion crash incident remediation (run hbh1). Traces to bead `xvy0`. Model swap (A.2: coder_model gemini-3.1-pro-low -> deepseek_flash) handled by user directly; this entry covers A.1/B/C.
 
 ### Fixed
 - **A.1 / xvy0 — surfaced coder empty-output HALT** (`runner.py`). `record_coder` now catches `UnexpectedModelBehavior` (low-tier model returning empty `finish_reason=stop` completions) and raises a clean `[record_coder] coder emitted empty/invalid output …` RuntimeError instead of letting it propagate raw and kill the run with no diagnostic. The existing failure-persistence path writes a FAILED coder transcript so the run is resumable/diagnosable.
 - **B / xvy0 — DAG fast-fail on blocked upstream** (`runner.py`). `process_group` now inspects each dependency group's results after `wait_for`; if the upstream produced ONLY `blocked` tasks (e.g. coder crashed), the downstream group short-circuits in <1s with a `[DAG] group … SKIPPED — prerequisite … produced 0 usable tasks` message instead of hanging the full 300s `wait_for` watchdog and surfacing a misleading `TimeoutError`.
-- **C / xvy0 — coder bounded-research hard_rule** (`templates/coder.yaml` + `customised/coder.yaml`). Added explicit rule: at most ~3 read-only discovery calls per target file then WRITE; if no file written after ~12 read-only calls, STOP and emit `final_result` (status `blocked`) rather than looping on discovery. Hardens against the research-loop class of failure (sibling of `baziforecaster-q9lt`).
+- **C / xvy0 — coder bounded-research hard_rule** (`templates/coder.yaml` + `customised/coder.yaml`). Added explicit rule: at most ~3 read-only discovery calls per target file then WRITE; if no file written after ~12 read-only calls, STOP and emit `final_result` (status `blocked`) rather than looping on discovery. Hardens against the research-loop class of failure (sibling of `q9lt`).
 
 ## [0.1.6] - 2026-07-17
 
@@ -1051,25 +1063,25 @@ Structural hardening: fallback removal, parallel coder, coding philosophy, tool 
 
 ## [0.1.3] - 2026-07-15
 
-Harness reliability + run-targeting fixes from the baziforecaster-yrev / hbh1 sessions.
+Harness reliability + run-targeting fixes from the yrev / hbh1 sessions.
 
 ### Added
-- **Red-team anti-laziness guard (`runner.py`, baziforecaster-71z2).** New `_blocker_findings_from_risks()` promotes any Critical/High `AuditRisk` with a resolvable `task_id` into a blocker `ReviewFinding`, so a lazy model can no longer flag real defects in `risks` yet leave `findings` empty (which let the gate pass and ship defects unreviewed). Critical/High risks with no resolvable `task_id` HARD FAIL as unresolvable. Wired into `run_red_team_gate` before the deterministic verdict.
+- **Red-team anti-laziness guard (`runner.py`, 71z2).** New `_blocker_findings_from_risks()` promotes any Critical/High `AuditRisk` with a resolvable `task_id` into a blocker `ReviewFinding`, so a lazy model can no longer flag real defects in `risks` yet leave `findings` empty (which let the gate pass and ship defects unreviewed). Critical/High risks with no resolvable `task_id` HARD FAIL as unresolvable. Wired into `run_red_team_gate` before the deterministic verdict.
 
 ### Changed
-- **Run targeting (`run_orchestrator.sh` + `runner.py`, baziforecaster-y5zp).** Launcher now reads an explicit `bd:` line (line 2 of `user_prompt.md`, after `Resume:`) when launched with no `--bd` arg, so no-arg runs target the correct ticket instead of auto-creating a smoke ticket. `read_prompt` strips the `bd:` line from the task spec so it never reaches the planner.
-- **tmux session naming.** Session is now named after the bd ticket (e.g. `baziforecaster-hbh1`) instead of the hardcoded `orchestrator`, so the operator can confirm the running ticket at a glance.
-- **Status board header (`runner.py`, baziforecaster-ez54).** `Roles completed: X/Y` → `Roles completed (executions/phases): X/Y` to disambiguate numerator (role executions) from denominator (phase types).
-- **Task spec (`user_prompt.md`, baziforecaster-hbh1).** Rewritten to the real zero-dicts remediation: convert `unified.py:625/777/786` `dict[str,Model]` fields to `DictMap` RootModels (reuse `TenGodMap`; define `ExternalPillarTriggerMap`/`PalaceAssociationMap`), skip intentional C4 fields `:3110/3114/3115`, convert `session.py` dict fields, replace `isinstance(x,dict)` shims across 5 engine files. Acceptance gate: `ruff clean` + `verify_dict_access_runtime.py → 0 CONFIRMED_CRASH`.
-- **HTTP/2 + pool tuning for all LLM providers (`control_orchestrator.py` → `http_client.py`, baziforecaster-hbh1).** Shared client config extracted into `admin/orchestrator/infra/http_client.py` (`create_resilient_http_client`): `http2=True`, `verify=False` (all providers are local self-signed LiteRouter-style proxies), `limits=httpx.Limits(max_connections=200, max_keepalive_connections=60)` (RAM headroom; was 100/20), `timeout=ORCH_HTTP_TIMEOUT` (connect=15s, read=300s — long enough for slow models; reverted from a briefly-tried 10s that tripped constant `ModelAPIError` retries on deepseek-v4-pro). `literouter_url` default flipped `http://`→`https://localhost:7766/v1`, so the orchestrator→proxy hop negotiates HTTP/2 over TLS. Change takes effect on next run launch.
-- **Centralized transport-level retry (`http_client.py`, baziforecaster-hbh1).** Retries on transient 429/5xx **and** connect/timeout errors are now handled at the HTTP transport layer via `pydantic_ai.retries.AsyncTenacityTransport` with `validate_retryable_response` as the gate: 90/120/240s `wait_exponential`, `MAX_MODEL_RETRIES=3`, `reraise=True`. The agent layer (`runner._run_agent_retry`) no longer retries — it just catches the final `ModelAPIError` and aborts gracefully. Retries are the transport's single responsibility (no double-retry / compounding backoff).
+- **Run targeting (`run_orchestrator.sh` + `runner.py`, y5zp).** Launcher now reads an explicit `bd:` line (line 2 of `user_prompt.md`, after `Resume:`) when launched with no `--bd` arg, so no-arg runs target the correct ticket instead of auto-creating a smoke ticket. `read_prompt` strips the `bd:` line from the task spec so it never reaches the planner.
+- **tmux session naming.** Session is now named after the bd ticket (e.g. `hbh1`) instead of the hardcoded `orchestrator`, so the operator can confirm the running ticket at a glance.
+- **Status board header (`runner.py`, ez54).** `Roles completed: X/Y` → `Roles completed (executions/phases): X/Y` to disambiguate numerator (role executions) from denominator (phase types).
+- **Task spec (`user_prompt.md`, hbh1).** Rewritten to the real zero-dicts remediation: convert `unified.py:625/777/786` `dict[str,Model]` fields to `DictMap` RootModels (reuse `TenGodMap`; define `ExternalPillarTriggerMap`/`PalaceAssociationMap`), skip intentional C4 fields `:3110/3114/3115`, convert `session.py` dict fields, replace `isinstance(x,dict)` shims across 5 engine files. Acceptance gate: `ruff clean` + `verify_dict_access_runtime.py → 0 CONFIRMED_CRASH`.
+- **HTTP/2 + pool tuning for all LLM providers (`control_orchestrator.py` → `http_client.py`, hbh1).** Shared client config extracted into `admin/orchestrator/infra/http_client.py` (`create_resilient_http_client`): `http2=True`, `verify=False` (all providers are local self-signed LiteRouter-style proxies), `limits=httpx.Limits(max_connections=200, max_keepalive_connections=60)` (RAM headroom; was 100/20), `timeout=ORCH_HTTP_TIMEOUT` (connect=15s, read=300s — long enough for slow models; reverted from a briefly-tried 10s that tripped constant `ModelAPIError` retries on deepseek-v4-pro). `literouter_url` default flipped `http://`→`https://localhost:7766/v1`, so the orchestrator→proxy hop negotiates HTTP/2 over TLS. Change takes effect on next run launch.
+- **Centralized transport-level retry (`http_client.py`, hbh1).** Retries on transient 429/5xx **and** connect/timeout errors are now handled at the HTTP transport layer via `pydantic_ai.retries.AsyncTenacityTransport` with `validate_retryable_response` as the gate: 90/120/240s `wait_exponential`, `MAX_MODEL_RETRIES=3`, `reraise=True`. The agent layer (`runner._run_agent_retry`) no longer retries — it just catches the final `ModelAPIError` and aborts gracefully. Retries are the transport's single responsibility (no double-retry / compounding backoff).
 - **Removed `openrouter` provider (`control_orchestrator.py`).** All providers are now local (mcpmart/antigravity = `10.32.34.243`, literouter/pydantic = localhost), so the public `openrouter.ai` endpoint (and its `verify=False` TLS-exposure) is gone. Model names like `openrouter/...` continue to route through the `literouter` provider.
 
 ### Fixed
 - **Model request timeout (`control_orchestrator.py`).** `ORCH_HTTP_TIMEOUT` `read` 60s → 300s so slow free-tier models (`zen/deepseek-v4-flash-free`) no longer crash the run with `ModelAPIError: Request timed out`. Still bounded by `_loopguard` `AGENT_RUN_TIMEOUT=600`; `connect=15s` still fails fast on unreachable endpoints.
 - **Gateway 401 (`control_orchestrator.py`, fcdff83b).** Hardcoded gateway auth keys (literouter/mcpmart/antigravity/pydantic) + fixed `env_file` path resolution, resolving the 401 Unauthorized on the literouter gateway.
-- **Transient provider timeout killed the whole run (`runner.py`, baziforecaster-hbh1).** `_run_agent_retry` only caught `ModelHTTPError`, so a bare `openai.APITimeoutError` (`ModelAPIError`) at `supervisor_plan` propagated and crashed the entire run. Broadened the `except` to `ModelAPIError`; HTTP errors keep the status-based retry gate, all other `ModelAPIError` (timeouts / connection / stream) are now retried.
-- **Graceful abort on final failure (`runner.py`, baziforecaster-hbh1).** On a final `ModelAPIError` (after the transport's retries are exhausted) **or** a non-retryable error, `_run_agent_retry` writes a structured `orch/logs/runtime/FAIL_<phase>.json` report via `_report_run_failure` and exits cleanly with `SystemExit(1)` + an `[RUN ABORTED]` banner — no unhandled traceback crash. (The retry schedule itself now lives in the transport layer; see above.)
+- **Transient provider timeout killed the whole run (`runner.py`, hbh1).** `_run_agent_retry` only caught `ModelHTTPError`, so a bare `openai.APITimeoutError` (`ModelAPIError`) at `supervisor_plan` propagated and crashed the entire run. Broadened the `except` to `ModelAPIError`; HTTP errors keep the status-based retry gate, all other `ModelAPIError` (timeouts / connection / stream) are now retried.
+- **Graceful abort on final failure (`runner.py`, hbh1).** On a final `ModelAPIError` (after the transport's retries are exhausted) **or** a non-retryable error, `_run_agent_retry` writes a structured `orch/logs/runtime/FAIL_<phase>.json` report via `_report_run_failure` and exits cleanly with `SystemExit(1)` + an `[RUN ABORTED]` banner — no unhandled traceback crash. (The retry schedule itself now lives in the transport layer; see above.)
 
 ## [0.1.2] - 2026-07-14
 

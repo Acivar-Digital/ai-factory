@@ -355,18 +355,30 @@ async def run_execute_phase(
                         timeout=240,
                     )
                 except Exception as guard_exc:
-                    # GUARDRAIL ITSELF errored (not a lint failure) — fail loudly
-                    # to the operator but treat as pass so we never crash the task.
                     log_operator(
                         f"[execute_task] guardrail_check.py crashed on {fp!r} for "
                         f"task {t.id}: {guard_exc!r}",
                         level="WARNING",
                     )
+                    ruff_failed = True
+                    feedback_block += (
+                        f"\n--- {fp} (GUARDRAIL CRASH) ---\n"
+                        f"Guardrail tool crashed: {guard_exc}\n"
+                    )
                     continue
                 try:
                     gj = json.loads(res.stdout.strip().splitlines()[-1]) if res.stdout.strip() else {}
                 except Exception:
-                    # Unparseable guardrail output -> treat as pass to avoid loops.
+                    log_operator(
+                        f"[execute_task] unparseable guardrail output on {fp!r} "
+                        f"for task {t.id}: {res.stdout!r}",
+                        level="WARNING",
+                    )
+                    ruff_failed = True
+                    feedback_block += (
+                        f"\n--- {fp} (UNPARSEABLE GUARDRAIL) ---\n"
+                        f"Guardrail output was not valid JSON: {res.stdout!r}\n"
+                    )
                     continue
                 verdict_state[fp] = gj
                 # Fix E (00_fix): mechanically auto-fix lint on the staged file,
@@ -540,8 +552,15 @@ async def run_execute_phase(
                                 obj["notes"] = f"[Runtime Load Gate] {fp} failed schema validation: {res.stdout.strip()} " + obj.get("notes", "")
                                 log_operator(f"task {t.id} blocked: schema load failed on {fp}: {res.stdout.strip()}", level="WARNING")
                                 break
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            log_operator(
+                                f"[execute_task] load_schema_gate.py crashed on {fp!r} "
+                                f"for task {t.id}: {e!r}",
+                                level="WARNING",
+                            )
+                            obj["status"] = "blocked"
+                            obj["notes"] = f"[Runtime Load Gate] Crash: {e!r} " + obj.get("notes", "")
+                            break
 
         # --- CQRS CLOSE ---
         try:

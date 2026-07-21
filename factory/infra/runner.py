@@ -240,8 +240,12 @@ async def main() -> None:
 
     save_exchange(bd, exchange)
 
-    last_coder = next((v for r, v in reversed(history) if r == "coder"), "")
-    verdict = "PASS" if "This Harness is Working" in last_coder else "CHECK"
+    if batch is not None and batch.results:
+        all_done = all(r.status == "done" for r in batch.results)
+        verdict = "PASS" if all_done else "CHECK"
+    else:
+        last_coder = next((v for r, v in reversed(history) if r == "coder"), "")
+        verdict = "PASS" if "This Harness is Working" in last_coder else "CHECK"
     update_status_board(history, None, bd)
     print("\n=== PIPELINE COMPLETE (propose-only) ===")
     print("\nVERDICT:", verdict)
