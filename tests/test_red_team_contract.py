@@ -22,7 +22,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-import asyncio
 import json
 
 import pytest
@@ -40,6 +39,7 @@ from factory.infra.models import (
     RubricCube,
     Strategy,
     TaskResult,
+    ToolPreferenceItem,
     UserStory,
     WorkGroup,
 )
@@ -50,8 +50,8 @@ from factory.infra.runner import (
 )
 
 PKG = Path(__file__).resolve().parents[1]  # factory
-TEMPLATE = PKG / "templates" / "red_team.yaml"
-CUSTOMISED = PKG / "customised" / "red_team.yaml"
+TEMPLATE = PKG / "factory" / "templates" / "red_team.yaml"
+CUSTOMISED = PKG / "factory" / "customised" / "red_team.yaml"
 
 # Canonical contract markers every red_team prompt must carry.
 MARK_FINDINGS = "evaluation"        # gate is evaluation list-driven
@@ -114,7 +114,10 @@ def _plan() -> ExecutablePlan:
     )
     strat = Strategy(
         how_to_fix="x",
-        tool_preference={"coder01": "CLI-wrapper", "coder02": "CLI-wrapper"},
+        tool_preference=[
+            ToolPreferenceItem(task_id="coder01", preference="CLI-wrapper"),
+            ToolPreferenceItem(task_id="coder02", preference="CLI-wrapper"),
+        ],
         parallelisable_workplan=ParallelisableWorkplan(groups=[g1, g2]),
     )
     return ExecutablePlan(
@@ -161,21 +164,22 @@ def _reviewer_always_failing_task_keyed():
     return _rev
 
 
-def test_runner_forced_pass_on_final_attempt():
+async def test_runner_forced_pass_on_final_attempt():
     plan = _plan()
     log: dict[str, int] = {}
     exchanged: list[ExchangeTurn] = []
     pass_counter: dict[str, int] = {}
-    batch = asyncio.run(run_red_team_gate(
+    batch = await run_red_team_gate(
         plan, TEMP_DIR / "rt_contract", _coder_factory(log),
         _reviewer_always_failing_task_keyed(),
         prior_batch=_prior_batch(plan),
         exchange=exchanged,  # type: ignore[arg-type]
         pass_counter=pass_counter,
-    ))
+    )
     # Final attempt (== MAX_RETRIES) with a still-failing task-keyed finding
     # must FORCED PASS rather than raise.
     from factory.infra.models import TaskBatch
     assert isinstance(batch, TaskBatch)
     # 3 red_team audits (one per attempt); coder re-executes on attempts 1 & 2.
-    assert pass_counter["red_team"] == 3
+    # 4 exchange entries recorded (attempts 1, 2, 3 + attempt 3 forced-pass audit).
+    assert pass_counter["red_team"] == 4

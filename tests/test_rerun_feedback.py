@@ -179,7 +179,7 @@ def test_r1_rerun_brief_carries_prior_feedback_for_failing_task():
     assert "coder_1 violates import order" not in b_brief
 
 
-def test_r1_fallback_note_when_rerun_without_feedback():
+def test_r1_fallback_note_when_rerun_without_feedback(monkeypatch):
     """R1 fallback: a reopened task with no structured findings in the feedback
     map still gets a generic 'reopened, re-read your memory' note (not blind).
 
@@ -188,6 +188,8 @@ def test_r1_fallback_note_when_rerun_without_feedback():
     (correct) HARD FAIL on an unresolvable global blocker.
     """
     from factory.infra.runner import run_execute_phase
+    import factory.infra.runner as m
+    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
 
     plan = _plan()
     briefs: dict[str, str] = {}

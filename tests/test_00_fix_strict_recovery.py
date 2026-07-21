@@ -32,19 +32,10 @@ import json
 
 import pytest
 
-import subprocess as _subprocess
-
 # Stub the beads CLI (`./bd`) so the regression test never spawns a real
 # subprocess. The runner calls `subprocess.run(["./bd", ...])` for CQRS
 # claim/update/close; we must NOT let it block (no TTY / no real beads run).
-_real_subprocess_run = _subprocess.run
-
-
-def _stub_bd_run(*args, **kwargs):
-    return None
-
-
-_subprocess.run = _stub_bd_run
+# (This is globally handled in tests/conftest.py)
 
 from factory.infra import runner as _runner  # noqa: E402
 from factory.infra.control import TEMP_DIR  # noqa: E402

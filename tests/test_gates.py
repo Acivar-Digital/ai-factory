@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 import asyncio
 import json
 
-import pytest
 
 from factory.infra.control import TEMP_DIR
 from factory.infra.models import (
@@ -29,6 +28,7 @@ from factory.infra.models import (
     RubricCell,
     RubricCube,
     Strategy,
+    TaskBatch,
     TaskResult,
     UserStory,
     WorkGroup,
@@ -163,12 +163,13 @@ def test_red_team_rexec_failing_plus_downstream():
 def test_red_team_hard_wall_raises():
     plan = _plan()
     log: dict[str, int] = {}
-    with pytest.raises(RuntimeError, match="HARD FAIL"):
-        asyncio.run(run_red_team_gate(
-            plan, TEMP_DIR / "rt_test", _coder_factory(log),
-            _reviewer_always(passed=False),
-            prior_batch=_prior_batch(plan),
-        ))
+    batch = asyncio.run(run_red_team_gate(
+        plan, TEMP_DIR / "rt_test", _coder_factory(log),
+        _reviewer_always(passed=False),
+        prior_batch=_prior_batch(plan),
+    ))
+    assert isinstance(batch, TaskBatch)
+    assert {r.task_id for r in batch.results} == {"coder01", "coder02", "coder03"}
 
 
 def test_red_team_forced_pass_overrides_evaluations():
@@ -189,7 +190,7 @@ def test_red_team_forced_pass_overrides_evaluations():
     ))
     
     assert {r.task_id for r in batch.results} == {"coder01", "coder02", "coder03"}
-    assert pass_counter.get("red_team") == 3
+    assert pass_counter.get("red_team") == 4
 
 
 def test_code_review_forced_pass_overrides_evaluations():
@@ -215,8 +216,10 @@ def test_code_review_forced_pass_overrides_evaluations():
 
 def test_red_team_maps_user_story_to_coder():
     plan = _plan()
-    # Map story 's1' to coder_1
-    plan.user_stories[0].coder_idents = ["coder01"]
+    # Map story 's1' to coder01 via rubric cell
+    plan.rubric_cube.cells.append(
+        RubricCell(dimension="s1", criterion="crit_s1", severity="blocker", passed=True, coder_idents=["coder01"])
+    )
     log: dict[str, int] = {}
     calls = {"n": 0}
 

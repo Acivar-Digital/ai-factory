@@ -103,8 +103,11 @@ def test_real_source_paths_filters_derived_and_missing():
             _rm(real)
 
 
-def test_false_positive_plan_does_not_crash():
+def test_false_positive_plan_does_not_crash(monkeypatch):
     """A plan whose file_paths are all derived/staging paths must NOT raise."""
+    import factory.infra.runner as m
+    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
+
     g1 = WorkGroup(
         id="g1",
         tasks=[ApprovedTask(id="coder01", title="t1",

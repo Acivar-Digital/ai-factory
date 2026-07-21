@@ -18,7 +18,7 @@ def test_check_plan_invariants_valid():
     task1 = ApprovedTask(
         id="coder01",
         title="Task 1",
-        file_paths=["file1.py", "file2.py"],
+        file_paths=["file1.py"],
         instruction="Do something",
         acceptance="Acceptance",
         tool_preference="AST-edit",
@@ -62,7 +62,7 @@ def test_check_plan_invariants_valid():
 
 def test_check_plan_invariants_over_five_files():
     epic = Epic(title="Epic", deliverables=["d1"], must_be_pydantic=True)
-    task1 = ApprovedTask(
+    task1 = ApprovedTask.model_construct(
         id="coder01",
         title="Task 1",
         file_paths=["f1.py", "f2.py", "f3.py", "f4.py", "f5.py", "f6.py"],
@@ -71,12 +71,12 @@ def test_check_plan_invariants_over_five_files():
         tool_preference="AST-edit",
         evidence=[]
     )
-    group1 = WorkGroup(
+    group1 = WorkGroup.model_construct(
         id="group_1",
         tasks=[task1],
         depends_on=[]
     )
-    plan = ExecutablePlan(
+    plan = ExecutablePlan.model_construct(
         epic=epic,
         user_stories=[],
         definition_of_done=[],
@@ -85,14 +85,14 @@ def test_check_plan_invariants_over_five_files():
         summary="Summary",
         tasks=[task1],
         alignment="Alignment",
-        workplan=ParallelisableWorkplan(groups=[group1]),
+        workplan=ParallelisableWorkplan.model_construct(groups=[group1]),
         rejected_subtasks=[],
-        strategy=Strategy(how_to_fix="How to fix", tool_preference=[], parallelisable_workplan=ParallelisableWorkplan(groups=[group1])),
+        strategy=Strategy(how_to_fix="How to fix", tool_preference=[], parallelisable_workplan=ParallelisableWorkplan.model_construct(groups=[group1])),
         approved=True
     )
     violations = check_plan_invariants(plan)
     assert len(violations) == 1
-    assert "lists 6 files (>5 max)" in violations[0]
+    assert "lists 6 files (exactly 1 required)" in violations[0]
 
 def test_check_plan_invariants_collisions():
     epic = Epic(title="Epic", deliverables=["d1"], must_be_pydantic=True)

@@ -24,6 +24,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 import asyncio
 import json
+import subprocess
+
+_orig_run = subprocess.run
+def _mock_run(args, *args_, **kwargs):
+    if args and isinstance(args, list) and len(args) > 0 and "./bd" in str(args[0]):
+        class DummyCP:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return DummyCP()
+    return _orig_run(args, *args_, **kwargs)
+subprocess.run = _mock_run
+
+import factory.infra.runner as m
+m._write_harness_patches = lambda task_id, files, bd="": ([], 1)
 
 import pytest
 
@@ -55,14 +70,14 @@ def _plan() -> ExecutablePlan:
     g2 = WorkGroup(
         id="g2",
         depends_on=["g1"],
-        tasks=[ApprovedTask(id=f"coder_{i}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
+        tasks=[ApprovedTask(id=f"coder{i:02d}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
                             instruction=f"implement coder_{i}", acceptance=f"coder_{i} ok",
                             tool_preference="CLI-wrapper") for i in range(2, 7)],
         concurrent=True,
     )
     strat = Strategy(
         how_to_fix="x",
-        tool_preference={f"coder_{i}": "CLI-wrapper" for i in range(1, 7)},
+        tool_preference={f"coder{i:02d}": "CLI-wrapper" for i in range(1, 7)},
         parallelisable_workplan=ParallelisableWorkplan(groups=[g1, g2]),
     )
     return ExecutablePlan(
@@ -121,9 +136,9 @@ def test_spawn_all_when_prerequisite_blocked():
             _coder_block_first({"coder01"}, spawned),
         ))
     # All six coders spawned despite the prerequisite block.
-    assert set(spawned) == {f"coder_{i}" for i in range(1, 7)}
+    assert set(spawned) == {f"coder{i:02d}" for i in range(1, 7)}
     # The halt names only the incomplete task(s).
-    assert "[HALT] EXECUTE phase incomplete: coder_1" in str(exc.value)
+    assert "[HALT] EXECUTE phase incomplete: coder01" in str(exc.value)
 
 
 def test_halt_lists_all_incomplete_tasks():
@@ -135,7 +150,7 @@ def test_halt_lists_all_incomplete_tasks():
             plan, TEMP_DIR / "spawn_all_multi", asyncio.Semaphore(20),
             _coder_block_first({"coder01", "coder04", "coder06"}, spawned),
         ))
-    assert set(spawned) == {f"coder_{i}" for i in range(1, 7)}
+    assert set(spawned) == {f"coder{i:02d}" for i in range(1, 7)}
     msg = str(exc.value)
     assert "[HALT] EXECUTE phase incomplete:" in msg
     for tid in ("coder01", "coder04", "coder06"):
@@ -150,7 +165,7 @@ def test_no_halt_when_all_done():
         plan, TEMP_DIR / "spawn_all_ok", asyncio.Semaphore(20),
         _coder_record_spawn(spawned),
     ))
-    assert set(spawned) == {f"coder_{i}" for i in range(1, 7)}
+    assert set(spawned) == {f"coder{i:02d}" for i in range(1, 7)}
     assert all(r.status == "done" for r in results.values())
 
 
@@ -172,4 +187,4 @@ def test_halt_on_exception_mapping():
             throwing_coder_fn,
         ))
     msg = str(exc.value)
-    assert "[HALT] EXECUTE phase incomplete: coder_1" in msg
+    assert "[HALT] EXECUTE phase incomplete: coder01" in msg
