@@ -46,7 +46,7 @@ def test_path_normalization_deduplication():
     p = "factory/temp/src2/foo.py"
     assert normalize_read_path(normalize_read_path(p)) == normalize_read_path(p)
     # windows separators normalized
-    assert normalize_read_path("admin\\orchestrator\\temp\\src2\\foo.py") == "src2/foo.py"
+    assert normalize_read_path("factory\\temp\\src2\\foo.py") == "src2/foo.py"
 
 
 

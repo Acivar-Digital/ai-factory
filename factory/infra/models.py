@@ -174,6 +174,7 @@ class Strategy(BaseModel):  # Planner is the PM — emits this (Q2/Q8/Q9)
 
 class DraftPlan(BaseModel):
     epic: Epic
+    user_stories: list[UserStory] = Field(default_factory=list)
     definition_of_done: list[str]
     acceptance_criteria: list[str]
     rubric_cube: RubricCube

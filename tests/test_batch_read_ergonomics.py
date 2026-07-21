@@ -24,7 +24,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from factory.infra.tools import (
     _BATCH_READ_DEFAULT_HEAD,
@@ -74,15 +74,16 @@ def test_batch_read_missing_line_ranges_succeeds_bounded_head() -> None:
     # With no line_ranges, batch_read SUCCEEDS (returns content) and the
     # harness supplies --end-line 250 (read_file honoured via _run_tool in the
     # live path; here we assert the steer note + that no error is returned).
-    res = batch_read(["a.py"])
+    res = batch_read(["pyproject.toml"])
     assert "first" in res and str(_BATCH_READ_DEFAULT_HEAD) in res
     assert "line_ranges REQUIRED" not in res
+    assert "File not found" not in res
 
 
 def test_batch_read_comma_joined_range_still_rejected() -> None:
     # A malformed (comma-joined) range is still a hard error — only the
     # *missing* range case is forgiving, not a syntactically broken one.
-    res = batch_read(["a.py"], {"a.py": "400,600-650"})
+    res = batch_read(["pyproject.toml"], {"pyproject.toml": "400,600-650"})
     assert "malformed line_range" in res
 
 
@@ -101,7 +102,7 @@ async def test_missing_line_ranges_consumes_read_budget_as_success() -> None:
     # A call WITH paths but no line_ranges is a productive read (succeeds) and
     # SHOULD consume the productive read_budget, not the forgive counter.
     gt = _make_guard()
-    await gt.call_tool("batch_read", {"paths": ["a.py"]}, None, _FakeTool())
+    await gt.call_tool("batch_read", {"paths": ["pyproject.toml"]}, None, _FakeTool())
     assert gt._read_used == 1
     assert gt._read_forgive_used == 0
     assert len(gt.wrapped.calls) == 1
@@ -125,7 +126,7 @@ async def test_forgive_then_recover_with_valid_call() -> None:
         await gt.call_tool("batch_read", {"paths": []}, None, _FakeTool())
     assert gt._read_used == 0
     await gt.call_tool(
-        "batch_read", {"paths": ["a.py"], "line_ranges": {"a.py": "1-10"}}, None, _FakeTool()
+        "batch_read", {"paths": ["pyproject.toml"], "line_ranges": {"pyproject.toml": "1-10"}}, None, _FakeTool()
     )
     assert gt._read_used == 1
     assert len(gt.wrapped.calls) == 1

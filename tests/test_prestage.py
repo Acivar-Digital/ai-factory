@@ -72,13 +72,13 @@ def test_stage_workspace_from_draft(tmp_path, monkeypatch):
         strategy=Strategy(
             how_to_fix="x",
             tool_preference=[{"task_id": "coder01", "preference": "AST-edit"}],
-            parallelisable_workplan=ParallelisableWorkplan(
+            parallelisable_workplan=ParallelisableWorkplan.model_construct(
                 groups=[
-                    WorkGroup(
+                    WorkGroup.model_construct(
                         id="group_1",
                         depends_on=[],
                         tasks=[
-                            ApprovedTask(
+                            ApprovedTask.model_construct(
                                 id="coder01",
                                 title="Edit test module",
                                 file_paths=["src2/engine/module_test.py", "factory/temp/patch_test.diff"],
@@ -110,6 +110,6 @@ def test_stage_workspace_from_draft(tmp_path, monkeypatch):
     assert copied_src.read_text(encoding="utf-8") == "print('hello')"
 
     # 2. Proposed new deliverable is touched as a 0-byte file
-    touched_diff = tmp_path / "admin" / "orchestrator" / "temp" / "patch_test.diff"
+    touched_diff = tmp_path / "factory/temp" / "patch_test.diff"
     assert touched_diff.exists()
     assert touched_diff.stat().st_size == 0

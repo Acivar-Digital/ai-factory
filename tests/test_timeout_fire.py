@@ -39,21 +39,21 @@ def _plan() -> ExecutablePlan:
     g1 = WorkGroup(
         id="g1",
         tasks=[ApprovedTask(id="coder01", title="t1", file_paths=["src2/a.py"],
-                            instruction="implement coder_1", acceptance="coder_1 ok",
+                            instruction="implement coder01", acceptance="coder01 ok",
                             tool_preference="CLI-wrapper")],
         concurrent=True,
     )
     g2 = WorkGroup(
         id="g2",
         depends_on=["g1"],
-        tasks=[ApprovedTask(id=f"coder_{i}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
-                            instruction=f"implement coder_{i}", acceptance=f"coder_{i} ok",
+        tasks=[ApprovedTask(id=f"coder{i:02d}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
+                            instruction=f"implement coder{i:02d}", acceptance=f"coder{i:02d} ok",
                             tool_preference="CLI-wrapper") for i in range(2, 5)],
         concurrent=True,
     )
     strat = Strategy(
         how_to_fix="x",
-        tool_preference={f"coder_{i}": "CLI-wrapper" for i in range(1, 5)},
+        tool_preference={f"coder{i:02d}": "CLI-wrapper" for i in range(1, 5)},
         parallelisable_workplan=ParallelisableWorkplan(groups=[g1, g2]),
     )
     return ExecutablePlan(
@@ -82,11 +82,11 @@ def test_per_task_timeout_fires_at_one_second(monkeypatch):
     async def hang_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         if tid == "coder01":
-            await asyncio.sleep(60.0)
+            await asyncio.sleep(2.0)
         return json.dumps({"status": "done", "task_id": tid, "files_changed": [],
                            "diff_summary": "", "notes": ""})
 
-    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*coder_1"):
+    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*coder01"):
         asyncio.run(run_execute_phase(
             _plan(), TEMP_DIR / "timeout_fire_task", asyncio.Semaphore(20), hang_coder_fn,
         ))
@@ -107,11 +107,11 @@ def test_dependent_group_timeout_fires_at_one_second(monkeypatch):
     async def hang_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         if tid == "coder02":  # lives in the dependent group g2
-            await asyncio.sleep(60.0)
+            await asyncio.sleep(2.0)
         return json.dumps({"status": "done", "task_id": tid, "files_changed": [],
                            "diff_summary": "", "notes": ""})
 
-    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*coder_2"):
+    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*coder02"):
         asyncio.run(run_execute_phase(
             _plan(), TEMP_DIR / "timeout_fire_dep", asyncio.Semaphore(20), hang_coder_fn,
         ))

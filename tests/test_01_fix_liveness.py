@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import asyncio
 import json
@@ -50,7 +50,7 @@ def _plan() -> ExecutablePlan:
     )
     strat = Strategy(
         how_to_fix="x",
-        tool_preference={f"coder_{i}": "CLI-wrapper" for i in range(1, 5)},
+        tool_preference={f"coder0{i}": "CLI-wrapper" for i in range(1, 5)},
         parallelisable_workplan=ParallelisableWorkplan(groups=[g1, g2]),
     )
     return ExecutablePlan(
@@ -85,6 +85,7 @@ def test_slow_legitimate_group_does_not_crash(monkeypatch):
     import factory.infra.runner as m
     monkeypatch.setattr(m, "DAG_DEADLOCK_TIMEOUT", 0.5)
     monkeypatch.setattr(m, "AGENT_RUN_TIMEOUT", 5.0)
+    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
 
     async def slow_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
@@ -95,7 +96,7 @@ def test_slow_legitimate_group_does_not_crash(monkeypatch):
         _plan(), TEMP_DIR / "01fix_slow", asyncio.Semaphore(20), slow_coder_fn,
     ))
     assert all(r.status == "done" for r in results.values())
-    assert {f"coder_{i}" for i in range(1, 5)} == set(results.keys())
+    assert {f"coder0{i}" for i in range(1, 5)} == set(results.keys())
 
 
 # ---- Fix 2: Per-task timeout ----
@@ -109,16 +110,19 @@ def test_hung_coder_times_out_and_is_blocked(monkeypatch):
     async def hang_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         if tid == "coder01":
-            await asyncio.sleep(30.0)
+            await asyncio.sleep(2.0)
         return json.dumps({"status": "done", "task_id": tid, "files_changed": [], "diff_summary": "", "notes": ""})
 
-    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*coder_1"):
+    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*coder01"):
         asyncio.run(run_execute_phase(
             _plan(), TEMP_DIR / "01fix_hang", asyncio.Semaphore(20), hang_coder_fn,
         ))
 
 
-def test_all_done_no_timeout():
+def test_all_done_no_timeout(monkeypatch):
+    import factory.infra.runner as m
+    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
+
     async def quick_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         return json.dumps({"status": "done", "task_id": tid, "files_changed": [], "diff_summary": "", "notes": ""})

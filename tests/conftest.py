@@ -7,6 +7,7 @@ real repo. See infra/testing_framework.md §GOLD TEST SUITE.
 from __future__ import annotations
 
 import sys
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -14,6 +15,36 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import pytest  # noqa: E402
+
+_real_subprocess_run = subprocess.run
+
+def _stub_bd_run(args, **kwargs):
+    is_bd = False
+    if args:
+        if isinstance(args, list):
+            first = str(args[0])
+            if first == "./bd" or first.endswith("/bd") or "bd" in first:
+                if "pytest" not in first and "python" not in first and "ruff" not in first and "pyright" not in first:
+                    is_bd = True
+            elif len(args) > 2 and args[0] == "uv" and args[1] == "run":
+                for arg in args[2:]:
+                    s = str(arg)
+                    if s == "./bd" or s.endswith("/bd") or "/bd" in s:
+                        is_bd = True
+                        break
+        elif isinstance(args, str):
+            if args.startswith("./bd") or " bd " in args or "/bd " in args:
+                is_bd = True
+    if is_bd:
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout="",
+            stderr=""
+        )
+    return _real_subprocess_run(args, **kwargs)
+
+subprocess.run = _stub_bd_run
 
 from factory.infra import _loopguard as loopguard_mod  # noqa: E402
 from factory.infra import control as ctrl  # noqa: E402

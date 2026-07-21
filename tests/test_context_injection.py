@@ -39,6 +39,7 @@ from factory.infra.runner import (
     _stage_copies,
     estimate_task_tokens,
     run_execute_phase,
+    stage_path,
     stage_paths,
     task_context_tier,
 )
@@ -70,11 +71,19 @@ def _plan_with(tasks) -> ExecutablePlan:
 
 def _monkeypatch_repo(tmp_path, monkeypatch):
     """Point the modules' REPO_ROOT at tmp_path so relative file_paths resolve."""
+    import shutil
     import factory.infra.control as ctrl
     import factory.infra.runner as runner_mod
 
     monkeypatch.setattr(runner_mod, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(ctrl, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(runner_mod, "TEMP_DIR", tmp_path / "temp")
+    monkeypatch.setattr(ctrl, "TEMP_DIR", tmp_path / "temp")
+
+    tools_src = Path(__file__).resolve().parents[1] / "factory" / "tools"
+    tools_dst = tmp_path / "factory" / "tools"
+    if tools_src.exists() and not tools_dst.exists():
+        shutil.copytree(tools_src, tools_dst)
 
 
 # ── unit: token calculator ────────────────────────────────────────────────
@@ -133,15 +142,15 @@ def test_build_tier_b_map_lists_symbols(tmp_path, monkeypatch):
 # ── integration: Tier B brief is injected, no halt ────────────────────────
 def test_tier_b_injects_map_without_halt(tmp_path, monkeypatch):
     _monkeypatch_repo(tmp_path, monkeypatch)
+    import factory.infra.runner as runner_mod
+    monkeypatch.setattr(runner_mod, "TASK_TOKEN_THRESHOLD", 10_000)
     # Tier B triggers when a task's TOTAL tokens exceed TASK_TOKEN_THRESHOLD
-    # (100K) but NO single file exceeds TIER_B_SLICE_THRESHOLD (100K). Use three
-    # moderate files (~40K tokens each -> ~120K total, each < 100K).
+    # (10K) but the single file does not exceed TIER_B_SLICE_THRESHOLD (100K).
     paths = []
-    for i in range(3):
-        f = tmp_path / "src2" / f"mod{i}.py"
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(("x = 1\n" * 20_000), encoding="utf-8")
-        paths.append(f"src2/mod{i}.py")
+    f = tmp_path / "src2" / "mod0.py"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(("x = 1\n" * 5_000), encoding="utf-8")
+    paths.append("src2/mod0.py")
     assert task_context_tier(paths) == "B"
     task = ApprovedTask(id="coder01", title="t1", file_paths=paths,
                         instruction="edit modules", acceptance="ok",
@@ -151,8 +160,11 @@ def test_tier_b_injects_map_without_halt(tmp_path, monkeypatch):
 
     async def coder_fn(brief: str, task_id: str | None = None) -> str:
         spawned[task_id or "coder01"] = brief
+        staged_file = Path(stage_path("src2/mod0.py"))
+        if staged_file.exists():
+            staged_file.write_text(staged_file.read_text(encoding="utf-8") + "\n# edit\n", encoding="utf-8")
         return json.dumps({"status": "done", "task_id": task_id or "coder01",
-                            "files_changed": [], "diff_summary": "", "notes": ""})
+                            "files_changed": ["src2/mod0.py"], "diff_summary": "edited mod0.py", "notes": ""})
 
     asyncio.run(run_execute_phase(plan, TEMP_DIR / "tier_b", asyncio.Semaphore(5), coder_fn))
     brief = spawned["coder01"]
