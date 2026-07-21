@@ -43,23 +43,30 @@ def extract_pattern_context(lines: list[str], pattern: str) -> str:
     if not matches:
         return f"No matches found for pattern: {pattern}"
 
-    extracted_blocks = []
-    visited_lines = set()
-
+    ranges = []
     for m_idx in matches:
         start = max(0, m_idx - 5)
         end = min(len(lines), m_idx + 10)
+        ranges.append((start, end))
 
+    merged_ranges = []
+    current_start, current_end = ranges[0]
+    for start, end in ranges[1:]:
+        if start <= current_end:
+            current_end = max(current_end, end)
+        else:
+            merged_ranges.append((current_start, current_end))
+            current_start, current_end = start, end
+    merged_ranges.append((current_start, current_end))
+
+    extracted_blocks = []
+    match_set = set(matches)
+    for start, end in merged_ranges:
         block = []
         for idx in range(start, end):
-            if idx in visited_lines:
-                continue
-            visited_lines.add(idx)
-            prefix = ">>> " if idx == m_idx else "    "
+            prefix = ">>> " if idx in match_set else "    "
             block.append(f"{idx + 1}:{prefix}{lines[idx]}")
-
-        if block:
-            extracted_blocks.append("\n".join(block))
+        extracted_blocks.append("\n".join(block))
 
     return "\n\n--- Context Match ---\n\n".join(extracted_blocks)
 
@@ -121,7 +128,11 @@ def main():
     if tokens > 12000:
         print(f"⚠️ Warning: Context segment is too large ({tokens} est. tokens). Truncating context to fit 12K limits.")
         # Slice characters to safely fit
-        code_segment = code_segment[:int(12000 * 3.8)] + "\n... [Context truncated due to 12K limit] ..."
+        limit = int(12000 * 3.8)
+        truncate_idx = code_segment.rfind('\n', 0, limit)
+        if truncate_idx == -1:
+            truncate_idx = limit
+        code_segment = code_segment[:truncate_idx] + "\n... [Context truncated due to 12K limit] ..."
 
     # Set up codebase model (sandboxed: CONTROL_SHEET["codebase_model"])
     model = CONTROL_SHEET.model("codebase_model")
