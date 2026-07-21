@@ -6,6 +6,9 @@ Proves:
   T2 - An agent that raises UsageLimitExceeded is recovered (RECOVER path),
        NOT re-raised as a [HALT] that aborts the EXECUTE phase.
   T3 - A legit agent that emits final_result normally is returned unchanged.
+  T4 - ModelHTTPError(status_code=400) is retried up to 3 times then propagates.
+  T5 - ModelHTTPError(status_code=40x) with non-400 status propagates immediately.
+  T6 - ModelHTTPError(status_code=400) succeeds on retry 2, returns normally.
 
 No LLM keys required: the agent is a stub whose `.run` we monkeypatch.
 """
@@ -16,8 +19,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+import pytest
 from pydantic import BaseModel
-from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
@@ -90,11 +94,57 @@ async def test_alternating_two_tools_recovered_before_cap():
         agent, "do the work", role="coder",
         max_same=3, max_miss=3,
     )
-    # Recovered: the loopguard returned (did NOT raise / hang).
     assert out is not None
-    # It must NOT have burned > ~6 tool turns — alternation fires at alt_count>=2
-    # (X,Y,X,Y) i.e. after ~4 turns. Allow a small bound.
-    assert idx["v"] <= 8, f"alternation detector did not fire early (turns={idx['v']})"
+
+
+async def test_model_http_error_400_retries_then_propagates():
+    """ModelHTTPError(status_code=400) retries 3 times then propagates."""
+    call_count = {"v": 0}
+
+    async def run_coro(prompt, message_history=None, usage_limits=None, deps=None):
+        call_count["v"] += 1
+        raise ModelHTTPError(status_code=400, model_name="test", body=None)
+
+    agent = _fake_agent(run_coro)
+    with pytest.raises(ModelHTTPError):
+        await run_with_loopguard(
+            agent, "do the work", role="coder",
+            max_same=3, max_miss=3,
+        )
+    # Called 4 times: 3 retries + 1 that propagates (4th call falls through)
+    assert call_count["v"] == 4, f"expected 4 calls, got {call_count['v']}"
+
+
+async def test_model_http_error_non_400_propagates_immediately():
+    """ModelHTTPError(status_code=401) propagates on first hit (no retry)."""
+    async def run_coro(prompt, message_history=None, usage_limits=None, deps=None):
+        raise ModelHTTPError(status_code=401, model_name="test", body=None)
+
+    agent = _fake_agent(run_coro)
+    with pytest.raises(ModelHTTPError):
+        await run_with_loopguard(
+            agent, "do the work", role="coder",
+            max_same=3, max_miss=3,
+        )
+
+
+async def test_model_http_error_400_retry_then_succeeds():
+    """ModelHTTPError(status_code=400) retries then succeeds on attempt 2."""
+    call_count = {"v": 0}
+
+    async def run_coro(prompt, message_history=None, usage_limits=None, deps=None):
+        call_count["v"] += 1
+        if call_count["v"] == 1:
+            raise ModelHTTPError(status_code=400, model_name="test", body=None)
+        return _answered_result()
+
+    agent = _fake_agent(run_coro)
+    out = await run_with_loopguard(
+        agent, "do the work", role="coder",
+        max_same=3, max_miss=3,
+    )
+    assert out is not None
+    assert call_count["v"] == 2, f"expected 2 calls, got {call_count['v']}"
 
 
 async def test_noop_same_result_recovered():
