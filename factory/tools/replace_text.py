@@ -72,8 +72,10 @@ def main():
         else:
             target = args.target_text
             if args.ignore_whitespace:
-                target = re.sub(r"\s+", r"\\s+", re.escape(target))
-                new_text, n = re.subn(target, args.replacement_text, old_text)
+                chunks = re.split(r"\s+", target)
+                target = r"\s+".join(re.escape(c) for c in chunks)
+                flags = re.IGNORECASE if args.case_insensitive else 0
+                new_text, n = re.subn(target, args.replacement_text, old_text, flags=flags)
             else:
                 if args.case_insensitive:
                     n = old_text.lower().count(target.lower())
