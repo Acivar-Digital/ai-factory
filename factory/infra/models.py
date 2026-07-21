@@ -134,7 +134,6 @@ class WorkGroup(BaseModel):
     id: str
     depends_on: list[str] = []  # empty = MECE; else dependent (C=A+C)
     tasks: list[ApprovedTask] = Field(min_length=1)  # Planner asserts these are file-disjoint
-    concurrent: bool = True
 
 
 class ParallelisableWorkplan(BaseModel):

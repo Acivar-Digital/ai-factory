@@ -45,10 +45,9 @@ async def run_execute_phase(
 
     - Topologically ordered via per-group asyncio.Event gating on depends_on.
     - Tasks within a group ALWAYS run concurrently via asyncio.gather, bounded
-      by `sem`.  The group-level `concurrent` flag is IGNORED during execution:
-      if the Planner needs sequential ordering it must put tasks in separate
-      groups chained via depends_on — that is the ONLY supported gating
-      mechanism.  Addressed user complaint 'not spawning agents based on DAG'.
+      by `sem`.  If the Planner needs sequential ordering it must put tasks
+      in separate groups chained via depends_on — that is the ONLY supported
+      gating mechanism.
     - `prior` + `rerun_ids` enable surgical re-execution: only tasks whose id is
       in `rerun_ids` are re-run; others are copied from `prior`.
     - `feedback` (optional) is a task_id -> prior-review/audit findings text map.
@@ -63,35 +62,53 @@ async def run_execute_phase(
             if d not in groups:
                 raise RuntimeError(f"[DAG] group {g.id!r} depends on unknown group {d!r}")
     for g in workplan.groups:
-        if g.concurrent:
-            seen_paths: set[tuple[str, ...]] = set()
-            for t in g.tasks:
-                key = tuple(sorted(_real_source_paths(t.file_paths)))
-                # A task with no REAL source files has nothing to race on; do
-                # not let the empty tuple collide across tasks (vw4dd).
-                if not key:
-                    continue
-                if key in seen_paths:
-                    raise RuntimeError(
-                        f"[DAG] group {g.id!r} is NOT file-disjoint "
-                        f"(shared {sorted(key)}) — violates Planner claim"
-                    )
-                seen_paths.add(key)
-    # P0 zu9u (H8): cross-group disjointness. Groups run concurrently via
-    # asyncio.gather below, so two DIFFERENT groups sharing a file can race.
-    # Intra-group assert above is insufficient — assert globally here.
+        seen_paths: set[tuple[str, ...]] = set()
+        for t in g.tasks:
+            key = tuple(sorted(_real_source_paths(t.file_paths)))
+            # A task with no REAL source files has nothing to race on; do
+            # not let the empty tuple collide across tasks (vw4dd).
+            if not key:
+                continue
+            if key in seen_paths:
+                raise RuntimeError(
+                    f"[DAG] group {g.id!r} is NOT file-disjoint "
+                    f"(shared {sorted(key)}) — violates Planner claim"
+                )
+            seen_paths.add(key)
+    # P0 zu9u (H8): cross-group disjointness. Groups NOT in a depends_on chain
+    # run concurrently via asyncio.gather below, so concurrent groups sharing a
+    # file can race.  Groups in a depends_on chain run sequentially and may
+    # safely share files (e.g. a dependent group refactoring the same file).
+    # Intra-group assert above is insufficient — assert globally here, but skip
+    # pairs where one depends_on the other (directly or transitively).
     # NOTE: this is a PLANNER-CONTRACT violation surfaced fail-loudly — not a
     # runtime patch. The planner owns parallelism; we do not silently reorder.
+    _dep_map: dict[str, set[str]] = {}
+    for g in workplan.groups:
+        gdeps: set[str] = set(g.depends_on)
+        changed = True
+        while changed:
+            changed = False
+            for d in list(gdeps):
+                for dd in _dep_map.get(d, set()):
+                    if dd not in gdeps:
+                        gdeps.add(dd)
+                        changed = True
+        _dep_map[g.id] = gdeps
     _all_paths: dict[str, str] = {}  # file_path -> group_id (first owner)
     for g in workplan.groups:
         for t in g.tasks:
             for fp in _real_source_paths(t.file_paths):
                 owner = _all_paths.get(fp)
                 if owner is not None and owner != g.id:
-                    raise RuntimeError(
-                        f"[DAG] cross-group file overlap: {fp} appears in multiple "
-                        f"groups ({owner!r} and {g.id!r}) — violates concurrency safety"
-                    )
+                    # Allow file sharing ONLY if groups are in a depends_on chain
+                    owner_is_predecessor = owner in _dep_map.get(g.id, set())
+                    g_is_predecessor = g.id in _dep_map.get(owner, set())
+                    if not (owner_is_predecessor or g_is_predecessor):
+                        raise RuntimeError(
+                            f"[DAG] cross-group file overlap: {fp} appears in multiple "
+                            f"groups ({owner!r} and {g.id!r}) — violates concurrency safety"
+                        )
                 _all_paths[fp] = g.id
     group_events = {gid: asyncio.Event() for gid in groups}
     group_done: dict[str, bool] = {}
@@ -608,8 +625,17 @@ async def run_execute_phase(
                         f"[HALT] prerequisite group {d!r} completed but never signaled "
                         f"its completion event (dependency deadlock bug)"
                     )
-                # Prerequisite is still legitimately working — wait indefinitely.
-                await group_events[d].wait()
+                # Prerequisite is still legitimately working — wait with secondary
+                # timeout so we don't hang forever on a silent crash.
+                try:
+                    await asyncio.wait_for(
+                        group_events[d].wait(), timeout=DAG_DEADLOCK_TIMEOUT * 2
+                    )
+                except TimeoutError:
+                    raise RuntimeError(
+                        f"[HALT] prerequisite group {d!r} did not complete after "
+                        f"{DAG_DEADLOCK_TIMEOUT * 2:.0f}s secondary timeout"
+                    )
         if rerun_ids is None:
             # Fresh run when no prior exists; adopt prior verbatim (no re-exec)
             # when a prior batch is supplied (e.g. the red-team gate auditing an
@@ -621,9 +647,6 @@ async def run_execute_phase(
             group_events[g.id].set()
             group_done[g.id] = True
             return
-        # ALWAYS concurrent dispatch — the `concurrent` flag on WorkGroup is
-        # logged but NOT obeyed.  Sequential tasks must be in separate groups
-        # chained via `depends_on`.
         task_labels = ", ".join(t.id for t in to_run[:5])
         if len(to_run) > 5:
             task_labels += f" … ({len(to_run)} total)"
@@ -663,7 +686,7 @@ async def run_execute_phase(
         group_events[g.id].set()
         group_done[g.id] = True
 
-    _concurrent = sum(1 for g in workplan.groups if getattr(g, "concurrent", True))
+    _concurrent = sum(1 for g in workplan.groups if not g.depends_on)
     _sequential = len(workplan.groups) - _concurrent
     print(
         f"[DAG] planner topology: concurrent_groups={_concurrent} "

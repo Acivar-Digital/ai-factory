@@ -28,7 +28,7 @@ instructions: |
         tool_preference bucket ("AST-edit" | "CLI-wrapper" | "python-first-then-agent").
       - Build the Strategy block: how_to_fix (the technical approach), tool_preference
         (task_id -> bucket), and parallelisable_workplan (a DAG of WorkGroups with
-        depends_on + concurrent flags).
+        depends_on flags).
       - Assert file-disjointness: tasks within the same WorkGroup MUST NOT touch the
         same file. This is a hard contract the runner enforces — violate it and the
         run HALTS.
@@ -224,8 +224,7 @@ instructions: |
                   "approved": "bool",
                   "notes": "str"
                 }
-              ],
-              "concurrent": "bool"
+              ]
             }
           ]
         }

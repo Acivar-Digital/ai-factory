@@ -116,7 +116,6 @@ def test_false_positive_plan_does_not_crash(monkeypatch):
         tasks=[ApprovedTask(id="coder01", title="t1",
                             file_paths=["factory/temp/src2/core/schemas/unified_patch.py"],
                             instruction="i", acceptance="a", tool_preference="CLI-wrapper")],
-        concurrent=True,
     )
     g2 = WorkGroup(
         id="g2",
@@ -124,7 +123,6 @@ def test_false_positive_plan_does_not_crash(monkeypatch):
         tasks=[ApprovedTask(id="coder02", title="t2",
                             file_paths=["src2/does_not_exist.py"],
                             instruction="i", acceptance="a", tool_preference="CLI-wrapper")],
-        concurrent=True,
     )
     plan = _plan_with([g1, g2])
     # Must NOT raise RuntimeError([DAG] ...).
@@ -135,21 +133,19 @@ def test_false_positive_plan_does_not_crash(monkeypatch):
 
 
 def test_true_positive_real_overlap_still_halts():
-    """Two concurrent groups sharing a REAL existing src2/ file MUST HALT."""
+    """Two concurrent groups (no depends_on) sharing a REAL src2/ file MUST HALT."""
     shared = _make_real_src2("src2/_vw4dd_shared.py")
     try:
         g1 = WorkGroup(
             id="g1",
             tasks=[ApprovedTask(id="coder01", title="t1", file_paths=["src2/_vw4dd_shared.py"],
                                 instruction="i", acceptance="a", tool_preference="CLI-wrapper")],
-            concurrent=True,
         )
         g2 = WorkGroup(
             id="g2",
-            depends_on=["g1"],
+            # No depends_on — genuinely concurrent with g1, so file overlap is unsafe
             tasks=[ApprovedTask(id="coder02", title="t2", file_paths=["src2/_vw4dd_shared.py"],
                                 instruction="i", acceptance="a", tool_preference="CLI-wrapper")],
-            concurrent=True,
         )
         plan = _plan_with([g1, g2])
         with tempfile.TemporaryDirectory() as d:
@@ -159,5 +155,34 @@ def test_true_positive_real_overlap_still_halts():
                 raise AssertionError("expected [DAG] cross-group file overlap RuntimeError")
             except RuntimeError as e:
                 assert "cross-group file overlap" in str(e)
+    finally:
+        _rm(shared)
+
+
+def test_depends_on_chain_allows_file_overlap(monkeypatch):
+    """Sequential groups in a depends_on chain MAY share a file."""
+    monkeypatch.setattr(
+        "factory.infra.execution._write_harness_patches",
+        lambda task_id, files, bd="": ([], 1),
+    )
+    shared = _make_real_src2("src2/_vw4dd_chain_overlap.py")
+    try:
+        g1 = WorkGroup(
+            id="g1",
+            tasks=[ApprovedTask(id="coder01", title="t1", file_paths=["src2/_vw4dd_chain_overlap.py"],
+                                instruction="i", acceptance="a", tool_preference="CLI-wrapper")],
+        )
+        g2 = WorkGroup(
+            id="g2",
+            depends_on=["g1"],
+            tasks=[ApprovedTask(id="coder02", title="t2", file_paths=["src2/_vw4dd_chain_overlap.py"],
+                                instruction="i", acceptance="a", tool_preference="CLI-wrapper")],
+        )
+        plan = _plan_with([g1, g2])
+        with tempfile.TemporaryDirectory() as d:
+            # Must NOT raise — g2 runs after g1, no race condition
+            results = asyncio.run(run_execute_phase(
+                plan, Path(d) / "run", asyncio.Semaphore(20), _stub_coder_fn))
+        assert set(results) == {"coder01", "coder02"}
     finally:
         _rm(shared)

@@ -260,7 +260,7 @@ def build_coder_brief(task: ApprovedTask, plan: ApprovedPlan) -> str:
         for g in plan.workplan.groups:
             deps = ",".join(g.depends_on) if g.depends_on else "MECE"
             task_ids = ",".join(t.id for t in g.tasks)
-            out.append(f"  - {g.id} [concurrent={g.concurrent}, depends_on={deps}] tasks={task_ids}")
+            out.append(f"  - {g.id} [depends_on={deps}] tasks={task_ids}")
     else:
         out.append("groups: (none)")
 

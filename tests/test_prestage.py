@@ -93,7 +93,6 @@ def test_stage_workspace_from_draft(tmp_path, monkeypatch):
                                 notes=""
                             )
                         ],
-                        concurrent=True
                     )
                 ]
             )

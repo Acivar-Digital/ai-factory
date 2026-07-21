@@ -71,7 +71,6 @@ def _plan(single: bool = True) -> ExecutablePlan:
         tasks=[ApprovedTask(id="coder01", title="t1", file_paths=["src2/a.py"],
                             instruction="implement coder01", acceptance="coder01 ok",
                             tool_preference="CLI-wrapper")],
-        concurrent=True,
     )
     groups = [g1]
     if not single:
@@ -81,7 +80,6 @@ def _plan(single: bool = True) -> ExecutablePlan:
             tasks=[ApprovedTask(id=f"coder{i:02d}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
                                 instruction=f"implement coder{i:02d}", acceptance=f"coder{i:02d} ok",
                                 tool_preference="CLI-wrapper") for i in range(2, 7)],
-            concurrent=True,
         )
         groups.append(g2)
     strat = Strategy(
