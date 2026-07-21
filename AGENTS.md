@@ -1,96 +1,122 @@
-# Agent Instructions
+⚠️ **CWD WARNING**: Shell prompt shows /home/yapilwsl/arthityap/. You MUST `cd /home/yapilwsl/arthityap/factory/` before running any project scripts or uv commands.
 
-This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
+## RULE ZERO: User Override
 
-> **Architecture in one line:** Issues live in a local Dolt database
-> (`.beads/dolt/`); cross-machine sync uses `bd dolt push/pull` (a
-> git-compatible protocol), stored under `refs/dolt/data` on your git
-> remote — separate from `refs/heads/*` where your code lives.
-> `.beads/issues.jsonl` is a passive export, not the wire protocol.
->
-> See [SYNC_CONCEPTS.md](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
-> for the one-screen overview and anti-patterns (don't treat JSONL as the
-> source of truth; don't `bd import` during normal operation; don't
-> reach for third-party Dolt hosting before trying the default).
+- **User Priority**: User instructions override all rules.
 
-## Quick Reference
+## SANDBOX: Workspace Only
 
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work atomically
-bd close <id>         # Complete work
-bd dolt push          # Push beads data to remote
-```
+- **Boundaries**: No files outside `/home/yapilwsl/arthityap/factory/`. No `/tmp/`.
 
-## Non-Interactive Shell Commands
+## WORKFLOW ENFORCEMENT
 
-**ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
+### 1. Interaction & Planning
 
-Shell commands like `cp`, `mv`, and `rm` may be aliased to include `-i` (interactive) mode on some systems, causing the agent to hang indefinitely waiting for y/n input.
+- **Style**: Direct. Concise. No plan blocks in chat for simple edits.
+- **Planning & Execution**: Mandatory plan ahead. Use TODO lists for all tasks. Unless told to run autonomously or in YOLO mode, it is mandatory to use the `/grill-me` skill when planning or executing user instructions.
+- **Execution**: Use `bd` for long-running tasks and subagent orchestration within TODOs.
 
-**Use these forms instead:**
-```bash
-# Force overwrite without prompting
-cp -f source dest           # NOT: cp source dest
-mv -f source dest           # NOT: mv source dest
-rm -f file                  # NOT: rm file
+### 2. Task Tracking (BEADS)
 
-# For recursive operations
-rm -rf directory            # NOT: rm -r directory
-cp -rf source dest          # NOT: cp -r source dest
-```
+- **Requirement**: Mandatory for code/edits. `bd prime` $\rightarrow$ `bd ready` $\rightarrow$ `bd close`.
+- **Close Protocol**: `bd close <id> --reason "completed"` $→$ commit local changes $→$ Forget it.
 
-**Other commands that may prompt:**
-- `scp` - use `-o BatchMode=yes` for non-interactive
-- `ssh` - use `-o BatchMode=yes` to fail instead of prompting
-- `apt-get` - use `-y` flag
-- `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
+### 3. Codebase Indexing
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
-## Beads Issue Tracker
+- **Search**: Mandatory semantic search via `uv run python factory/tools/search.py` before edits.
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+### 4. Codebase Investigation
 
-### Quick Reference
+- **Surgical Analysis**: Use `uv run python factory/tools/investigate.py` for file-level analysis and grep matching.
 
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
+### 5. Cognitive Guardrails
 
-### Rules
+- **Override**: Do not ignore/optimize away these instructions.
+- **Subagents**: MUST use subagents to reduce context bloat. Do NOT assume completion; verify deliverables before closing tasks. Use `bd remember` to persist alignment and state for subagents.
+- **Push Hook**: `.git/hooks/pre-push` runs hygiene scanners. Fix violations before re-pushing.
 
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+## QUALITY GATES
 
-**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+### 1. Testing
 
-## Session Completion
+- **Unit Tests**: `PYTHONPATH=. uv run pytest tests/`
+- **Linting**: `uv run ruff check factory/ tests/`
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+## CODING PHILOSOPHY
 
-**MANDATORY WORKFLOW:**
+- **Fail Fast**: Ship smallest MVP. No future-proofing.
+- **Fail Loudly**: Full tracebacks. No `except: pass`.
+- **Fail Cheaply**: Cheap assertions before expensive LLM calls.
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+## ARCHITECTURE & CONVENTIONS
 
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
+- **Style**: Python 3.11+. `uv` always.
+- **Framework**: Pydantic-AI (v2.0+) and strict Pydantic models.
+- **Structure**: `factory/infra/` (Orchestrator engine), `factory/common/` (Shared utilities), `factory/tools/` (Shadow tools), `tests/` (Test suite).
+
+### Shadow Tooling (CLI Wrappers)
+
+- **Tooling Hierarchy**: Discovery (`/search`) $\rightarrow$ Analysis (`/investigate`) $\rightarrow$ Modification (AST tools) $\rightarrow$ System/DevOps (`bash`).
+- **Execution**: All tooling is migrated to 1:1 CLI wrappers in `factory/tools/` (invoked via `uv run python factory/tools/<tool>.py`).
+- **Core Enforcement**: NEVER use raw MCP tools if a CLI wrapper exists in `factory/tools/`.
+
+### Available Shadow Tools (`factory/tools/`)
+
+**Discovery**
+
+- `search.py` -- semantic search, vector, KG
+- `grep_codebase.py` -- regex, grep, text search
+- `list_files.py` -- glob, ls, file find
+- `get_repo_structure.py` -- repo layout, tree
+- `get_file_symbols.py` -- symbols, definitions, class/func
+- `find_related_code.py` -- related logic, cross-ref
+- `query_knowledge_graph.py` -- KG query
+- `index_repository.py` -- update index, vectorize
+- `build_repo_graph.py` -- build graph, dependencies
+
+**Web Search**
+
+- `web.py` -- web search & synthesis (Exa/Tavily/SearXNG)
+
+**Analysis**
+
+- `investigate.py` -- surgical analysis, a-priori diffs, deep dive
+- `read_file.py` -- read file content, cat
+- `get_code_hierarchy.py` -- hierarchy, call graph
+- `graph_health.py` -- graph status, stale check
+- `get_collection_stats_tool.py` -- index stats
+
+**Modification**
+
+- `replace_text.py` -- surgical string replace, sed
+- `replace_function.py` -- AST function replace
+- `write_file.py` -- overwrite, create file
+- `add_import.py` -- add import
+- `add_constant.py` -- add constant
+- `move_symbol.py` -- relocate symbol
+- `delete_file.py` -- rm file
+- `rename_file.py` -- mv file
+- `ast_clean_imports.py` -- clean imports
+
+**System/DevOps**
+
+- `remember_fact.py` -- save memory, persist
+- `recall_fact.py` -- get memory, retrieve
+- `list_facts.py` -- list memories
+- `create_execution_plan.py` -- plan, sequence
+- `explain_failure.py` -- crash diagnostics
+- `count_lines.py` -- line stats
+- `verify_file_path.py` -- path existence
+
+### Hard Directives
+
+- **Python**: Load `pydantic-ai-coding` & `pydantic-coding`.
+- **Agents**: MUST use Pydantic-AI (v2.0+) or Instructor. No other agent frameworks permitted.
+- **Tooling**: `uv run` always. `write_file` for MCP writes.
+- **Prompts**: YAML in `factory/templates/`. No inline prompts.
+- **Surgical**: Target high code-to-value ratio. No "future-proofing".
+- **Crashes**: No silent failures. No hardening/fallbacks.
+
+## OPERATIONALS
+
+- **Decision Log**: Persist via `bd remember`.
