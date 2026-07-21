@@ -117,9 +117,6 @@ deterministic Python script — NO LLM orchestrator, NO delegation of orchestrat
 
 **System/DevOps**
 
-- `remember_fact.py` -- save memory, persist
-- `recall_fact.py` -- get memory, retrieve
-- `list_facts.py` -- list memories
 - `create_execution_plan.py` -- plan, sequence
 - `explain_failure.py` -- crash diagnostics
 - `count_lines.py` -- line stats

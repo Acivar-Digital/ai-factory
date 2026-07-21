@@ -5,6 +5,35 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — 00_fix.md audit: 7 bugfixes from third-party code review
+
+**Audit-driven fixes across `pipeline.py`, `execution.py`, and `control.py`**
+in response to an external code review. 8/9 claims verified; 7 real bugs fixed.
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `pipeline.py:469` | `run_gated` returned `False` on PASS (caller can't distinguish pass from fail) | `return True` |
+| 2 | `pipeline.py:275-301` | `do_role` had dead `if/else` branches — both executed identical code | Merged into shared `_recover_from_unexpected_behavior()` |
+| 3 | `pipeline.py:349-386` | `record_coder` copy-pasted `do_role`'s `UnexpectedModelBehavior` recovery | Both now call shared helper |
+| 4 | `execution.py:307-442` | HALT fired at `_pass=2` before the Nth re-spawn — got 2 re-spawns instead of `CODER_VALIDATION_PASSES` | Loop range `+1`, condition `>`, message says "re-spawn attempts" |
+| 5 | `control.py:203-204` | Dead `if any(...): pass` in `_redact_payload` | Removed |
+| 6 | `control.py:108` | `pydantic_url` defaulted to `:7766` (same as `literouter_url`) | `:7768` |
+| 7 | `control.py:397` | `gemma_4_26b_a4b_it`: `context_window=16000 == max_completion_tokens=16000` → zero input budget | `max_completion_tokens=12000, context_window=32000` |
+
+**False positive rejected:** "double semaphore acquire" claim (first `async with sem` exits before re-spawn loop — no deadlock).
+
+**`prior={}` edge case deferred** — intentionally passed by `run_red_team_gate` to mean "no prior batch"; original `[] if prior else ...` is correct.
+
+**Discipline memory clarified** — "no fallback chains" means model-level fallback only; agent-level recovery (same model loopguard retry + `_recover_from_unexpected_behavior`) is the correct pattern, not raw crash.
+
+**Documentation:**
+- `docs/00_fix.md` — audit log written
+- `.agents/skills/ai-factory/SKILL.md` — updated
+- `AGENTS.md` — removed stale fact-tool references (`remember_fact.py`, `recall_fact.py`, `list_facts.py` were purged in memory unification 2026-07-21)
+- `bd` discipline memory clarified
+
+**Tests:** 225/225 pass, ruff clean on changed files.
+
 ## 2026-07-21 — Monolithic runner.py refactored into modular architecture
 
 **3558-line `runner.py` split into 10 focused modules.** The monolithic orchestrator

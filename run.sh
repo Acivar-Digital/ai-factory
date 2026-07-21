@@ -27,6 +27,7 @@ FRESH=0
 FROM_FLAG=""
 STOP_AFTER_FLAG=""
 RESUME_ACTIVE=0
+CWD_FLAG=""
 POSITIONAL=()
 for arg in "$@"; do
     case "$arg" in
@@ -36,9 +37,15 @@ for arg in "$@"; do
         --stop-after) ;;
         --stop-after=*) STOP_AFTER_FLAG="${arg#--stop-after=}" ;;
         --resume) RESUME_ACTIVE=1 ;;
+        --cwd) ;;
+        --cwd=*) CWD_FLAG="${arg#--cwd=}" ;;
         *) POSITIONAL+=("$arg") ;;
     esac
 done
+
+if [ -n "$CWD_FLAG" ]; then
+    export CWD="$CWD_FLAG"
+fi
 
 FROM_ACTIVE=0
 if [ -n "$FROM_FLAG" ]; then

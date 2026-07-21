@@ -41,7 +41,8 @@ def _load_runtime_env() -> dict[str, str]:
 
 _RUNTIME_ENV = _load_runtime_env()
 
-REPO_ROOT = Path(_RUNTIME_ENV.get("CWD", str(Path.cwd().resolve())))
+_CWD = os.environ.get("CWD") or _RUNTIME_ENV.get("CWD") or str(Path.cwd().resolve())
+REPO_ROOT = Path(_CWD)
 PKG_DIR = Path(__file__).resolve().parent.parent  # factory root package
 ORCH_ROOT = PKG_DIR / "orch"  # runtime home
 
@@ -104,7 +105,7 @@ class SystemSettings(BaseSettings):
     literouter_auth_key: str | None = Field(default='sk-lr-8f2a9e3b1c4d7e5f')
 
     # Pydantic Gateway (Port 7768)
-    pydantic_url: str = Field(default="http://localhost:7766/v1")
+    pydantic_url: str = Field(default="http://localhost:7768/v1")
     pydantic_auth_key: str | None = Field(default='sk-lr-8f2a9e3b1c4d7e5f')
 
     # Application & Infrastructure -- DB credentials come from env (DATABASE_URL).
@@ -199,8 +200,6 @@ def _redact_payload(payload: str) -> str:
     to the traffic log on disk (SA1-F5).
     """
     lowered = payload.lower()
-    if any(s in lowered for s in ("bearer ", "sk-", "api_key=", "apikey=", "token=")):
-        pass
 
     def _mask(value):
         if isinstance(value, dict):
@@ -393,7 +392,7 @@ gemma_4_26b_a4b_it = OpenAIChatModel(
     "gemma-4-26b-a4b-it",
     provider=PROVIDERS["mcpmart"],
     settings=ModelSettings(
-        max_completion_tokens=16000, context_window=16000,
+        max_completion_tokens=12000, context_window=32000,
         extra_body={
             "google": {
                 "thinking_config": {

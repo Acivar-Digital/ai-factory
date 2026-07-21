@@ -160,6 +160,35 @@ def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, st
     return resume, task_body, scope, start_phase, stop_phase
 
 
+def _recover_from_unexpected_behavior(
+    role: str,
+    e: UnexpectedModelBehavior,
+    agent_id: str | None = None,
+) -> str:
+    """Recover structured output when the model hallucinates a tool call.
+
+    Both `do_role` and `record_coder` share this path. Raises on unrecoverable.
+    """
+    real_messages = _load_role_messages(role, agent_id=agent_id)
+    raw = extract_model_json(real_messages)
+    if not raw:
+        raw = extract_tool_call_payload(e) or ""
+    if not raw:
+        raise RuntimeError(
+            f"[HALT] role {role!r} emitted no final_result call"
+        ) from e
+    recovered = _recover_role_output(raw, OUTPUT_TYPE_REGISTRY[ROLE_OUTPUT_TYPE[role]], role, None)
+    if recovered is not None:
+        if hasattr(recovered.output, "model_dump_json"):
+            return recovered.output.model_dump_json()
+        return str(recovered.output)
+    raise RuntimeError(
+        f"[{role}] role {role!r} hallucinated an unregistered tool "
+        f"(pydantic_ai exhausted retries). Check {role}'s tool_allow_list "
+        f"vs its prompt — do NOT instruct it to run commands it has no tool for."
+    ) from e
+
+
 async def do_role(
     role: str,
     task: str,
@@ -273,38 +302,7 @@ async def do_role(
         try:
             out = await load_skill(role, run_brief, bd)
         except UnexpectedModelBehavior as e:
-            real_messages = _load_role_messages(role)
-            if ROLE_OUTPUT_TYPE[role] != "str":
-                raw = extract_model_json(real_messages)
-                if not raw:
-                    raw = extract_tool_call_payload(e) or ""
-                    if not raw:
-                        raise RuntimeError(
-                            f"[HALT] role {role!r} emitted no final_result call"
-                        ) from e
-            else:
-                raw = extract_model_json(real_messages)
-                if not raw:
-                    raw = extract_tool_call_payload(e) or ""
-            if raw:
-                recovered = _recover_role_output(raw, OUTPUT_TYPE_REGISTRY[ROLE_OUTPUT_TYPE[role]], role, None)
-                if recovered is not None:
-                    if hasattr(recovered.output, "model_dump_json"):
-                        out = recovered.output.model_dump_json()
-                    else:
-                        out = str(recovered.output)
-                else:
-                    raise RuntimeError(
-                        f"[do_role] role '{role}' hallucinated an unregistered tool "
-                        f"(pydantic_ai exhausted retries). Check {role}'s tool_allow_list "
-                        f"vs its prompt — do NOT instruct it to run commands it has no tool for."
-                    ) from e
-            else:
-                raise RuntimeError(
-                    f"[do_role] role '{role}' hallucinated an unregistered tool "
-                    f"(pydantic_ai exhausted retries). Check {role}'s tool_allow_list "
-                    f"vs its prompt — do NOT instruct it to run commands it has no tool for."
-                ) from e
+            out = _recover_from_unexpected_behavior(role, e)
 
     out_md = PHASE_SUMMARIES.get(role, out)
     history.append((role, out_md))
@@ -347,43 +345,7 @@ async def record_coder(
     try:
         out = await load_skill("coder", run_brief, bd, task_id=task_id)
     except UnexpectedModelBehavior as e:
-        agent_id = _coder_agent_id(task_id)
-        real_messages = _load_role_messages("coder", agent_id=agent_id)
-        if ROLE_OUTPUT_TYPE["coder"] != "str":
-            raw = extract_model_json(real_messages)
-            if not raw:
-                raw = extract_tool_call_payload(e) or ""
-                if not raw:
-                    raise RuntimeError(
-                        "[HALT] role 'coder' emitted no final_result call"
-                    ) from e
-        else:
-            raw = extract_model_json(real_messages)
-            if not raw:
-                raw = extract_tool_call_payload(e) or ""
-        if raw:
-            recovered = _recover_role_output(raw, OUTPUT_TYPE_REGISTRY[ROLE_OUTPUT_TYPE["coder"]], "coder", None)
-            if recovered is not None:
-                if hasattr(recovered.output, "model_dump_json"):
-                    out = recovered.output.model_dump_json()
-                else:
-                    out = str(recovered.output)
-            else:
-                raise RuntimeError(
-                    "[record_coder] coder emitted empty/invalid output and exhausted "
-                    "retries (UnexpectedModelBehavior). The coder model returned no "
-                    "usable result — check the coder model binding and the coder "
-                    "transcript under artefacts/history/coder/. Do NOT instruct the "
-                    "coder to call tools it does not have."
-                ) from e
-        else:
-            raise RuntimeError(
-                "[record_coder] coder emitted empty/invalid output and exhausted "
-                "retries (UnexpectedModelBehavior). The coder model returned no "
-                "usable result — check the coder model binding and the coder "
-                "transcript under artefacts/history/coder/. Do NOT instruct the "
-                "coder to call tools it does not have."
-            ) from e
+        out = _recover_from_unexpected_behavior("coder", e, agent_id=_coder_agent_id(task_id))
     out_md = PHASE_SUMMARIES.get("coder", out)
     history.append(("coder", out_md))
     PHASE_SUMMARIES["coder"] = out_md
@@ -468,7 +430,7 @@ async def run_gated(
             return True
         if passed(reviewer, reviewer_out):
             print(f"[gate] {reviewer} attempt {attempt}: PASS -> proceed")
-            return False
+            return True
         print(f"[gate] {reviewer} attempt {attempt}: FAIL -> {author} revises")
     return False
 
