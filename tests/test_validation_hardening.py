@@ -101,7 +101,7 @@ async def test_intercepted_request_enrichment(monkeypatch):
 
 
 def test_templates_parsing():
-    templates_dir = Path(__file__).resolve().parents[1] / "factory" / "templates"
+    templates_dir = Path(__file__).resolve().parents[1] / "factory" / "infra" / "agents"
     template_files = ["planner.yaml", "supervisor_plan.yaml", "supervisor_review.yaml", "red_team.yaml", "coder.yaml"]
     for tf in template_files:
         path = templates_dir / tf
@@ -177,6 +177,7 @@ def test_draft_plan_validation_hardening():
 
 @pytest.mark.asyncio
 async def test_structured_output_recovery_hardening(monkeypatch):
+    from factory.common import ROLE_OUTPUT_TYPE
     from factory.infra import runner
     from pydantic_ai.exceptions import UnexpectedModelBehavior
 
@@ -184,16 +185,16 @@ async def test_structured_output_recovery_hardening(monkeypatch):
     async def mock_run_agent_retry(*args, **kwargs):
         raise UnexpectedModelBehavior("Direct text output is disallowed...")
 
-    monkeypatch.setattr(runner, "_run_agent_retry", mock_run_agent_retry)
+    monkeypatch.setattr("factory.infra.agent._run_agent_retry", mock_run_agent_retry)
 
     # Mock _load_role_messages to return empty list (so extract_model_json returns None)
-    monkeypatch.setattr(runner, "_load_role_messages", lambda *args, **kwargs: [])
+    monkeypatch.setattr("factory.infra.agent._load_role_messages", lambda *args, **kwargs: [])
 
     # Mock extract_tool_call_payload to return None
-    monkeypatch.setattr(runner, "extract_tool_call_payload", lambda *args, **kwargs: None)
+    monkeypatch.setattr("factory.infra.agent.extract_tool_call_payload", lambda *args, **kwargs: None)
 
     # Ensure planner is registered as structured output in ROLE_OUTPUT_TYPE
-    assert runner.ROLE_OUTPUT_TYPE["planner"] != "str"
+    assert ROLE_OUTPUT_TYPE["planner"] != "str"
 
     # Now run load_skill and assert it raises RuntimeError with the HALT message
     with pytest.raises(RuntimeError) as excinfo:

@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from factory.infra.runner import run_execute_phase
+from factory.infra.execution import run_execute_phase
 from tests.test_gates import _plan
 
 
@@ -24,9 +24,10 @@ def test_staging_diff_gate_zero_diff(tmp_path, monkeypatch):
     staged_file.parent.mkdir(parents=True, exist_ok=True)
     staged_file.write_text("print('hello')")
     
-    # Patch REPO_ROOT in runner
-    import factory.infra.runner
-    monkeypatch.setattr(factory.infra.runner, "REPO_ROOT", tmp_path)
+    # Patch REPO_ROOT in source modules
+    monkeypatch.setattr("factory.infra.control.REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.context.REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.execution.REPO_ROOT", tmp_path)
     
     # Mock coder returning 'done' but identical files
     async def coder_fn(brief: str, task_id: str | None = None) -> str:
@@ -61,8 +62,9 @@ def test_runtime_load_gate_fails(tmp_path, monkeypatch):
     staged_file.parent.mkdir(parents=True, exist_ok=True)
     staged_file.write_text("class Foo Pydantic syntax error!")
     
-    import factory.infra.runner
-    monkeypatch.setattr(factory.infra.runner, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.control.REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.context.REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.execution.REPO_ROOT", tmp_path)
     
     async def coder_fn(brief: str, task_id: str | None = None) -> str:
         return json.dumps({

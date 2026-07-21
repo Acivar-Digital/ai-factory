@@ -36,7 +36,9 @@ from factory.infra.models import (
     TaskResult,
     WorkGroup,
 )
-from factory.infra.runner import MAX_RETRIES, ExchangeTurn, run_red_team_gate
+from factory.infra.exchange import ExchangeTurn
+from factory.infra.pipeline import run_red_team_gate
+from factory.infra.validation import MAX_RETRIES
 
 
 def _plan() -> ExecutablePlan:
@@ -110,12 +112,10 @@ def _reviewer_always_failing_US_vocab():
 def _patch_layer_passing(monkeypatch):
     """Isolate the gate test from the unrelated harness patch-generation layer:
     a coder that genuinely edited a file passes (real_changes > 0)."""
-    import factory.infra.runner as m
-
     def _fake_patches(tid, files, bd):
         return (files, 1)
 
-    monkeypatch.setattr(m, "_write_harness_patches", _fake_patches)
+    monkeypatch.setattr("factory.infra.context._write_harness_patches", _fake_patches)
 
 
 def test_us_vocab_rejection_does_not_hard_fail(monkeypatch):
@@ -168,7 +168,7 @@ def test_plan_intent_block_present_in_planner_template():
     import yaml
 
     PKG = Path(__file__).resolve().parents[1] / "factory"
-    text = yaml.safe_load((PKG / "templates" / "planner.yaml").read_text())
+    text = yaml.safe_load((PKG / "infra" / "agents" / "planner.yaml").read_text())
     instr = text.get("instructions", "")
     if isinstance(instr, dict):
         instr = " ".join(str(v) for v in instr.values() if isinstance(v, str))
@@ -184,7 +184,7 @@ def test_reviewer_prompts_require_coder_n_item_id():
 
     PKG = Path(__file__).resolve().parents[1] / "factory"
     for name in ("red_team.yaml", "supervisor_review.yaml"):
-        text = yaml.safe_load((PKG / "templates" / name).read_text())
+        text = yaml.safe_load((PKG / "infra" / "agents" / name).read_text())
         instr = text.get("instructions", "")
         if isinstance(instr, dict):
             instr = " ".join(str(v) for v in instr.values() if isinstance(v, str))

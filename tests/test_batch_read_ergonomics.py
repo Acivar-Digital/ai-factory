@@ -137,7 +137,7 @@ async def test_forgive_then_recover_with_valid_call() -> None:
 def test_all_templates_contain_batch_read_illustration() -> None:
     from factory.infra import tools as tools_mod
 
-    template_dir = tools_mod.PKG_DIR / "templates"
+    template_dir = tools_mod.PKG_DIR / "infra" / "agents"
     roles = ["planner", "supervisor_plan", "supervisor_review", "red_team", "coder"]
     import yaml
 

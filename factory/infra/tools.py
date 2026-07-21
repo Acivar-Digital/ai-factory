@@ -1577,13 +1577,37 @@ def _render_instructions(instructions: object) -> str:
 def build_skill_spec(role: str) -> SkillSpec:
     """Build the frozen SkillSpec for a role (D1 forge-once). No LLM.
 
-    Reads the role's frozen template `instructions` and derives the
-    `tool_allow_list` + `hard_rules` from SKILL_MAP (controls.py).
+    Prefers factory.infra.agents module (colocated Python + YAML), falls
+    back to YAML in the agents/ directory, then to SKILL_MAP defaults.
     """
     if role not in SKILL_MAP.roles:
         raise KeyError(f"[HALT] role {role!r} not in SKILL_MAP")
     entry = SKILL_MAP.roles[role]
-    template_path = PKG_DIR / "templates" / entry.template
+
+    module_map = {
+        "supervisor_plan": "supervisor",
+        "supervisor_review": "supervisor",
+    }
+    mod_name = module_map.get(role, role)
+    agent_module_name = f"factory.infra.agents.{mod_name}"
+
+    try:
+        import importlib
+        mod = importlib.import_module(agent_module_name)
+        builder_name = f"build_{role}_spec"
+        builder = getattr(mod, builder_name, None)
+        if builder:
+            spec = builder()
+            if not spec.tool_allow_list and role in SKILL_MAP.roles:
+                bucket = SKILL_MAP.roles[role].tool_bucket
+                spec.tool_allow_list = [f.__name__ for f in _ctrl_tool_bucket(bucket)]
+            if not spec.hard_rules and role in SKILL_MAP.roles:
+                spec.hard_rules = ["never edit src/ or src2/; confined to factory/"] + list(SKILL_MAP.roles[role].hard_rules)
+            return spec
+    except (ImportError, AttributeError):
+        pass
+
+    template_path = PKG_DIR / "infra" / "agents" / entry.template
     instructions = ""
     if template_path.exists():
         with open(template_path) as f:

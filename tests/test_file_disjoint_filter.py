@@ -35,7 +35,8 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import _real_source_paths, run_execute_phase
+from factory.infra.context import _real_source_paths
+from factory.infra.execution import run_execute_phase
 
 
 def _make_real_src2(rel: str) -> Path:
@@ -105,8 +106,10 @@ def test_real_source_paths_filters_derived_and_missing():
 
 def test_false_positive_plan_does_not_crash(monkeypatch):
     """A plan whose file_paths are all derived/staging paths must NOT raise."""
-    import factory.infra.runner as m
-    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
+    monkeypatch.setattr(
+        "factory.infra.execution._write_harness_patches",
+        lambda task_id, files, bd="": ([], 1),
+    )
 
     g1 = WorkGroup(
         id="g1",

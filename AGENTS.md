@@ -1,4 +1,21 @@
-⚠️ **CWD WARNING**: Shell prompt shows /home/yapilwsl/arthityap/. You MUST `cd /home/yapilwsl/arthityap/factory/` before running any project scripts or uv commands.
+⚠️ **CWD WARNING**: Shell prompt shows /home/yapilwsl/arthityap/. You MUST `cd /home/yapilwsl/arthityap/ai-factory/` before running any project scripts or uv commands.
+
+# AI-Factory — What This Repo Is
+
+**Deterministic orchestrator for multi-agent code generation pipelines.** Spawns LLM agents
+(planner, coder, supervisor, red-team, ops) in a phase pipeline. The conductor is a
+deterministic Python script — NO LLM orchestrator, NO delegation of orchestration decisions.
+
+## How to Understand This Repo Quickly
+
+1. **Load the `ai-factory` skill** — it contains the full architecture overview, role/phase table,
+   key disciplines, test patterns, and session workflow. Run `b skill ai-factory` or use the
+   `skill` tool with name `ai-factory` to inject it.
+2. **Search memories** — `bd memories <keyword>` to find cross-session decisions:
+   `bd memories runner` → plans phase control, `bd memories discipline` → coding philosophy,
+   `bd memories harness` → all harness invariants.
+3. **Persistent knowledge** — use `bd remember <key> "value"` to save decisions that should
+   survive across sessions (never write to MEMORY.md files).
 
 ## RULE ZERO: User Override
 
@@ -6,7 +23,7 @@
 
 ## SANDBOX: Workspace Only
 
-- **Boundaries**: No files outside `/home/yapilwsl/arthityap/factory/`. No `/tmp/`.
+- **Boundaries**: No files outside `/home/yapilwsl/arthityap/ai-factory/`. No `/tmp/`.
 
 ## WORKFLOW ENFORCEMENT
 
@@ -113,10 +130,12 @@
 - **Python**: Load `pydantic-ai-coding` & `pydantic-coding`.
 - **Agents**: MUST use Pydantic-AI (v2.0+) or Instructor. No other agent frameworks permitted.
 - **Tooling**: `uv run` always. `write_file` for MCP writes.
-- **Prompts**: YAML in `factory/templates/`. No inline prompts.
+- **Prompts**: YAML in `factory/infra/agents/`. No inline prompts.
 - **Surgical**: Target high code-to-value ratio. No "future-proofing".
 - **Crashes**: No silent failures. No hardening/fallbacks.
 
 ## OPERATIONALS
 
 - **Decision Log**: Persist via `bd remember`.
+- **Skill**: Load `ai-factory` skill for full repo context (`b skill ai-factory`).
+- **Memories**: Search with `bd memories <keyword>` before asking questions.

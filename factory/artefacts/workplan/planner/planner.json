@@ -1,0 +1,132 @@
+{
+  "epic": {
+    "title": "Wire get_clash_valence into the scoring pipeline in module11_probability.py",
+    "deliverables": [
+      "In module11_probability.py, add clash_beneficial and clash_harmful keys to LOG_ODDS_WEIGHTS dict",
+      "In module11_probability.py, add get_valence_gated_clash function calling get_clash_valence from module3_interaction.py and returning log-odds key and weight"
+    ],
+    "must_be_pydantic": false
+  },
+  "user_stories": [
+    {
+      "id": "US-001",
+      "story": "As an engine module, I want module11_probability.py to score clashes using valence-gated keys (clash_beneficial and clash_harmful) by calling get_clash_valence from module3_interaction.py.",
+      "acceptance_criteria": [
+        "from src2.engine.module11_probability import get_valence_gated_clash succeeds",
+        "Function returns correct keys matching tai_sui_beneficial/harmful pattern",
+        "uv run ruff check src2/engine/module11_probability.py passes"
+      ],
+      "definition_of_done": [
+        "clash_beneficial and clash_harmful keys added to LOG_ODDS_WEIGHTS in module11_probability.py",
+        "get_valence_gated_clash function implemented in module11_probability.py importing get_clash_valence from module3_interaction.py",
+        "Ruff check passes cleanly on src2/engine/module11_probability.py",
+        "module3_interaction.py is unmodified"
+      ]
+    }
+  ],
+  "definition_of_done": [
+    "clash_beneficial and clash_harmful keys added to LOG_ODDS_WEIGHTS in module11_probability.py",
+    "get_valence_gated_clash function implemented in module11_probability.py importing get_clash_valence from module3_interaction.py",
+    "Ruff check passes cleanly on src2/engine/module11_probability.py",
+    "module3_interaction.py is unmodified"
+  ],
+  "acceptance_criteria": [
+    "from src2.engine.module11_probability import get_valence_gated_clash succeeds",
+    "Function returns correct keys matching tai_sui_beneficial/harmful pattern",
+    "uv run ruff check src2/engine/module11_probability.py passes"
+  ],
+  "rubric_cube": {
+    "cells": [
+      {
+        "dimension": "file_disjointness",
+        "criterion": "Each subtask touches disjoint files and respects 1 coder per file contract",
+        "severity": "blocker",
+        "passed": true,
+        "evidence": "coder01 operates exclusively on src2/engine/module11_probability.py",
+        "coder_idents": [
+          "coder01"
+        ]
+      },
+      {
+        "dimension": "anti_pattern",
+        "criterion": "Do not modify module3_interaction.py — only add code to module11_probability.py",
+        "severity": "blocker",
+        "passed": true,
+        "evidence": "module3_interaction.py is excluded from file_paths",
+        "coder_idents": [
+          "coder01"
+        ]
+      },
+      {
+        "dimension": "fail_loudly",
+        "criterion": "Fail loudly on unexpected inputs without using except: pass",
+        "severity": "blocker",
+        "passed": true,
+        "evidence": "Instruction explicitly commands fail loudly with full tracebacks",
+        "coder_idents": [
+          "coder01"
+        ]
+      }
+    ]
+  },
+  "summary": "Wire get_clash_valence from module3_interaction.py into module11_probability.py by adding clash_beneficial and clash_harmful keys to LOG_ODDS_WEIGHTS and implementing get_valence_gated_clash.",
+  "subtasks": [
+    {
+      "id": "coder01",
+      "title": "Implement get_valence_gated_clash and update LOG_ODDS_WEIGHTS in module11_probability.py",
+      "file_paths": [
+        "src2/engine/module11_probability.py"
+      ],
+      "instruction": "In src2/engine/module11_probability.py:\n1. Import get_clash_valence from src2.engine.module3_interaction.\n2. Add 'clash_beneficial' and 'clash_harmful' keys to the LOG_ODDS_WEIGHTS dictionary, matching the weight style of tai_sui_beneficial and tai_sui_harmful.\n3. Add function get_valence_gated_clash matching the signature and pattern of existing trigger-scoring functions in module11_probability.py. Call get_clash_valence to evaluate clash valence and return the appropriate log-odds key ('clash_beneficial' or 'clash_harmful') and weight.\n4. Fail loudly on any unexpected inputs (no except: pass).\n5. Do NOT modify module3_interaction.py.",
+      "acceptance": "from src2.engine.module11_probability import get_valence_gated_clash succeeds and ruff check passes",
+      "tool_preference": "AST-edit",
+      "evidence": [
+        {
+          "file_path": "src2/engine/module11_probability.py",
+          "content": "Target file to add clash_beneficial and clash_harmful keys to LOG_ODDS_WEIGHTS dict and get_valence_gated_clash function."
+        }
+      ]
+    }
+  ],
+  "risks": [
+    "Potential mismatch in parameters expected by get_clash_valence if arguments passed differ from signature in module3_interaction.py"
+  ],
+  "strategy": {
+    "how_to_fix": "1. In src2/engine/module11_probability.py, add imports for get_clash_valence from src2.engine.module3_interaction.\n2. Add 'clash_beneficial' and 'clash_harmful' keys to the LOG_ODDS_WEIGHTS dictionary, following the tai_sui_beneficial / tai_sui_harmful weight key style.\n3. Define get_valence_gated_clash with trigger-scoring arguments, calling get_clash_valence and returning the appropriate log-odds key and weight.\n4. Ensure no modifications are made to module3_interaction.py.",
+    "tool_preference": [
+      {
+        "task_id": "coder01",
+        "preference": "AST-edit"
+      }
+    ],
+    "parallelisable_workplan": {
+      "groups": [
+        {
+          "id": "group1",
+          "depends_on": [],
+          "tasks": [
+            {
+              "id": "coder01",
+              "title": "Implement get_valence_gated_clash and update LOG_ODDS_WEIGHTS in module11_probability.py",
+              "file_paths": [
+                "src2/engine/module11_probability.py"
+              ],
+              "instruction": "In src2/engine/module11_probability.py:\n1. Import get_clash_valence from src2.engine.module3_interaction.\n2. Add 'clash_beneficial' and 'clash_harmful' keys to the LOG_ODDS_WEIGHTS dictionary, matching the weight style of tai_sui_beneficial and tai_sui_harmful.\n3. Add function get_valence_gated_clash matching the signature and pattern of existing trigger-scoring functions in module11_probability.py. Call get_clash_valence to evaluate clash valence and return the appropriate log-odds key ('clash_beneficial' or 'clash_harmful') and weight.\n4. Fail loudly on any unexpected inputs (no except: pass).\n5. Do NOT modify module3_interaction.py.",
+              "acceptance": "from src2.engine.module11_probability import get_valence_gated_clash succeeds and ruff check passes",
+              "tool_preference": "AST-edit",
+              "evidence": [
+                {
+                  "file_path": "src2/engine/module11_probability.py",
+                  "content": "Target file to add clash_beneficial and clash_harmful keys to LOG_ODDS_WEIGHTS dict and get_valence_gated_clash function."
+                }
+              ],
+              "approved": true,
+              "notes": "Strictly scoped to src2/engine/module11_probability.py"
+            }
+          ],
+          "concurrent": false
+        }
+      ]
+    }
+  }
+}

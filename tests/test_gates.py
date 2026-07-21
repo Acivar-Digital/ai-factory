@@ -33,11 +33,8 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import (
-    ExchangeTurn,
-    run_code_review_gate,
-    run_red_team_gate,
-)
+from factory.infra.exchange import ExchangeTurn
+from factory.infra.pipeline import run_code_review_gate, run_red_team_gate
 
 
 def _plan() -> ExecutablePlan:
