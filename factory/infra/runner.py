@@ -18,10 +18,11 @@ import factory.infra._runtime as runtime
 # These will be created in subsequent prompts
 from factory.infra.pipeline import (
     do_role, record_coder, run_gated, _assert_plan_gate_ok,
-    run_code_review_gate, run_red_team_gate
+    run_code_review_gate, run_red_team_gate, _recover_from_unexpected_behavior,
 )
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from factory.infra.agent import (
-    _configure_logfire
+    _configure_logfire, load_skill,
 )
 from factory.infra.models import TaskBatch
 
@@ -199,11 +200,32 @@ async def main() -> None:
     if args.from_ and _from_idx >= _coder_idx and not approved_json:
         raise RuntimeError("[HALT] --from but no persisted ApprovedPlan found.")
 
+    # Build closure wrappers so coder_fn matches execute_task's contract:
+    #   coder_fn(brief: str, task_id: str | None = None) -> str
+    # and reviewer_fn matches run_code_review_gate/run_red_team_gate's contract:
+    #   reviewer_fn(brief: str) -> str
+    coder_state = {"brief": task, "seeded": False}
+
+    async def _coder_fn(brief: str, task_id: str | None = None) -> str:
+        return await record_coder(brief, bd, history, prior, coder_state, task_id=task_id)
+
+    async def _run_supervisor_review(brief: str) -> str:
+        try:
+            return await load_skill("supervisor_review", brief, bd)
+        except UnexpectedModelBehavior as e:
+            return _recover_from_unexpected_behavior("supervisor_review", e)
+
+    async def _run_red_team_audit(brief: str) -> str:
+        try:
+            return await load_skill("red_team", brief, bd)
+        except UnexpectedModelBehavior as e:
+            return _recover_from_unexpected_behavior("red_team", e)
+
     # Code-review gate
     if plan is not None and plan.workplan and plan.workplan.groups:
         run_dir = TEMP_DIR / bd
         run_dir.mkdir(parents=True, exist_ok=True)
-        batch = await run_code_review_gate(plan, run_dir, record_coder, do_role, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
+        batch = await run_code_review_gate(plan, run_dir, _coder_fn, _run_supervisor_review, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
         history.append(("supervisor_review", batch.model_dump_json()))
     else:
         await run_gated("coder", "supervisor_review", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, record_exchange=(args.from_ == "coder"))
@@ -211,7 +233,7 @@ async def main() -> None:
     # Red-team gate
     if plan is not None and plan.workplan and plan.workplan.groups:
         run_dir = TEMP_DIR / bd
-        batch = await run_red_team_gate(plan, run_dir, record_coder, do_role, {t.task_id: t for t in batch.results} if batch else {}, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
+        batch = await run_red_team_gate(plan, run_dir, _coder_fn, _run_red_team_audit, {t.task_id: t for t in batch.results} if batch else {}, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
         history.append(("red_team", batch.model_dump_json()))
     else:
         await run_gated("coder", "red_team", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, hard=True, record_exchange=(args.from_ == "coder"))

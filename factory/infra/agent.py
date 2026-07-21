@@ -534,10 +534,15 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # P1 ugvt (M4): SINK-2 — store this role's summary for downstream phases.
     # Compact markdown render of the output (not raw JSON) to save cross-phase
     # tokens. Fail loudly if the store itself errors (it never should).
-    try:
-        PHASE_SUMMARIES[role] = _model_to_md(result.output)
-    except Exception as exc:
-        print(f"[WARN] PHASE_SUMMARIES store failed for {role!r}: {exc!r}", flush=True)
+    # SKIP for coder: multiple concurrent coders race on PHASE_SUMMARIES["coder"]
+    # (last-writer-wins). The coder summary is handled by record_coder after all
+    # concurrent tasks finish, and downstream phases use RAW_OUTPUTS / TaskBatch
+    # — not PHASE_SUMMARIES — for coder results.
+    if role != "coder":
+        try:
+            PHASE_SUMMARIES[role] = _model_to_md(result.output)
+        except Exception as exc:
+            print(f"[WARN] PHASE_SUMMARIES store failed for {role!r}: {exc!r}", flush=True)
 
     # `validated_json` is the JSON string (used for the `history` parse
     # contract at run_phase, line ~1700). The model-object markdown render

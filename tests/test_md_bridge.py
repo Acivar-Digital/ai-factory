@@ -7,8 +7,11 @@ on cold spawn, and honours per-coderN isolation.
 """
 from __future__ import annotations
 
+import sys
+import types
 from pathlib import Path
 
+import pytest
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 
 from factory.common.md_bridge import build_md_bridge
@@ -65,3 +68,19 @@ def test_unknown_role_returns_none(tmp_path, monkeypatch):
     art = tmp_path / "artefacts"
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
     assert build_md_bridge("ops") is None
+
+
+def test_import_error_loudly_raised(tmp_path, monkeypatch):
+    """A broken artefacts module (missing symbols) MUST propagate, not be swallowed.
+
+    ``_read_exact_md`` catches ``ModuleNotFoundError`` (module genuinely absent)
+    and returns None. But an ``ImportError`` from a module that *exists* but has
+    missing symbols must propagate loudly — violating fail-loudly is not allowed.
+    """
+    mock_artefacts = types.ModuleType("factory.infra.artefacts")
+    mock_artefacts.__package__ = "factory.infra"
+    mock_artefacts.__path__ = []
+    monkeypatch.setitem(sys.modules, "factory.infra.artefacts", mock_artefacts)
+
+    with pytest.raises(ImportError):
+        build_md_bridge("planner")

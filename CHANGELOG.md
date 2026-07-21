@@ -5,6 +5,26 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 4: coder_fn signature adapter + PHASE_SUMMARIES race guard
+
+**Audit-driven fixes for 2 of 4 reported bugs.** The critical fix: `record_coder` and
+`do_role` were passed as bare `coder_fn`/`reviewer_fn` to `run_code_review_gate` and
+`run_red_team_gate`, but the call site `coder_fn(brief, task_id=t.id)` only supplies 2
+arguments while `record_coder` requires 6. Runner uses `do_role` as the reviewer, but
+`do_role` entirely ignores the caller's brief (it reads from `state_dict["brief"]`).
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `runner.py:203-238` | `record_coder` (6 params) and `do_role` (8 params) passed directly as callables to gate functions — called as `cod er_fn(brief, task_id)` / `reviewer_fn(brief)`, crash at runtime | Wrap in closure adapters that capture `bd`, `history`, `prior`, `state_dict`; use `load_skill` wrappers for reviewers instead of `do_role` |
+| 2 | `agent.py:537-541` | `PHASE_SUMMARIES[role]` write inside `load_skill` is unguarded — concurrent coders via `asyncio.gather` race on `PHASE_SUMMARIES["coder"]` | Guard with `role != "coder"` — downstream phases use `RAW_OUTPUTS`/`TaskBatch` for coder results |
+
+**Not a bug (verified):** `build_coder_spec()` hardcodes `tool_allow_list=[]`, but
+`build_skill_spec()` in `tools.py:1601-1603` fills from `SKILL_MAP.tool_bucket` when
+the list is empty — so coders do receive tools.
+
+**Deferred:** Re-spawn coder stale `message_history` (Bug 1) — the MD bridge
+intentionally provides continuity and the feedback brief injects corrections.
+
 ## 2026-07-22 — Batch 3: DAG executor hardening (concurrent flag, cross-group, deadlock)
 
 **Third wave of DAG executor fixes.** Removed misleading `concurrent` field

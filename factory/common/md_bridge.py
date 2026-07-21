@@ -50,7 +50,7 @@ def _read_exact_md(role: str, agent_id: str | None) -> str | None:
             _history_filename,
             artefacts_dir,
         )
-    except Exception as exc:  # never abort the pipeline over artefacts lookup
+    except ModuleNotFoundError as exc:
         print(f"[WARN] md_bridge: artefacts import failed: {exc!r}", flush=True)
         return None
 
