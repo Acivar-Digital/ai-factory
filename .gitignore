@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Environment & local state
+.env
+.env.local
+orch/logs/
+temp/
+.checkpoints/
+scratch/
+*.log
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
