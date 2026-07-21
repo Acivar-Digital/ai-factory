@@ -79,6 +79,14 @@ dict at runner scope. Reviewer closures call `load_skill(role, brief, bd)` direc
 
 ## Test Pattern: Monkeypatch Refactoring
 
+## Shadow Tooling Guidelines
+
+The orchestrator relies heavily on `factory/tools/` CLI wrappers (e.g. `read_file.py`, `investigate.py`, `replace_function.py`, `replace_text.py`).
+- **Context Integrity**: File reads always prepend `N:` line numbers to guarantee precise line targeting by LLMs.
+- **Context Constraints**: Token truncation limits (e.g. 12k) safely slice at the last complete newline. Overlapping pattern matches dynamically merge context blocks without dropping lines.
+- **AST Edits**: Tooling prefers surgical AST-bounded string edits over wholesale AST rewrites (e.g. `ast.unparse()`) to strictly preserve code formatting, whitespace, and comments.
+- **Regex Edits**: Exact string replacements gracefully handle whitespace configuration without double-escaping regex literal blocks.
+
 After the runner.py split, monkeypatch targets **must be string-based** on the module where the name is resolved:
 
 ```python
