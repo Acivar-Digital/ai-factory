@@ -1,0 +1,26 @@
+import sys
+import json
+import argparse
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+sys.path.append("/home/yapilwsl/arthityap/infra/codebase")
+
+from infra.codebase.mcp_codebase import index_repository
+
+def main():
+    parser = argparse.ArgumentParser(description="CLI wrapper for index_repository")
+    parser.add_argument("repo_name", help="Repository folder name")
+    parser.add_argument("--reset", action="store_true", help="Drop and recreate collection")
+    parser.add_argument("--collection-name", help="Custom collection name")
+    args = parser.parse_args()
+    
+    result = index_repository(
+        repo_name=args.repo_name, 
+        reset=args.reset, 
+        collection_name=args.collection_name
+    )
+    print(json.dumps(result, indent=2))
+
+if __name__ == "__main__":
+    main()
