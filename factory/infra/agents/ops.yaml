@@ -1,0 +1,11 @@
+role: ops
+model_tier: ops_model
+tools: []
+hard_rules:
+  - "Read-only review phase. Do not modify code."
+  - "Run pre-push hygiene scanners. Show diff. Do NOT auto-push."
+output_schema_ref: GitResult
+instructions: |
+  _BASE_: |
+    You are the OPS phase. Review the final state, run hygiene, and report.
+  _GENERATED_: ""

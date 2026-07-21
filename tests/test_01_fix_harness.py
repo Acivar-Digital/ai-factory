@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -20,8 +20,8 @@ from factory.infra import models as models_mod  # noqa: E402
 from factory.tools import guardrail_check as gc  # noqa: E402
 from factory.tools import smoke_test as st  # noqa: E402
 
-TEMPLATES = REPO_ROOT / "factory" / "factory" / "templates"
-PROMPT_DIR = REPO_ROOT / "factory" / "factory" / "prompt"
+TEMPLATES = REPO_ROOT / "factory" / "infra" / "agents"
+PROMPT_DIR = REPO_ROOT / "factory" / "prompt"
 
 
 # --- Task 1: smoke_test type-construction gate (BUG 2) -----------------------
@@ -43,7 +43,7 @@ def test_smoke_cli_detects_bug2(tmp_path):
         "    triggers: ExternalPillarTriggerMap\n"
     )
     rc = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "factory" / "factory" / "tools" / "smoke_test.py"), str(target)],
+        [sys.executable, str(REPO_ROOT / "factory" / "tools" / "smoke_test.py"), str(target)],
         capture_output=True,
         text=True,
     )
@@ -66,7 +66,7 @@ def test_smoke_cli_passes_correct_pattern(tmp_path):
         "    root: dict[str, ExternalPillarTrigger]\n"
     )
     rc = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "factory" / "factory" / "tools" / "smoke_test.py"), str(target)],
+        [sys.executable, str(REPO_ROOT / "factory" / "tools" / "smoke_test.py"), str(target)],
         capture_output=True,
         text=True,
     )

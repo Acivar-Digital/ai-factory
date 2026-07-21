@@ -58,7 +58,8 @@ from factory.infra.models import (  # noqa: E402
     Strategy,
     WorkGroup,
 )
-from factory.infra.runner import run_code_review_gate, run_execute_phase  # noqa: E402
+from factory.infra.execution import run_execute_phase
+from factory.infra.pipeline import run_code_review_gate
 
 
 def _plan(single: bool = True) -> ExecutablePlan:

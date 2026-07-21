@@ -27,3 +27,12 @@ scratch/
 .dolt/
 *.db
 .beads-credential-key
+
+# opencode
+.opencode/
+.claude/
+.agents/
+.beads/
+
+# Studio / staging
+studio/

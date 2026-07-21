@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from factory.infra.ledger import inject_repo_map
-from factory.infra.runner import read_prompt
+from factory.infra.pipeline import read_prompt
 
 
 # ── 86rmw: read_prompt front-matter parsing ────────────────────────────────
@@ -41,10 +41,12 @@ def test_read_prompt_front_matter_scope(tmp_path: Path) -> None:
         "# EPIC\n"
         "do the thing\n",
     )
-    resume, task, scope = read_prompt(p)
+    resume, task, scope, start_phase, stop_phase = read_prompt(p)
     assert resume is False
     assert "do the thing" in task
     assert scope == ["src2/core/schemas/unified.py", "src2/engine/"]
+    assert start_phase is None
+    assert stop_phase is None
 
 
 def test_read_prompt_resume_true(tmp_path: Path) -> None:
@@ -52,10 +54,12 @@ def test_read_prompt_resume_true(tmp_path: Path) -> None:
         tmp_path,
         "---\nResume: true\nbd: t1\nscope:\n  - src2/engine/module1_macro.py\n---\nbody text\n",
     )
-    resume, task, scope = read_prompt(p)
+    resume, task, scope, start_phase, stop_phase = read_prompt(p)
     assert resume is True
     assert task.strip() == "body text"
     assert scope == ["src2/engine/module1_macro.py"]
+    assert start_phase is None
+    assert stop_phase is None
 
 
 def test_read_prompt_empty_scope_defaults_to_empty_list(tmp_path: Path) -> None:
@@ -63,8 +67,10 @@ def test_read_prompt_empty_scope_defaults_to_empty_list(tmp_path: Path) -> None:
         tmp_path,
         "---\nResume: false\nbd: t2\n---\nbody\n",
     )
-    _, _, scope = read_prompt(p)
+    _, _, scope, start_phase, stop_phase = read_prompt(p)
     assert scope == []
+    assert start_phase is None
+    assert stop_phase is None
 
 
 def test_read_prompt_missing_front_matter_fails_loudly(tmp_path: Path) -> None:
@@ -92,10 +98,68 @@ def test_read_prompt_unclosed_front_matter_fails_loudly(tmp_path: Path) -> None:
 
 
 def test_read_prompt_missing_prompt_file_returns_default() -> None:
-    resume, task, scope = read_prompt(Path("/nonexistent/user_prompt.md"))
+    resume, task, scope, start_phase, stop_phase = read_prompt(
+        Path("/nonexistent/user_prompt.md")
+    )
     assert resume is False
     assert "Harness is Working" in task
     assert scope == []
+    assert start_phase is None
+    assert stop_phase is None
+
+
+def test_read_prompt_start_phase(tmp_path: Path) -> None:
+    p = _write_prompt(
+        tmp_path,
+        "---\nResume: false\nbd: t5\nstart_phase: planner\n---\nbody\n",
+    )
+    _, _, _, start_phase, stop_phase = read_prompt(p)
+    assert start_phase == "planner"
+    assert stop_phase is None
+
+
+def test_read_prompt_stop_phase(tmp_path: Path) -> None:
+    p = _write_prompt(
+        tmp_path,
+        "---\nResume: false\nbd: t6\nstop_phase: supervisor_plan\n---\nbody\n",
+    )
+    _, _, _, start_phase, stop_phase = read_prompt(p)
+    assert start_phase is None
+    assert stop_phase == "supervisor_plan"
+
+
+def test_read_prompt_both_phases(tmp_path: Path) -> None:
+    p = _write_prompt(
+        tmp_path,
+        "---\n"
+        "Resume: false\n"
+        "bd: t7\n"
+        "start_phase: planner\n"
+        "stop_phase: supervisor_plan\n"
+        "---\n"
+        "body\n",
+    )
+    _, _, _, start_phase, stop_phase = read_prompt(p)
+    assert start_phase == "planner"
+    assert stop_phase == "supervisor_plan"
+
+
+def test_read_prompt_invalid_start_phase_fails(tmp_path: Path) -> None:
+    p = _write_prompt(
+        tmp_path,
+        "---\nResume: false\nbd: t8\nstart_phase: nonexistent\n---\nbody\n",
+    )
+    with pytest.raises(SystemExit):
+        read_prompt(p)
+
+
+def test_read_prompt_invalid_stop_phase_fails(tmp_path: Path) -> None:
+    p = _write_prompt(
+        tmp_path,
+        "---\nResume: false\nbd: t9\nstop_phase: invalid_phase\n---\nbody\n",
+    )
+    with pytest.raises(SystemExit):
+        read_prompt(p)
 
 
 # ── xfqkf: inject_repo_map scoped behaviour ────────────────────────────────
@@ -241,10 +305,10 @@ def test_rebuild_clean_planner_md_from_rubbish_file() -> None:
 
 # ── y1oqi: injection into planner + supervisor_plan (no hardcoded DictMap) ──
 def test_load_skill_injects_scope_into_planner_and_supervisor(monkeypatch) -> None:
-    import factory.infra.runner as runner
+    from factory.infra import _runtime as runtime_mod
 
     # Provide a cached scope context and avoid the real agent spawn.
-    monkeypatch.setattr(runner, "SCOPE_CONTEXT", "CODEBASE REFERENCE CONTEXT BLOCK")
+    monkeypatch.setattr("factory.infra._runtime.SCOPE_CONTEXT", "CODEBASE REFERENCE CONTEXT BLOCK")
     captured: dict[str, str] = {}
 
     async def fake_load_skill(role, brief, bd="", task_id=None):
@@ -255,7 +319,7 @@ def test_load_skill_injects_scope_into_planner_and_supervisor(monkeypatch) -> No
     import factory.infra.tools as tools_mod
 
     monkeypatch.setattr(
-        runner, "build_role_agent", lambda role: (None, None)
+        "factory.infra.agent.build_role_agent", lambda role: (None, None)
     )
     monkeypatch.setattr(
         tools_mod, "set_current_role", lambda role: None
@@ -264,7 +328,7 @@ def test_load_skill_injects_scope_into_planner_and_supervisor(monkeypatch) -> No
         tools_mod, "set_current_agent", lambda agent_id: None
     )
     monkeypatch.setattr(
-        runner, "build_md_bridge", lambda role, agent_id=None: None
+        "factory.common.md_bridge.build_md_bridge", lambda role, agent_id=None: None
     )
 
     # load_skill is async and builds an Agent; instead assert the brief-mutating
@@ -274,12 +338,13 @@ def test_load_skill_injects_scope_into_planner_and_supervisor(monkeypatch) -> No
     for role in ("planner", "supervisor_plan"):
         base = "TASK SPEC BODY"
         injected = base + "\n\n" + wrap_injected_context(
-            runner.SCOPE_CONTEXT, label="codebase_reference_context"
+            runtime_mod.SCOPE_CONTEXT, label="codebase_reference_context"
         )
         assert "CODEBASE REFERENCE CONTEXT BLOCK" in injected
         assert "TASK SPEC BODY" in injected
 
-    # Confirm the hardcoded DictMap text is gone from the source.
-    source = (Path(runner.__file__).read_text(encoding="utf-8"))
+    # Confirm the hardcoded DictMap text is gone from the source (now in agent.py).
+    from factory.infra import agent as agent_mod
+    source = (Path(agent_mod.__file__).read_text(encoding="utf-8"))
     assert "DictMap pattern: class XxxMap" not in source
     assert "codebase_reference_context" in source

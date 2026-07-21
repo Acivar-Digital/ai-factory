@@ -40,7 +40,7 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import run_red_team_gate
+from factory.infra.pipeline import run_red_team_gate
 
 
 def _plan() -> ExecutablePlan:
@@ -188,8 +188,7 @@ def test_r1_fallback_note_when_rerun_without_feedback(monkeypatch):
     (correct) HARD FAIL on an unresolvable global blocker.
     """
     from factory.infra.runner import run_execute_phase
-    import factory.infra.runner as m
-    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
+    monkeypatch.setattr("factory.infra.execution._write_harness_patches", lambda task_id, files_changed, bd="": (["fake.diff"], 1))
 
     plan = _plan()
     briefs: dict[str, str] = {}

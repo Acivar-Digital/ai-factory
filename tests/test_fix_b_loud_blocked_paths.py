@@ -114,7 +114,7 @@ async def test_fix_b_initial_timeout_is_loud(monkeypatch):
     def _log(msg, level="WARNING"):
         logs.append((level, msg))
 
-    monkeypatch.setattr(runner, "log_operator", _log)
+    monkeypatch.setattr("factory.infra.execution.log_operator", _log)
 
     calls = {"n": 0}
 
@@ -128,7 +128,7 @@ async def test_fix_b_initial_timeout_is_loud(monkeypatch):
             raise TimeoutError()
         return res
 
-    monkeypatch.setattr(runner.asyncio, "wait_for", _fake_wait_for)
+    monkeypatch.setattr("asyncio.wait_for", _fake_wait_for)
 
     plan = _make_plan()
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
@@ -148,13 +148,10 @@ async def test_fix_b_initial_timeout_is_loud(monkeypatch):
 
 async def test_fix_b_respawn_timeout_is_loud(monkeypatch):
     logs: list[tuple[str, str]] = []
-    monkeypatch.setattr(runner, "log_operator", lambda m, level="WARNING": logs.append((level, m)))
-    monkeypatch.setattr(runner, "subprocess", type(runner.subprocess)(""))  # placeholder, replaced below
-    # We need subprocess.run callable; monkeypatch the module attribute instead.
+    monkeypatch.setattr("factory.infra.execution.log_operator", lambda m, level="WARNING": logs.append((level, m)))
     import subprocess as _sp
 
     monkeypatch.setattr(_sp, "run", _guardrail_fail_run)
-    monkeypatch.setattr(runner, "subprocess", _sp)
 
     calls = {"n": 0}
 
@@ -168,7 +165,7 @@ async def test_fix_b_respawn_timeout_is_loud(monkeypatch):
             raise TimeoutError()
         return res
 
-    monkeypatch.setattr(runner.asyncio, "wait_for", _fake_wait_for)
+    monkeypatch.setattr("asyncio.wait_for", _fake_wait_for)
 
     plan = _make_plan()
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
@@ -187,14 +184,13 @@ async def test_fix_b_respawn_timeout_is_loud(monkeypatch):
 
 async def test_fix_b_validation_exhaustion_is_loud(monkeypatch):
     logs: list[tuple[str, str]] = []
-    monkeypatch.setattr(runner, "log_operator", lambda m, level="WARNING": logs.append((level, m)))
+    monkeypatch.setattr("factory.infra.execution.log_operator", lambda m, level="WARNING": logs.append((level, m)))
     import subprocess as _sp
 
     monkeypatch.setattr(_sp, "run", _guardrail_fail_run)
-    monkeypatch.setattr(runner, "subprocess", _sp)
 
     # Never time out — let validation exhaust and raise RuntimeError.
-    monkeypatch.setattr(runner.asyncio, "wait_for", lambda coro, timeout=None: coro)
+    monkeypatch.setattr("asyncio.wait_for", lambda coro, timeout=None: coro)
 
     plan = _make_plan()
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):

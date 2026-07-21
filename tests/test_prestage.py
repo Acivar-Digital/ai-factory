@@ -25,20 +25,20 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import stage_workspace_from_draft
+from factory.infra.context import stage_workspace_from_draft
 
 
 def test_stage_workspace_from_draft(tmp_path, monkeypatch):
     # Setup mock REPO_ROOT and TEMP_DIR
+    import factory.infra.context as context_mod
     import factory.infra.control as ctrl
-    import factory.infra.runner as runner_mod
 
-    monkeypatch.setattr(runner_mod, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(ctrl, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(context_mod, "REPO_ROOT", tmp_path)
 
     mock_temp = tmp_path / "admin" / "orchestrator" / "temp"
-    monkeypatch.setattr(runner_mod, "TEMP_DIR", mock_temp)
     monkeypatch.setattr(ctrl, "TEMP_DIR", mock_temp)
+    monkeypatch.setattr(context_mod, "TEMP_DIR", mock_temp)
 
     # Create dummy source files
     src2_dir = tmp_path / "src2" / "engine"

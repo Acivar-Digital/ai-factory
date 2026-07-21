@@ -28,7 +28,11 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import CODER_VALIDATION_PASSES, DAG_DEADLOCK_TIMEOUT, run_execute_phase
+from factory.infra.execution import (
+    CODER_VALIDATION_PASSES,
+    DAG_DEADLOCK_TIMEOUT,
+    run_execute_phase,
+)
 
 
 def _plan() -> ExecutablePlan:
@@ -82,10 +86,9 @@ def test_slow_legitimate_group_does_not_crash(monkeypatch):
     """A slow prerequisite group that exceeds the old 300s deadline must NOT crash.
     Patch DAG_DEADLOCK_TIMEOUT=0.5, AGENT_RUN_TIMEOUT=5 so group_2's wait fires,
     detects group_done=False, and keeps waiting."""
-    import factory.infra.runner as m
-    monkeypatch.setattr(m, "DAG_DEADLOCK_TIMEOUT", 0.5)
-    monkeypatch.setattr(m, "AGENT_RUN_TIMEOUT", 5.0)
-    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
+    monkeypatch.setattr("factory.infra.execution.DAG_DEADLOCK_TIMEOUT", 0.5)
+    monkeypatch.setattr("factory.infra.execution.AGENT_RUN_TIMEOUT", 5.0)
+    monkeypatch.setattr("factory.infra.execution._write_harness_patches", lambda task_id, files, bd="": ([], 1))
 
     async def slow_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
@@ -103,9 +106,8 @@ def test_slow_legitimate_group_does_not_crash(monkeypatch):
 
 def test_hung_coder_times_out_and_is_blocked(monkeypatch):
     """A coder that exceeds AGENT_RUN_TIMEOUT returns blocked instead of stalling."""
-    import factory.infra.runner as m
-    monkeypatch.setattr(m, "AGENT_RUN_TIMEOUT", 0.5)
-    monkeypatch.setattr(m, "DAG_DEADLOCK_TIMEOUT", 10.0)
+    monkeypatch.setattr("factory.infra.execution.AGENT_RUN_TIMEOUT", 0.5)
+    monkeypatch.setattr("factory.infra.execution.DAG_DEADLOCK_TIMEOUT", 10.0)
 
     async def hang_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
@@ -120,8 +122,7 @@ def test_hung_coder_times_out_and_is_blocked(monkeypatch):
 
 
 def test_all_done_no_timeout(monkeypatch):
-    import factory.infra.runner as m
-    monkeypatch.setattr(m, "_write_harness_patches", lambda task_id, files, bd="": ([], 1))
+    monkeypatch.setattr("factory.infra.execution._write_harness_patches", lambda task_id, files, bd="": ([], 1))
 
     async def quick_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
@@ -137,9 +138,9 @@ def test_all_done_no_timeout(monkeypatch):
 
 def test_add_constant_empty_value_fails():
     result = subprocess.run(
-        [sys.executable, "factory/factory/tools/add_constant.py", "src2/a.py", "MY_CONST", ""],
+        [sys.executable, "factory/tools/add_constant.py", "src2/a.py", "MY_CONST", ""],
         capture_output=True, text=True,
-        cwd=str(Path(__file__).resolve().parents[2]), timeout=10,
+        cwd=str(Path(__file__).resolve().parents[1]), timeout=10,
     )
     assert result.returncode != 0
     assert "no value supplied" in result.stdout
@@ -148,11 +149,11 @@ def test_add_constant_empty_value_fails():
 def test_add_constant_class_def_rejected():
     """add_constant rejects multi-line class defs (pre-existing behaviour, verified in crash log)."""
     result = subprocess.run(
-        [sys.executable, "factory/factory/tools/add_constant.py",
+        [sys.executable, "factory/tools/add_constant.py",
          "src2/core/schemas/unified.py", "MyClass",
          "class MyClass:\n    pass"],
         capture_output=True, text=True,
-        cwd=str(Path(__file__).resolve().parents[2]), timeout=10,
+        cwd=str(Path(__file__).resolve().parents[1]), timeout=10,
     )
     # The tool resolves the path relative to the project; if unified.py exists,
     # it should reject the class definition, not "file not found".

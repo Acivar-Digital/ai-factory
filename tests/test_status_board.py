@@ -20,16 +20,18 @@ from pathlib import Path
 
 import pytest
 
-from factory.infra import runner as runner_mod
+from factory.infra.exchange import update_status_board
+import factory.infra.exchange as exchange_mod
+import factory.infra._runtime as runtime
 
 
 @pytest.fixture
 def status_board(tmp_path, monkeypatch):
     """Point STATUS_MD at a temp file and reset global counters."""
     board = tmp_path / "STATUS.md"
-    monkeypatch.setattr(runner_mod, "STATUS_MD", board)
-    monkeypatch.setattr(runner_mod, "_RECOVERY_COUNT", 0)
-    monkeypatch.setattr(runner_mod, "_COMPACTION_COUNT", 0)
+    monkeypatch.setattr(exchange_mod, "STATUS_MD", board)
+    monkeypatch.setattr(runtime, "_RECOVERY_COUNT", 0)
+    monkeypatch.setattr(runtime, "_COMPACTION_COUNT", 0)
     return board
 
 
@@ -39,7 +41,7 @@ def _read(board: Path) -> str:
 
 def test_fresh_board_has_no_stale_coder_line(status_board):
     """RC1: a fresh status update with no coder history must not bleed coder:A."""
-    runner_mod.update_status_board([], "supervisor_plan", "baziforecaster-l4wjg")
+    update_status_board([], "supervisor_plan", "baziforecaster-l4wjg")
     text = _read(status_board)
     assert "coder:A" not in text
     assert "supervisor_plan" in text
@@ -48,15 +50,15 @@ def test_fresh_board_has_no_stale_coder_line(status_board):
 
 def test_review_phase_surfaced_while_running(status_board):
     """RC2: supervisor_review + red_team appear as IN-PROGRESS on the board."""
-    runner_mod.update_status_board([], "supervisor_review", "bd1")
+    update_status_board([], "supervisor_review", "bd1")
     assert "supervisor_review" in _read(status_board)
-    runner_mod.update_status_board([], "red_team", "bd1")
+    update_status_board([], "red_team", "bd1")
     assert "red_team" in _read(status_board)
 
 
 def test_coder_in_flight_shown_before_run(status_board):
     """A coder task id is reported active immediately (not after it returns)."""
-    runner_mod.update_status_board([("planner", "{}")], "coder:A", "bd1")
+    update_status_board([("planner", "{}")], "coder:A", "bd1")
     text = _read(status_board)
     assert "coder:A" in text
     assert "Active task: coder:A" in text
@@ -66,8 +68,8 @@ def test_coder_in_flight_shown_before_run(status_board):
 
 def test_done_folds_skipped_phases(status_board, monkeypatch):
     """A --from continuation run shows pre-completed phases as DONE."""
-    monkeypatch.setattr(runner_mod, "_SKIPPED_PHASES", ["planner", "supervisor_plan"])
-    runner_mod.update_status_board([], "coder", "bd1")
+    monkeypatch.setattr(runtime, "_SKIPPED_PHASES", ["planner", "supervisor_plan"])
+    update_status_board([], "coder", "bd1")
     text = _read(status_board)
     assert "- [x] planner" in text
     assert "- [x] supervisor_plan" in text
@@ -91,7 +93,7 @@ def test_run_start_shows_planner_and_clears_stale_coder(status_board):
         encoding="utf-8",
     )
     # Simulate the runner's run-start board init (history empty, planner role).
-    runner_mod.update_status_board([], "planner", "bd1")
+    update_status_board([], "planner", "bd1")
     text = _read(status_board)
     # Stale coder row gone, fresh timestamp applied.
     assert "coder01" not in text
@@ -112,7 +114,7 @@ def test_run_start_with_from_phase(status_board):
         "## ▶ LIVE — coder99 → src2/zzz.py\n- [~] coder99 → src2/zzz.py\n",
         encoding="utf-8",
     )
-    runner_mod.update_status_board([], "coder", "bd1")
+    update_status_board([], "coder", "bd1")
     text = _read(status_board)
     assert "coder99" not in text
     assert "LIVE — coder" in text

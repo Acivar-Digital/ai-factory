@@ -9,7 +9,7 @@ Verifies the durable-state contract the runner's `_checkpoint` relies on:
 from __future__ import annotations
 
 from factory.infra import models, state
-from factory.infra.runner import _PHASE_ORDER
+from factory.infra._runtime import _PHASE_ORDER
 
 
 def _workplan():

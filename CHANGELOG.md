@@ -1,9 +1,33 @@
 # Changelog
 
-All notable changes to the Baziforecaster Orchestrator are documented in this file.
+All notable changes to the ai-factory orchestrator are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
+
+## 2026-07-21 — Monolithic runner.py refactored into modular architecture
+
+**3558-line `runner.py` split into 10 focused modules.** The monolithic orchestrator
+was extracted into a package of single-responsibility files:
+
+| Module | Purpose | Lines |
+|---|---|---|
+| `_runtime.py` | Module globals: `RAW_OUTPUTS`, `PHASE_SUMMARIES`, `_PHASE_ORDER`, `SCOPE_CONTEXT` | 16 |
+| `exchange.py` | Exchange-turn / status-board / JSONL persistence | 302 |
+| `agent.py` | Agent builder: `build_role_agent`, `load_skill`, `_run_agent_retry`, `_coder_agent_id` | 548 |
+| `context.py` | Staging: `stage_workspace_from_draft`, `_stage_copies`, `_write_harness_patches`, tier-B map | 438 |
+| `validation.py` | Invariant checks: `check_plan_invariants`, `red_team_passed`, constants | 210 |
+| `execution.py` | EXECUTE phase: `run_execute_phase`, task execution, per-task timeout, harness patching | 935 |
+| `pipeline.py` | Gate orchestration: `run_code_review_gate`, `run_red_team_gate`, `run_ops_phase`, `run_gated` | 977 |
+| `runner.py` | Slim conductor: `main()`, `read_prompt()`, imports gates/agents (221 lines, was 3558) | 221 |
+| `agents/` subpkg | 7 Python + 7 YAML role specs (planner, coder, supervisor, red_team, ops, healer) | ~30 files |
+| `__init__.py` | Package exports | 29 |
+
+**Tests migrated.** 46 test files updated: `from factory.infra.runner import X` → direct
+imports from new modules. Monkeypatch targets converted from `monkeypatch.setattr(runner, X)`
+to string-based `monkeypatch.setattr("factory.infra.module.X")` so patches hit the module
+where the name is actually resolved (execution.py / context.py / agent.py import their
+dependencies with `from ... import` creating private references). All 225 tests pass.
 
 ## 2026-07-21 — 00_fix.md: ModelHTTPError 400 retry in loopguard
 

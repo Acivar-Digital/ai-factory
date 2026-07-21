@@ -43,11 +43,9 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import (
-    ExchangeTurn,
-    red_team_passed,
-    run_red_team_gate,
-)
+from factory.infra.exchange import ExchangeTurn
+from factory.infra.pipeline import run_red_team_gate
+from factory.infra.validation import red_team_passed
 
 PKG = Path(__file__).resolve().parents[1]  # factory
 TEMPLATE = PKG / "factory" / "templates" / "red_team.yaml"

@@ -11,7 +11,7 @@ from pydantic_ai.usage import UsageLimits
 
 from factory.infra import _loopguard as lg
 from factory.infra import models, runner, tools
-from factory.infra.runner import run_ops_phase
+from factory.infra.pipeline import run_ops_phase
 
 
 # ── SA1 Security (ACL) ───────────────────────────────────────────────────────

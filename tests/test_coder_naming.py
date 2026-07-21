@@ -26,7 +26,7 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import _coder_agent_id
+from factory.infra.agent import _coder_agent_id
 
 
 def _task(tid: str) -> ApprovedTask:

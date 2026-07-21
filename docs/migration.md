@@ -1,7 +1,7 @@
 # Migration Plan: Extracting `admin/orchestrator` into Standalone Community Repo `factory` (`ai-factory`)
 
 ## Executive Summary
-This document outlines the complete migration strategy for extracting the Orchestrator harness from `/home/yapilwsl/arthityap/baziforecaster/admin/orchestrator` into an autonomous, open-source, community-ready standalone repository at `/home/yapilwsl/arthityap/factory`, linked to remote origin `https://github.com/Acivar-Digital/ai-factory.git` under the MIT License ("Freely received, freely given").
+This document outlines the complete migration strategy for extracting the Orchestrator harness from `/home/yapilwsl/arthityap/baziforecaster/admin/orchestrator` into an autonomous, open-source, community-ready standalone repository at `/home/yapilwsl/arthityap/ai-factory`, linked to remote origin `https://github.com/Acivar-Digital/ai-factory.git` under the MIT License ("Freely received, freely given").
 
 ---
 
@@ -24,7 +24,7 @@ This document outlines the complete migration strategy for extracting the Orches
 ## 1. Core Architecture & Principles
 
 1. **100% Standalone Open-Source Framework (`ai-factory`)**:
-   - Local directory: `/home/yapilwsl/arthityap/factory`
+   - Local directory: `/home/yapilwsl/arthityap/ai-factory`
    - Remote repository: `https://github.com/Acivar-Digital/ai-factory.git`
    - License: MIT License ("Freely received, freely given")
    - `baziforecaster` holds NO symlink or any references to Orchestrator. `admin/orchestrator` is completely removed from `baziforecaster`.
@@ -67,8 +67,8 @@ This document outlines the complete migration strategy for extracting the Orches
 
 ## 3. Detailed Step-by-Step Execution Plan
 
-### Phase 1: Repository Setup (`/home/yapilwsl/arthityap/factory`) [COMPLETED]
-1. Created directory: `/home/yapilwsl/arthityap/factory`.
+### Phase 1: Repository Setup (`/home/yapilwsl/arthityap/ai-factory`) [COMPLETED]
+1. Created directory: `/home/yapilwsl/arthityap/ai-factory`.
 2. Initialized Git repo in `factory`: `git init`.
 3. Set remote origin: `git remote add origin https://github.com/Acivar-Digital/ai-factory.git`.
 4. Scaffolded `pyproject.toml` with `uv` dependencies (`pydantic>=2.0`, `pydantic-ai`, `pydantic-settings`, `httpx`, `pytest`, `ruff`, `pyyaml`).

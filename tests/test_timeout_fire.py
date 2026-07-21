@@ -31,7 +31,7 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import run_execute_phase
+from factory.infra.execution import run_execute_phase
 
 
 def _plan() -> ExecutablePlan:
@@ -75,9 +75,8 @@ def _plan() -> ExecutablePlan:
 
 def test_per_task_timeout_fires_at_one_second(monkeypatch):
     """AGENT_RUN_TIMEOUT=1 must trip and block the hung coder (no infinite stall)."""
-    import factory.infra.runner as m
-    monkeypatch.setattr(m, "AGENT_RUN_TIMEOUT", 1.0)
-    monkeypatch.setattr(m, "DAG_DEADLOCK_TIMEOUT", 30.0)
+    monkeypatch.setattr("factory.infra.execution.AGENT_RUN_TIMEOUT", 1.0)
+    monkeypatch.setattr("factory.infra.execution.DAG_DEADLOCK_TIMEOUT", 30.0)
 
     async def hang_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
@@ -100,9 +99,8 @@ def test_dependent_group_timeout_fires_at_one_second(monkeypatch):
     must be allowed to finish), so the real fail-loud trip is AGENT_RUN_TIMEOUT,
     which wraps every coder_fn including those in downstream groups.
     """
-    import factory.infra.runner as m
-    monkeypatch.setattr(m, "AGENT_RUN_TIMEOUT", 1.0)
-    monkeypatch.setattr(m, "DAG_DEADLOCK_TIMEOUT", 60.0)
+    monkeypatch.setattr("factory.infra.execution.AGENT_RUN_TIMEOUT", 1.0)
+    monkeypatch.setattr("factory.infra.execution.DAG_DEADLOCK_TIMEOUT", 60.0)
 
     async def hang_coder_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]

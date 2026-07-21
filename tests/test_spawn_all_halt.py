@@ -17,30 +17,12 @@ skip-short-circuit, tasks 2-6 silently vanish again — this test fails loudly.
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-
 import asyncio
 import json
-import subprocess
-
-_orig_run = subprocess.run
-def _mock_run(args, *args_, **kwargs):
-    if args and isinstance(args, list) and len(args) > 0 and "./bd" in str(args[0]):
-        class DummyCP:
-            returncode = 0
-            stdout = ""
-            stderr = ""
-        return DummyCP()
-    return _orig_run(args, *args_, **kwargs)
-subprocess.run = _mock_run
-
-import factory.infra.runner as m
-m._write_harness_patches = lambda task_id, files, bd="": ([], 1)
 
 import pytest
+
+import factory.infra.execution as exec_mod
 
 from factory.infra.control import TEMP_DIR
 from factory.infra.models import (
@@ -54,7 +36,15 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import run_execute_phase
+from factory.infra.execution import run_execute_phase
+
+
+@pytest.fixture(autouse=True)
+def _patch_harness(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        exec_mod, "_write_harness_patches",
+        lambda task_id, files, bd="": ([], 1),
+    )
 
 
 def _plan() -> ExecutablePlan:

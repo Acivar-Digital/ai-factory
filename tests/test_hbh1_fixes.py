@@ -1,4 +1,4 @@
-from factory.infra.runner import check_plan_invariants
+from factory.infra.validation import check_plan_invariants
 from factory.infra.tools import ROLE_TOOL_BUDGET
 from factory.infra.models import (
     ApprovedTask,

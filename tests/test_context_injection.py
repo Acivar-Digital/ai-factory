@@ -34,15 +34,15 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.runner import (
+from factory.infra.context import (
     _build_tier_b_map,
     _stage_copies,
     estimate_task_tokens,
-    run_execute_phase,
     stage_path,
     stage_paths,
     task_context_tier,
 )
+from factory.infra.execution import run_execute_phase
 
 
 def _plan_with(tasks) -> ExecutablePlan:
@@ -72,13 +72,12 @@ def _plan_with(tasks) -> ExecutablePlan:
 def _monkeypatch_repo(tmp_path, monkeypatch):
     """Point the modules' REPO_ROOT at tmp_path so relative file_paths resolve."""
     import shutil
-    import factory.infra.control as ctrl
-    import factory.infra.runner as runner_mod
 
-    monkeypatch.setattr(runner_mod, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(ctrl, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(runner_mod, "TEMP_DIR", tmp_path / "temp")
-    monkeypatch.setattr(ctrl, "TEMP_DIR", tmp_path / "temp")
+    monkeypatch.setattr("factory.infra.control.REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.context.REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.execution.REPO_ROOT", tmp_path)
+    monkeypatch.setattr("factory.infra.control.TEMP_DIR", tmp_path / "temp")
+    monkeypatch.setattr("factory.infra.context.TEMP_DIR", tmp_path / "temp")
 
     tools_src = Path(__file__).resolve().parents[1] / "factory" / "tools"
     tools_dst = tmp_path / "factory" / "tools"
@@ -142,8 +141,8 @@ def test_build_tier_b_map_lists_symbols(tmp_path, monkeypatch):
 # ── integration: Tier B brief is injected, no halt ────────────────────────
 def test_tier_b_injects_map_without_halt(tmp_path, monkeypatch):
     _monkeypatch_repo(tmp_path, monkeypatch)
-    import factory.infra.runner as runner_mod
-    monkeypatch.setattr(runner_mod, "TASK_TOKEN_THRESHOLD", 10_000)
+    monkeypatch.setattr("factory.infra.context.TASK_TOKEN_THRESHOLD", 10_000)
+    monkeypatch.setattr("factory.infra.execution.TASK_TOKEN_THRESHOLD", 10_000)
     # Tier B triggers when a task's TOTAL tokens exceed TASK_TOKEN_THRESHOLD
     # (10K) but the single file does not exceed TIER_B_SLICE_THRESHOLD (100K).
     paths = []
