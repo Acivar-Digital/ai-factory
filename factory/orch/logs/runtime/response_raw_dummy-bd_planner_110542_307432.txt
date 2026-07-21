@@ -1,0 +1,1 @@
+(no output/tool-call parts captured; see response_raw_dummy-bd_planner.json)

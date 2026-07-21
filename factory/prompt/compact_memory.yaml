@@ -1,0 +1,17 @@
+# Compact-memory instruction set for the cross-turn "keep_memory" gate.
+# Loaded by _loopguard._load_compact_prompts(); inline fallbacks exist if missing.
+
+compact_instruction: |
+  Your prior working memory is included below. It is too large to carry
+  forward verbatim. Compact it NOW into a single dense memory dump you can
+  continue from: keep only durable facts, decisions, constraints, open
+  questions, and unresolved threads — drop chatter, raw file dumps, and
+  redundant retries. Then call the keep_memory tool EXACTLY ONCE with that
+  compacted text. Do NOT return the text as a normal answer; you MUST call
+  keep_memory.
+
+compact_retry: |
+  That dump is still too large to carry forward. Compact it FURTHER —
+  collapse it to only the absolute essentials you need to continue, then call
+  keep_memory AGAIN with the smaller text. Keep calling keep_memory with
+  progressively tighter text until it fits.

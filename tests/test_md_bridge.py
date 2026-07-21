@@ -1,0 +1,67 @@
+"""Tests for the MD-twin per-turn re-injection bridge (ticket baziforecaster-mb1k5).
+
+Offline by design: no network, no LLM keys. We build a hermetic artefacts tree
+(via the ``ORCHESTRATOR_ARTEFACTS_DIR`` env override) containing `.md` twins and
+assert ``build_md_bridge`` resolves the EXACT twin (no mtime-glob), returns None
+on cold spawn, and honours per-coderN isolation.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from pydantic_ai.messages import ModelRequest, UserPromptPart
+
+from factory.common.md_bridge import build_md_bridge
+
+
+def _write_md(art_dir: Path, role_folder: str, stem: str, text: str) -> None:
+    folder = art_dir / "history" / role_folder
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{stem}.md").write_text(text, encoding="utf-8")
+
+
+def test_cold_spawn_returns_none(tmp_path, monkeypatch):
+    """No twin yet -> bridge returns None (no HALT, fresh agent)."""
+    art = tmp_path / "artefacts"
+    monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
+    assert build_md_bridge("planner") is None
+    assert build_md_bridge("coder", agent_id="coder3") is None
+
+
+def test_role_md_bridge_injects_exact_twin(tmp_path, monkeypatch):
+    """A non-coder role's `.md` twin is wrapped as a single ModelRequest."""
+    art = tmp_path / "artefacts"
+    monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
+    _write_md(art, "planner", "planner", "# Planner journal\n- did X\n- did Y")
+
+    bridge = build_md_bridge("planner")
+    assert bridge is not None
+    assert len(bridge) == 1
+    assert isinstance(bridge[0], ModelRequest)
+    part = bridge[0].parts[0]
+    assert isinstance(part, UserPromptPart)
+    assert "Planner journal" in part.content
+    # The MD_LEDGER sentinel marks the journal injection channel.
+    assert "<!-- MD_LEDGER -->" in part.content
+
+
+def test_coder_agent_isolation(tmp_path, monkeypatch):
+    """coder + agent_id resolves the isolated coderN.md; no sibling leakage."""
+    art = tmp_path / "artefacts"
+    monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
+    _write_md(art, "coder", "coder3", "coder3 private work")
+    # A DIFFERENT coder's twin must NOT be picked up for agent_id coder3.
+    _write_md(art, "coder", "coder7", "coder7 private work - MUST NOT LEAK")
+
+    bridge = build_md_bridge("coder", agent_id="coder3")
+    assert bridge is not None
+    content = bridge[0].parts[0].content
+    assert "coder3 private work" in content
+    assert "coder7" not in content
+
+
+def test_unknown_role_returns_none(tmp_path, monkeypatch):
+    """ops is excluded from ROLE_FOLDER -> no twin, returns None."""
+    art = tmp_path / "artefacts"
+    monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
+    assert build_md_bridge("ops") is None
