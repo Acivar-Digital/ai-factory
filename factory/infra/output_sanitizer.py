@@ -431,11 +431,19 @@ def clean_role_output(raw: str | None, model: type[T]) -> T:
                 model_settings=ModelSettings(parallel_tool_calls=False)
             )
             try:
-                res = healer_agent.run_sync(
-                    f"Malformed Raw Output:\n{raw}\n\n"
-                    f"Target Schema:\n{schema_str}\n\n"
-                    f"Validation Error:\n{str(e)}"
-                )
+                import concurrent.futures
+                import asyncio
+                
+                def _run_healer_thread():
+                    return asyncio.run(healer_agent.run(
+                        f"Malformed Raw Output:\n{raw}\n\n"
+                        f"Target Schema:\n{schema_str}\n\n"
+                        f"Validation Error:\n{str(e)}"
+                    ))
+                    
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    res = pool.submit(_run_healer_thread).result()
+                    
                 healed_obj = res.output
 
                 try:

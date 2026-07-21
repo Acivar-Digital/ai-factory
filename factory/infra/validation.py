@@ -39,6 +39,9 @@ def check_plan_invariants(plan) -> list[str]:
 
     groups = getattr(workplan, "groups", []) if workplan else []
 
+    if not workplan:
+        violations.append("workplan or strategy.parallelisable_workplan is missing or null.")
+
     tasks = []
     for group in groups or []:
         tasks.extend(getattr(group, "tasks", []) or [])

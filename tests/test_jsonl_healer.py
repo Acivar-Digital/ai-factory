@@ -68,6 +68,9 @@ def test_healer_mode_fallback(monkeypatch):
         def run_sync(self, prompt):
             return FakeResult()
 
+        async def run(self, prompt):
+            return FakeResult()
+
     monkeypatch.setattr("pydantic_ai.Agent", FakeAgent)
 
     # Malformed raw input (missing value field)
@@ -111,6 +114,9 @@ def test_self_learning_loop(monkeypatch):
                 self.output_type = output_type
 
             def run_sync(self, prompt):
+                return FakeResult()
+
+            async def run(self, prompt):
                 return FakeResult()
 
         monkeypatch.setattr("pydantic_ai.Agent", FakeAgent)
