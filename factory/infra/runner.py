@@ -190,8 +190,8 @@ async def main() -> None:
         plan = None
         batch = None
     else:
-        is_forced_pass = await run_gated("planner", "supervisor_plan", history, exchange, pass_counter, bd, task, st, args, prior)
-        plan = _assert_plan_gate_ok(history, bd, is_forced_pass=is_forced_pass, st=st, args=args, exchange=exchange)
+        is_forced_pass = await run_gated("planner", "supervisor_plan", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False})
+        plan = _assert_plan_gate_ok(history, bd, st=st, is_forced_pass=is_forced_pass)
         if plan is None:
             return  # Checkpoint stop
 
@@ -203,18 +203,18 @@ async def main() -> None:
     if plan is not None and plan.workplan and plan.workplan.groups:
         run_dir = TEMP_DIR / bd
         run_dir.mkdir(parents=True, exist_ok=True)
-        batch = await run_code_review_gate(plan, run_dir, record_coder, do_role, exchange, pass_counter, bd, history, task, st, args, prior)
+        batch = await run_code_review_gate(plan, run_dir, record_coder, do_role, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
         history.append(("supervisor_review", batch.model_dump_json()))
     else:
-        await run_gated("coder", "supervisor_review", history, exchange, pass_counter, bd, task, st, args, prior, record_exchange=(args.from_ == "coder"))
+        await run_gated("coder", "supervisor_review", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, record_exchange=(args.from_ == "coder"))
 
     # Red-team gate
     if plan is not None and plan.workplan and plan.workplan.groups:
         run_dir = TEMP_DIR / bd
-        batch = await run_red_team_gate(plan, run_dir, record_coder, do_role, {t.task_id: t for t in batch.results} if batch else {}, exchange, pass_counter, bd, history, task, st, args, prior)
+        batch = await run_red_team_gate(plan, run_dir, record_coder, do_role, {t.task_id: t for t in batch.results} if batch else {}, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
         history.append(("red_team", batch.model_dump_json()))
     else:
-        await run_gated("coder", "red_team", history, exchange, pass_counter, bd, task, st, args, prior, hard=True, record_exchange=(args.from_ == "coder"))
+        await run_gated("coder", "red_team", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, hard=True, record_exchange=(args.from_ == "coder"))
 
     save_exchange(bd, exchange)
 

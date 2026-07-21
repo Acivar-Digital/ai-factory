@@ -304,7 +304,7 @@ async def run_execute_phase(
         # not the consumer. Each coder call is a clean agent (no shell needed).
         feedback_brief = brief
         verdict_state: dict[str, dict] = {}  # fp -> last guardrail payload
-        for _pass in range(CODER_VALIDATION_PASSES):
+        for _pass in range(CODER_VALIDATION_PASSES + 1):
             files = obj.get("files_changed") or obj.get("files") or []
             ruff_failed = False
             pyright_failed = False
@@ -412,11 +412,8 @@ async def run_execute_phase(
             if not (ruff_failed or smoke_failed or pyright_failed or zero_diff_failed):
                 break  # clean -> final result is the current out/obj.
 
-            if _pass + 1 >= CODER_VALIDATION_PASSES:
-                # Task 6 / D8: HARD-HALT on the 3rd validation failure. A broken
-                # upstream type contract must NOT poison dependents; we abort the
-                # EXECUTE phase loudly rather than warn-and-proceed (the old
-                # behaviour that let module9's runtime crash ship).
+            if _pass + 1 > CODER_VALIDATION_PASSES:
+                # HARD-HALT after exhausting all re-spawn attempts.
                 reasons = []
                 if ruff_failed:
                     reasons.append("ruff")
@@ -430,13 +427,13 @@ async def run_execute_phase(
                 # HALT so the operator sees it without a deep log dive.
                 log_operator(
                     f"[HALT] task {t.id} failed validation after "
-                    f"{CODER_VALIDATION_PASSES} coder passes "
+                    f"{CODER_VALIDATION_PASSES} re-spawn attempts "
                     f"({', '.join(reasons)})",
                     level="ERROR",
                 )
                 raise RuntimeError(
                     f"[HALT] task {t.id} failed validation after "
-                    f"{CODER_VALIDATION_PASSES} coder passes "
+                    f"{CODER_VALIDATION_PASSES} re-spawn attempts "
                     f"({', '.join(reasons)}). EXECUTE phase aborted — a broken "
                     f"type contract must not reach review/red-team."
                 )

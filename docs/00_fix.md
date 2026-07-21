@@ -1,88 +1,17 @@
-# MALFORMED_FUNCTION_CALL Fix — Loopguard 400 Retry
+# 00_fix: Audit-discovered bugfixes (2026-07-22)
 
-> **Issue:** beads `factory-2xo` (open)
-> **Date:** 2026-07-21
-> **Scope:** One file, add one handler
+Fixes applied in response to a third-party code review of `pipeline.py`,
+`execution.py`, and `control.py`. All 7 real findings fixed.
 
----
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `pipeline.py:469` | `run_gated` returned `False` on PASS (caller can't distinguish pass from fail) | `return True` |
+| 2 | `pipeline.py:275-301` | `do_role` had dead `if/else` branches — both executed identical code | Merged into shared helper |
+| 3 | `pipeline.py:349-386` | `record_coder` copy-pasted `do_role`'s `UnexpectedModelBehavior` recovery | Both now call `_recover_from_unexpected_behavior()` |
+| 4 | `execution.py:620` | `[] if prior else ...` treats empty `prior={}` (falsy) as "fresh run" | **Deferred** — original `prior={}` is intentionally passed by `run_red_team_gate` when `batch` is empty; treating `{}` as falsy is correct here |
+| 5 | `execution.py:307-442` | HALT fired at `_pass=2` (3rd check) before the Nth re-spawn — got 2 re-spawns instead of `CODER_VALIDATION_PASSES` | Loop range `+1`, condition `>`, message says "re-spawn attempts" |
+| 6 | `control.py:203-204` | Dead `if any(...): pass` in `_redact_payload` | Removed |
+| 7 | `control.py:108` | `pydantic_url` defaulted to `:7766` (same as `literouter_url`) | `:7768` |
+| 8 | `control.py:397` | `gemma_4_26b_a4b_it`: `context_window=16000 == max_completion_tokens=16000` → zero input budget | `max_completion_tokens=12000, context_window=32000` |
 
-## Root Cause
-
-The provider gateway (OpenRouter/LiteLLM) sometimes false-positive flags valid function calls as malformed and returns HTTP 400 with a "malformed function call" error. The model output was actually fine — the gateway hiccuped. A simple retry of the same request succeeds on the next attempt.
-
-### Exception flow
-
-```
-Provider 400 → OpenAI SDK APIStatusError → _map_api_errors → ModelHTTPError(400)
-  → model_request → agent graph → _loopguard.py except Exception → _dump_failure → raise
-  → runner.py except ModelAPIError → _report_run_failure → SystemExit(1) [HALT]
-```
-
-`ModelHTTPError` is a subclass of `ModelAPIError`. The 400 is NOT in `RETRYABLE_STATUS_CODES` (`{429, 500, 502, 503, 504}`), so the transport layer does NOT retry it.
-
----
-
-## Fix Strategy
-
-**Catch `ModelHTTPError` with status_code 400 inside `_loopguard.py`'s `while True` loop** and retry up to 3 times with exponential backoff. No message injection needed — the same request will succeed on retry (the model output was valid, the gateway flapped).
-
-If all 3 attempts fail, let the error propagate to the existing `except Exception` handler for normal failure loudness.
-
-### Why in `_loopguard.py` not `runner.py`
-
-- `_loopguard.py` **owns** the agent interaction loop — every agent call passes through it.
-- `runner.py` is the **orchestrator** caller — it should only see clean success or terminal failure.
-- Placing recovery here makes it **universal**: coder, planner, supervisor, all roles benefit.
-
----
-
-## Implementation
-
-### File: `factory/infra/_loopguard.py`
-
-**Step 1 — Add import** (line 20):
-```
-from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded
-```
-
-**Step 2 — Add handler** between `except UsageLimitExceeded` (line 369) and `except Exception` (line 369):
-
-```python
-            except ModelHTTPError as exc:
-                if exc.status_code == 400:
-                    attempts = getattr(f, '_malformed_retries', 0) + 1
-                    f._malformed_retries = attempts
-                    if attempts <= 3:
-                        delay = 5 * attempts
-                        print(
-                            f"[{phase or 'RUN'}] turn {turn} got 400 (attempt {attempts}/3); "
-                            f"retrying in {delay}s...",
-                            flush=True,
-                        )
-                        await asyncio.sleep(delay)
-                        continue
-                _dump_failure(fail_dir, phase, role, current_history, limits, exc, agent_id=agent_id)
-                raise
-```
-
-**Acceptance:**
-1. `ModelHTTPError(status_code=400)` → retries up to 3 times with `asyncio.sleep` backoff, then falls through to generic `except Exception` on exhaustion
-2. Other `ModelHTTPError` (e.g. 401, 403) → `_dump_failure` + re-raise (existing behaviour preserved)
-3. `ruff check` clean
-
----
-
-## Dependency Order
-
-```
-00_fix.md (this plan)
-  └── _loopguard.py change (only work item)
-        └── verify: run harness with a provider that 400s on function calls
-```
-
-## Verification Protocol
-
-1. `uv run ruff check factory/infra/_loopguard.py` → clean
-2. Unit test: `uv run pytest tests/ -x -k "malformed"`
-3. Integration: run a task with the target model; observe loopguard retries instead of HALT
-4. Close beads issue `factory-2xo`
+The reviewer's "double semaphore acquire" claim was incorrect — the first `async with sem:` in `execute_task` exits before the validation re-spawn loop.
