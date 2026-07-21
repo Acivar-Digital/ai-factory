@@ -102,31 +102,34 @@ def main():
             )
             sys.exit(1)
 
-        new_tree = ast.parse(content)
-        if args.class_name:
-            for node in ast.walk(new_tree):
-                if isinstance(node, ast.ClassDef) and node.name == args.class_name:
-                    for i, sub in enumerate(node.body):
-                        if (
-                            isinstance(sub, ast.FunctionDef)
-                            and sub.name == args.function_name
-                        ):
-                            node.body[i] = new_node
-        else:
-            for i, node in enumerate(new_tree.body):
-                if isinstance(node, ast.FunctionDef) and node.name == args.function_name:
-                    new_tree.body[i] = new_node
+        assert target is not None
+        start_line = target.lineno
+        if target.decorator_list:
+            start_line = min(d.lineno for d in target.decorator_list)
+        end_line = target.end_lineno
 
-        ast.fix_missing_locations(new_tree)
-        updated = ast.unparse(new_tree)
-        # Diff ONLY the replaced function (old vs new source), not the whole
-        # module — ast.unparse re-emits the entire file and normalises
-        # formatting (quote/import/blank-line churn), which would otherwise
-        # make the diff claim the whole file changed.
-        assert target is not None  # guarded by the `found` check above
-        old_src = ast.unparse(target)
-        new_src = ast.unparse(new_node)
-        path.write_text(updated + "\n", encoding="utf-8")
+        lines = content.splitlines(keepends=True)
+        target_line = lines[start_line - 1]
+        indent = target_line[:len(target_line) - len(target_line.lstrip())]
+
+        new_func_lines = args.new_function_code.splitlines(keepends=True)
+        if new_func_lines and not new_func_lines[-1].endswith("\n"):
+            new_func_lines[-1] += "\n"
+
+        new_code_indented = ""
+        for line in new_func_lines:
+            if line.strip():
+                new_code_indented += indent + line
+            else:
+                new_code_indented += line
+
+        old_src = "".join(lines[start_line - 1 : end_line])
+        new_src = new_code_indented
+
+        updated_lines = lines[:start_line - 1] + [new_code_indented] + lines[end_line:]
+        updated_content = "".join(updated_lines)
+
+        path.write_text(updated_content, encoding="utf-8")
         print(
             json.dumps(
                 ok(
