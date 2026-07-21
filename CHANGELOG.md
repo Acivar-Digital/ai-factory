@@ -5,6 +5,22 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 6: Shadow Tools Fixes (Line Numbers, Formatting, Whitespace, Edge Cases)
+
+**Comprehensive fixes for codebase investigation and modification shadow tools.** Addressed critical bugs preventing the LLM from accurately referencing line numbers, preserving codebase formatting, and performing reliable string/regex replacements.
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `factory/tools/read_file.py` | Missing line numbers in output, forcing the LLM to manually count lines | Prepended `N:` line numbers to the output, correctly offsetting by the start index |
+| 2 | `factory/tools/read_file.py` | The end-line variable `e` shadowed the exception block variable `e` | Renamed exception block variable from `e` to `ex` |
+| 3 | `factory/tools/investigate.py` | Context truncation blindly cut characters (e.g. `12000 * 3.8`), slicing through lines and line number prefixes | Truncation now safely slices at the last complete newline before the limit `rfind('\n', 0, limit)` |
+| 4 | `factory/tools/investigate.py` | `extract_pattern_context` created disjointed, visually ambiguous blocks for nearby/overlapping grep matches | Refactored to compute overlapping intervals and merge them into larger contiguous blocks with proper `>>> ` match markers |
+| 5 | `factory/tools/replace_text.py` | `--ignore-whitespace` doubly-escaped whitespace (`re.escape` then `re.sub`), resulting in a broken regex | Fixed regex compilation by splitting the input on spaces, escaping chunks, and rejoining with `\s+` |
+| 6 | `factory/tools/replace_function.py` | Using `ast.unparse()` wiped all comments and reformatted the entire file | Replaced AST rewrite with precision string slicing based on `node.lineno` and `node.end_lineno`, preserving all file formatting |
+
+
+
+
 ## 2026-07-22 — Batch 5: Guardrail Fail-Loudly, Schema Gate Logging, and Verdict Logic
 
 **Audit-driven fixes for 5 execution and validation logic bugs.** Addressed silent-pass vulnerabilities in the staging guardrails, schema gating, and red team validation.
