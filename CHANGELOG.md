@@ -5,6 +5,22 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 3: DAG executor hardening (concurrent flag, cross-group, deadlock)
+
+**Third wave of DAG executor fixes.** Removed misleading `concurrent` field
+from `WorkGroup` model, made cross-group file-disjointness check `depends_on`-aware,
+and added secondary timeout to deadlock fallback.
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `models.py:137`, `execution.py:66`, `pipeline.py`, `ledger.py`, `planner.yaml` | `WorkGroup.concurrent` field was ignored by executor for dispatch but exposed to planner, creating a contract mismatch | Removed `concurrent` from `WorkGroup` model; executor always checks intra-group disjointness; depends_on groups count as sequential in topology log |
+| 2 | `execution.py:85-95` | Cross-group file overlap check fired on ALL groups including `depends_on` chains where sequential execution makes overlap safe | Added transitive dependency closure; only concurrent groups (no depends_on relationship) trigger the overlap HALT |
+| 3 | `execution.py:611` | Deadlock fallback wait was unbounded — hung forever if prerequisite crashed silently | Added secondary timeout (`DAG_DEADLOCK_TIMEOUT * 2`) that raises `RuntimeError` |
+| 4 | `tests/test_file_disjoint_filter.py` | True-positive overlap test used `depends_on` groups (sequential, no race) | Updated to genuinely concurrent groups; added new `test_depends_on_chain_allows_file_overlap` |
+
+**Not a bug (re-confirmed):** `to_run = [] if prior else list(g.tasks)` — `bool({})` is
+`False`, so `prior={}` runs all tasks correctly per design intent.
+
 ## 2026-07-22 — Batch 2: 4 real bugs from second code review
 
 **Second wave of audit-driven fixes** in response to an independent review

@@ -51,7 +51,6 @@ def _plan() -> ExecutablePlan:
         tasks=[ApprovedTask(id="coder01", title="coder_1 task", file_paths=["src2/a.py"],
                              instruction="implement coder_1", acceptance="coder_1 must pass lint",
                              tool_preference="CLI-wrapper")],
-        concurrent=True,
     )
     g2 = WorkGroup(
         id="g2",
@@ -59,7 +58,6 @@ def _plan() -> ExecutablePlan:
         tasks=[ApprovedTask(id="coder02", title="coder_2 task", file_paths=["src2/b.py"],
                             instruction="implement coder_2", acceptance="coder_2 must pass lint",
                             tool_preference="CLI-wrapper")],
-        concurrent=True,
     )
     strat = Strategy(
         how_to_fix="x",

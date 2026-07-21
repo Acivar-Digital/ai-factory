@@ -269,7 +269,6 @@ async def do_role(
                                     id=g.id,
                                     depends_on=g.depends_on,
                                     tasks=group_tasks,
-                                    concurrent=g.concurrent,
                                 )
                             )
                         temp_plan = ExecutablePlan(
@@ -554,7 +553,6 @@ def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool =
                 id=g.id,
                 depends_on=g.depends_on,
                 tasks=group_tasks,
-                concurrent=g.concurrent,
             )
         )
 

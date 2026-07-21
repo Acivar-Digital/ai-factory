@@ -55,7 +55,6 @@ def _plan() -> ExecutablePlan:
         tasks=[ApprovedTask(id="coder01", title="t1", file_paths=["src2/a.py"],
                             instruction="implement coder_1", acceptance="coder_1 ok",
                             tool_preference="CLI-wrapper")],
-        concurrent=True,
     )
     g2 = WorkGroup(
         id="g2",
@@ -63,7 +62,6 @@ def _plan() -> ExecutablePlan:
         tasks=[ApprovedTask(id=f"coder{i:02d}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
                             instruction=f"implement coder_{i}", acceptance=f"coder_{i} ok",
                             tool_preference="CLI-wrapper") for i in range(2, 7)],
-        concurrent=True,
     )
     strat = Strategy(
         how_to_fix="x",

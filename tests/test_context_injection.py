@@ -46,7 +46,7 @@ from factory.infra.execution import run_execute_phase
 
 
 def _plan_with(tasks) -> ExecutablePlan:
-    g = WorkGroup(id="g1", tasks=list(tasks), concurrent=True)
+    g = WorkGroup(id="g1", tasks=list(tasks))
     strat = Strategy(
         how_to_fix="x",
         tool_preference={t.id: "CLI-wrapper" for t in tasks},
