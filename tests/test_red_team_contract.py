@@ -179,5 +179,5 @@ async def test_runner_forced_pass_on_final_attempt():
     from factory.infra.models import TaskBatch
     assert isinstance(batch, TaskBatch)
     # 3 red_team audits (one per attempt); coder re-executes on attempts 1 & 2.
-    # 4 exchange entries recorded (attempts 1, 2, 3 + attempt 3 forced-pass audit).
-    assert pass_counter["red_team"] == 4
+    # 3 exchange entries recorded (attempts 1, 2, 3 — forced-pass updates last in-place).
+    assert pass_counter["red_team"] == 3

@@ -97,7 +97,7 @@ def patch_summarizer(monkeypatch):
 
     # CONTROL_SHEET is a typed ControlSheet model; its models live in the
     # `models` dict. maybe_compact resolves the summarizer via
-    # CONTROL_SHEET.model(COMPACTION_CONFIG["summarizer_model"]), which is
+    # CONTROL_SHEET.model(COMPACTION_CONFIG.summarizer_model), which is
     # "compact_model" — patch that field.
     monkeypatch.setitem(CONTROL_SHEET.models, "compact_model", FunctionModel(_sum))
 

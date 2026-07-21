@@ -187,7 +187,7 @@ def test_red_team_forced_pass_overrides_evaluations():
     ))
     
     assert {r.task_id for r in batch.results} == {"coder01", "coder02", "coder03"}
-    assert pass_counter.get("red_team") == 4
+    assert pass_counter.get("red_team") == 3
 
 
 def test_code_review_forced_pass_overrides_evaluations():

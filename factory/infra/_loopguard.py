@@ -35,6 +35,7 @@ from factory.infra.control import (
     DEFAULT_AGENT_SETTINGS,
     ORCH_ROOT,
     PKG_DIR,
+    PerRoleConfig,
 )
 from factory.infra.models import CompactedContext
 
@@ -542,7 +543,7 @@ async def run_with_loopguard(
 
 
 # ── Context Compaction Gate (§8.5) ──────────────────────────────────────
-KEEP_RECENT = int(COMPACTION_CONFIG["keep_recent_messages"])  # type: ignore[arg-type]
+KEEP_RECENT = COMPACTION_CONFIG.keep_recent_messages
 
 
 def get_safe_recent_messages(
@@ -579,7 +580,7 @@ _CJK_RE = re.compile(r"[\u3000-\u303F\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]")
 
 
 def estimate_tokens(msgs: list[ModelMessage]) -> int:
-    if COMPACTION_CONFIG["token_estimate"] == "tiktoken":
+    if COMPACTION_CONFIG.token_estimate == "tiktoken":
         import tiktoken
 
         enc = tiktoken.get_encoding("cl100k_base")
@@ -614,15 +615,15 @@ async def maybe_compact(
     # Per-role budget (Q3/Q4): orchestrator gets the higher (~200K) window key and
     # a larger ceiling; workers stay small. We compact conservatively BEFORE the
     # provider latency wall (~200K) so both stay zippy.
-    role_cfg = COMPACTION_CONFIG.get("per_role", {}).get(role or "", {})
-    fraction = role_cfg.get("compact_at_fraction", COMPACTION_CONFIG["compact_at_fraction"])
-    hard_max = role_cfg.get("hard_max_tokens", COMPACTION_CONFIG["hard_max_tokens"])
+    role_cfg = COMPACTION_CONFIG.per_role.get(role or "", PerRoleConfig())
+    fraction = role_cfg.compact_at_fraction if role_cfg.compact_at_fraction is not None else COMPACTION_CONFIG.compact_at_fraction
+    hard_max = role_cfg.hard_max_tokens if role_cfg.hard_max_tokens is not None else COMPACTION_CONFIG.hard_max_tokens
     budget = min(int(window * fraction), hard_max)
     if estimate_tokens(agent_msgs) <= budget:
         return agent_msgs
 
     # Resolve the summarizer MODEL (not the raw string key).
-    summarizer_key = str(COMPACTION_CONFIG["summarizer_model"])
+    summarizer_key = COMPACTION_CONFIG.summarizer_model
     summarizer_model = CONTROL_SHEET.model(summarizer_key)
 
     # Load the summarizer prompt from the orchestrator sandbox (no inline strings).
@@ -670,9 +671,9 @@ async def maybe_compact(
 # today (700K+ bloat). This gate bounds it using the SAME WORKING LLM — no
 # separate compaction agent. Function A (the gate) lives in runner.load_skill;
 # Function B (this module) is the compaction loop + summarizer fallback.
-CONTEXT_COMPACT_CEILING = int(COMPACTION_CONFIG.get("CONTEXT_COMPACT_CEILING", 200_000))  # type: ignore[arg-type]
-CONTEXT_COMPACT_FLOOR = int(COMPACTION_CONFIG.get("CONTEXT_COMPACT_FLOOR", 60_000))  # type: ignore[arg-type]
-EMPTY_EXT_RETRIES = int(COMPACTION_CONFIG.get("EMPTY_EXT_RETRIES", 3))  # type: ignore[arg-type]
+CONTEXT_COMPACT_CEILING = COMPACTION_CONFIG.CONTEXT_COMPACT_CEILING
+CONTEXT_COMPACT_FLOOR = COMPACTION_CONFIG.CONTEXT_COMPACT_FLOOR
+EMPTY_EXT_RETRIES = COMPACTION_CONFIG.EMPTY_EXT_RETRIES
 
 _COMPACT_PROMPT_PATH = PKG_DIR / "prompt" / "compact_memory.yaml"
 
