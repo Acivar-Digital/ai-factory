@@ -5,6 +5,20 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Runtime Load Gate: Two-Root Path Resolution Fix
+
+The Runtime Load Gate (`factory/tools/load_schema_gate.py`) crashed when validating staged Python files, causing the orchestrator to block `coder01` and the Red Team to hallucinate that the Coder returned invalid JSON. Three compounding bugs in `load_schema_gate.py` caused the crash:
+
+1. **Legacy `temp_dir` path**: Hardcoded to `repo_root / "admin" / "orchestrator" / "temp"` (a path from the pre-decoupling era when the factory lived inside `baziforecaster`). The correct path is `repo_root / "factory" / "temp"`.
+2. **Missing `TARGET_REPO` in `sys.path`**: The script added `ai-factory/` to `sys.path` but never injected `TARGET_REPO` (`baziforecaster/`), so imports like `from src2.core.schemas...` failed with `ModuleNotFoundError`.
+3. **Synthetic dot-free module name**: The script flattened the module name (e.g. `schema_gate_src2_engine_module1_macro`) to avoid package-discovery, but this broke relative imports (`from .element_phase import ...`) in the staged file, causing `ImportError: attempted relative import with no known parent package`.
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `factory/tools/load_schema_gate.py` | `temp_dir` pointed to non-existent `admin/orchestrator/temp` | Changed to `repo_root / "factory" / "temp"` |
+| 2 | `factory/tools/load_schema_gate.py` | `TARGET_REPO` never added to `sys.path` | Added `_resolve_target_root()` and injected `TARGET_REPO` into `sys.path[1]` |
+| 3 | `factory/tools/load_schema_gate.py` | Dot-free module name broke relative imports | Use real dotted name (`src2.engine.module1_macro`) + set `module.__package__` explicitly |
+
 ## 2026-07-22 — MD_LEDGER Exponential Append Bug Fix
 
 The orchestrator was exponentially appending its entire historical context over itself upon every loop or agent resume, leading to massive token explosion and hallucinated output in `coder01.md`. `md_bridge.py` injects the previous `.md` twin as a `UserPromptPart`, but `_clean_messages` in `artefacts.py` was checking only for `SystemPromptPart` when stripping the ledger for persistence.
