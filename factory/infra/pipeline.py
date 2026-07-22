@@ -32,6 +32,7 @@ from factory.infra.execution import (
 from factory.infra.exchange import (
     update_status_board, save_exchange,
     format_exchange, append_exchange_turn, _model_to_md, _render_verdict_block,
+    _render_upfront_diffs,
     _render_history_md,
     ExchangeTurn,
 )
@@ -660,7 +661,8 @@ async def run_code_review_gate(
         print(f"\n=== [conductor -> supervisor_review] (attempt {attempt}) ===", flush=True)
         update_status_board(history if history is not None else [], "supervisor_review", bd)
         review_brief = (
-            "Review the executed tasks against their acceptance criteria.\n"
+            _render_upfront_diffs(batch)
+            + "Review the executed tasks against their acceptance criteria.\n"
             "Emit CodePassed with `findings` keyed by `task_id` "
             "(severity 'blocker' = must recode).\n\n"
             "PROPOSE-ONLY: the coder staged proposed edits under "
@@ -755,7 +757,8 @@ async def run_red_team_gate(
         print(f"\n=== [conductor -> red_team] (attempt {attempt}) ===", flush=True)
         update_status_board(history if history is not None else [], "red_team", bd)
         review_brief = (
-            "Audit the executed code batch against the red-team rubric.\n"
+            _render_upfront_diffs(batch)
+            + "Audit the executed code batch against the red-team rubric.\n"
             "Emit AuditResult with `rubric_cube` (any blocker cell not passed = FAIL) "
             "and `findings` keyed by `task_id` (severity 'blocker' = must recode).\n\n"
             "PROPOSE-ONLY: the coder staged proposed edits under "

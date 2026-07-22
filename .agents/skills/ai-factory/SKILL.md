@@ -20,6 +20,17 @@ The orchestrator spawns LLM agents with focused roles (planner, coder, superviso
 
 `factory/tools/normalize_json_escapes.py` is a deterministic shadow tool that detects `\uXXXX` unicode escapes in JSON artifacts (e.g. planner `\u4e09` etc.), decodes them, and remaps domain terms to registry keys (`branch_interaction.*`). Wired into `pipeline.py` planner artifact flow and applied to all `factory/artefacts/**/*.json`. Not an LLM task — framework-level normalization.
 
+## Guardrail Diff: `diff_vs_orig` & Upfront Diff Injection
+
+The harness-owned guardrail (`factory/tools/guardrail_check.py`) validates staged coder edits via ruff + pyright + smoke gates. The diff that feeds back to the coder (and to reviewers) is computed by `diff_vs_orig()`:
+
+- **Baseline**: `file_path.with_name(path.name + ".orig")` — the pre-edit snapshot captured at staging time (`context.py:_stage_copies`, line 143).
+- **New files**: If no `.orig` exists, the baseline is an empty array `[]` (simulating `/dev/null`), so the diff shows 100% added lines.
+- **JSON key**: The `validate` command emits `"diff_vs_orig"` (not the legacy `"diff_vs_checkpoint"`).
+- **Legacy checkpoint code** (`CHECKPOINT_DIR`, `checkpoint()`, `_latest_checkpoint()`) has been fully removed.
+
+**Upfront diff injection** (`exchange.py:_render_upfront_diffs`): Before the reviewer's prompt instructions and global alignment context, `_render_upfront_diffs(batch)` extracts only `tr.verdict_diff` strings from the `TaskBatch` and formats them into a `=== PROPOSED CODE CHANGES (DIFF) ===` block. This is prepended to the absolute beginning of `review_brief` in both `run_code_review_gate` (supervisor_review) and `run_red_team_gate` (red_team) in `pipeline.py`, ensuring the Code Supervisor and Red-Team agents see exactly what code changed right at the start of their prompt.
+
 ## Critical: `temp/` Path Resolution
 
 `temp/` paths in `user_prompt.md` scope/deliverables resolve to **`FACTORY_ROOT/factory/temp/`** (i.e. `PKG_DIR / "temp"`), NOT to the target repo. The `stage_path()` function in `context.py` strips the `temp/` prefix and joins with `TEMP_DIR`. Example: `temp/dm_strength.py` → `factory/temp/dm_strength.py`.
@@ -138,7 +149,7 @@ Always verify `TARGET_REPO` is set when the Load Gate fails.
 ## Quick Start
 
 ```bash
-uv run python -m pytest tests/       # Run all tests (231 tests, ~50s)
+uv run python -m pytest tests/       # Run all tests (243 tests, ~50s)
 uv run ruff check factory/ tests/    # Lint
 ```
 
