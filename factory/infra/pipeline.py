@@ -843,6 +843,8 @@ async def run_red_team_gate(
         if passed_:
             print(f"[gate] red_team attempt {attempt}: PASS -> proceed to ops")
             return batch
+        # When red_team FAILS, status board must show loop-back to coder.
+        update_status_board(history if history is not None else [], "red_team", bd)
         if attempt == MAX_RETRIES:
             print(f"[WARN] [gate] red_team attempt {attempt}: FORCED PASS -> overriding evaluations and proceeding (propose-only, unpushed)", flush=True)
             for ev in audit.evaluations:
