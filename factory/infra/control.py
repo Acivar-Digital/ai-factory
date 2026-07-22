@@ -614,7 +614,7 @@ MAX_AGENTS = 20
 
 # Read-Bucket Protocol (RBP) budgets — central config, imported by tools.GuardToolset.
 # batch_read attempts are uniform for ALL agents (kills the 15-call research loop).
-READ_BUDGET = 5
+READ_BUDGET = 15
 # Raw read_file is coder-only (pre-edit targeted reads); non-coders get 0.
 CODER_READ_FILE_BUDGET = 10
 # When True, OPS phase BLOCKS on a human approval sentinel before pushing.
