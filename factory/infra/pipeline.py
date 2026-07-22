@@ -141,6 +141,10 @@ def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, st
                     f"{_PHASE_ORDER} (got: {stop_phase!r})."
                 )
 
+        raw_target = front.get("target_repo")
+        if raw_target is not None:
+            os.environ["TARGET_REPO"] = str(raw_target).strip()
+
         task_body = "\n".join(lines[end_idx + 1:]).strip()
     else:
         m = RESUME_RE.match(lines[0]) if lines else None

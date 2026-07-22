@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import os
 import re
 import sys
 from pathlib import Path
@@ -100,6 +101,10 @@ def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, st
             stop_phase = str(raw_stop).strip()
             if stop_phase not in runtime._PHASE_ORDER:
                 raise SystemExit(f"[HALT] {prompt_file} stop_phase must be one of {runtime._PHASE_ORDER} (got: {stop_phase!r}).")
+
+        raw_target = front.get("target_repo")
+        if raw_target is not None:
+            os.environ["TARGET_REPO"] = str(raw_target).strip()
 
         task_body = "\n".join(lines[end_idx + 1 :]).strip()
     else:

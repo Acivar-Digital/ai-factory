@@ -396,10 +396,12 @@ def stage_workspace_from_draft(draft: DraftPlan, bd: str) -> None:
     for fp in sorted(file_paths):
         is_existing_src = False
         if fp.startswith("src2/") or fp.startswith("src2" + os.sep):
-            is_existing_src = (REPO_ROOT / fp).is_file()
+            target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
+            is_existing_src = (target_root / fp).is_file()
 
         if is_existing_src:
-            src_path = REPO_ROOT / fp
+            target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
+            src_path = target_root / fp
             mirror_path = Path(stage_path(fp))
             try:
                 mirror_path.parent.mkdir(parents=True, exist_ok=True)
@@ -439,7 +441,8 @@ def _real_source_paths(file_paths: list[str]) -> list[str]:
     for p in file_paths:
         if not (p.startswith("src2/") or p.startswith("src2" + os.sep)):
             continue
-        if not (REPO_ROOT / p).is_file():
+        target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
+        if not (target_root / p).is_file():
             continue
         out.append(p)
     return out

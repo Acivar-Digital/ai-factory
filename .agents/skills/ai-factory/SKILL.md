@@ -160,6 +160,8 @@ replace_function, add_constant, add_import, delete_file, rename_file, move_symbo
 
 Read tools (`batch_read`, `read_file`) remember the raw line-numbered content (no nudge/steer wrapping). Write/edit tools remember the actual content that changed (diff, function body, constant/import line). All notes survive across turns and across retries within the same role.
 
+**Important: the converter (`converter.py`) must NOT truncate remembered content.** Previously it stripped `batch_read`/`read_file` results to `[N lines]` in the `.md` file, making the auto-remember feature useless. The special-case truncation was removed — full line-numbered content now renders in the `.md` history.
+
 The `_REMEMBER_NUDGE` ("you may call `remember(...)`") is still appended to read tool returns for backwards compatibility — the LLM may still call `remember` explicitly, which writes a duplicate entry (harmless, costs tokens).
 
 ## Key Disciplines (LOAD-BEARING)

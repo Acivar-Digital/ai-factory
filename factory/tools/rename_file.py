@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-from _codebase_common import fail, ok, resolve_secure_path
+from _codebase_common import fail, ok, resolve_repo_path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -16,7 +16,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        src = resolve_secure_path(args.source_relative_path)
+        src = resolve_repo_path(args.source_relative_path)
     except ValueError as e:
         print(json.dumps(fail(str(e)), indent=2))
         sys.exit(1)
@@ -26,7 +26,7 @@ def main():
         sys.exit(1)
 
     try:
-        dst = resolve_secure_path(args.destination_relative_path)
+        dst = resolve_repo_path(args.destination_relative_path)
     except ValueError as e:
         print(json.dumps(fail(str(e)), indent=2))
         sys.exit(1)
