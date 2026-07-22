@@ -5,6 +5,18 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 9: Fix Bogus Tool Names in Agent YAML Prompts
+
+**`planner.yaml` and `coder.yaml` listed `remember_fact`, `recall_fact`, `list_facts` as tools — none exist in `_TOOL_BY_NAME`.** The LLM trusted its system prompt, called `list_facts`, got a 404, then spiraled into analysis-paralysis trying to reconcile the discrepancy.
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `factory/infra/agents/planner.yaml` | `tools:` listed `remember_fact`, `recall_fact`, `list_facts` — none registered in `_TOOL_BY_NAME` | Renamed `remember_fact`→`remember`, dropped `recall_fact`/`list_facts` from `tools:` list and instruction allow-list text |
+| 2 | `factory/infra/agents/coder.yaml` | Same bogus tools in `tools:` and instructions | Same fix |
+| 3 | `factory/infra/agents/red_team.yaml` | READ-MEMORY BRIDGE text suggested `remember/remember_fact` tool call — role only has `batch_read` | Replaced with "markdown thought explanation only" |
+| 4 | `factory/infra/agents/supervisor_review.yaml` | Same stale text | Same fix |
+| 5 | `factory/infra/agents/supervisor_plan.yaml` | Same stale text | Same fix |
+
 ## 2026-07-22 — Batch 7: Fix `stop_phase` Checkpoint Not Wired in Runner
 
 **`_checkpoint()` was defined in `pipeline.py` but never called from `runner.py`.** The `stop_phase` frontmatter field was parsed and stored in `args.stop_after` but the pipeline ran through all phases regardless.

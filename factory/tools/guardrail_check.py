@@ -128,7 +128,7 @@ def _changed_lines_from_diff(diff_text: str) -> set[int] | None:
 
     Returns ``None`` when there is no diff (caller must fall back to whole-file
     scoping) or when the diff is empty / unavailable. This replaces the old
-    checkpoint-based ``_changed_line_set`` (00_fix Defect B): the baseline is
+    checkpoint-based ``_changed_line_set`` (Defect B): the baseline is
     now the LIVE ORIGINAL on disk, never a lazily-taken checkpoint, so the
     changed-line filter actually engages.
     """
@@ -162,7 +162,7 @@ def typecheck_file(file_path: str, changed: set[int] | None = None) -> tuple[boo
 
     Pre-existing type errors elsewhere in the repo do not block. A coder is
     only held accountable for errors it INTRODUCED on the lines it CHANGED
-    (docs/01_fix.md / 00_fix — architectural principle: "other coder's shit is
+    (architectural principle: "other coder's shit is
     our shit"). Pre-existing errors in the same file on lines the coder never
     touched are filtered out via the ``changed`` set (computed from the diff
     vs the live original); when ``changed`` is ``None`` we fall back to
@@ -367,7 +367,7 @@ def diff_vs_checkpoint(file_path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Validation sandbox (00_fix Fix A' — validate in a REAL package context)
+# Validation sandbox (Fix A' — validate in a REAL package context)
 # ---------------------------------------------------------------------------
 def _virtual_live_path(staged: Path, edit_set) -> Path:
     """Map a STAGED path back to its true repo path so imports resolve.
@@ -441,8 +441,8 @@ def build_validation_sandbox(staged: Path, live: Path) -> Path:
 
 
 def diff_staged_vs_original(staged: Path, live: Path) -> str:
-    """Unified diff of the staged file vs the LIVE ORIGINAL on disk (00_fix
-    Fix B' — the real pre-edit baseline, no sidecar/checkpoint file).
+    """Unified diff of the staged file vs the LIVE ORIGINAL on disk
+    (the real pre-edit baseline, no sidecar/checkpoint file).
     """
     if not live.exists():
         return "no original"
@@ -462,9 +462,8 @@ def diff_staged_vs_original(staged: Path, live: Path) -> str:
 # ---------------------------------------------------------------------------
 def validate(file_path: str, edit_set: list[str] | None = None) -> dict:
     """Run ruff, smoke gate, broadened union pyright, and the staged-vs-original
-    diff — all in a REAL package context so cross-module imports resolve (00_fix
-    Defect A) and the changed-line filter is scoped to the live original (00_fix
-    Defect B).
+    diff — all in a REAL package context so cross-module imports resolve
+    and the changed-line filter is scoped to the live original.
 
     ``file_path`` is the STAGED path (e.g.
     ``factory/temp/src2/interfaces/telegram/session.py``). The live

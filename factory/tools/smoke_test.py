@@ -42,7 +42,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent  # factory/tools/
 PROJECT_ROOT = SCRIPT_DIR.parent.parent  # baziforecaster/
 
 # Environmental import failures (DB/network at import time) must NOT block a
-# coder — they are the architect's runtime concern, not a type bug (00_fix Fix H).
+# coder — they are the architect's runtime concern, not a type bug (Fix H).
 _ENV_ERRORS: tuple[type[BaseException], ...] = (ConnectionError, OSError)
 try:
     import psycopg2
@@ -169,7 +169,7 @@ def _module_dotted(path: Path) -> str | None:
 
 def _load_module_dotted(path: Path) -> tuple[types.ModuleType | None, str | None]:
     """Import ``path`` by its dotted package name (so cross-module relative
-    imports resolve — 00_fix Fix A'/H). Returns (module, error_message).
+    imports resolve — Fix A'/H). Returns (module, error_message).
 
     On an environmental import error (DB/network at import time) we return
     ``(None, None)`` with ok=True semantics handled by the caller. On a genuine

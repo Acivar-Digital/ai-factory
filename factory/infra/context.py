@@ -149,7 +149,7 @@ def _stage_copies(file_paths: list[str], staged: list[str]) -> list[tuple[str, s
 def stage_path(real_repo_path: str) -> str:
     """Map a repo-relative OR absolute staging path to its temp/ mirror (single seam).
 
-    00_fix Fix B: collapse BOTH absolute (``/abs/.../factory/temp/src2/x.py``)
+    Fix B: collapse BOTH absolute (``/abs/.../factory/temp/src2/x.py``)
     and relative (``temp/src2/x.py`` / ``factory/temp/src2/x.py``) temp prefixes
     down to ``TEMP_DIR/src2/x.py`` so every harness gate routes through one normalization
     seam. This is now load-bearing — the Staging Diff Gate and Load-Schema Gate both depend
@@ -288,7 +288,7 @@ def _write_harness_patches(task_id: str, files_changed: list[str], bd: str) -> t
 
 
 def staged_zero_diff(fp: str) -> bool | None:
-    """Compare a staged mirror against its captured ``.orig`` baseline (00_fix Fix A).
+    """Compare a staged mirror against its captured ``.orig`` baseline (Fix A).
 
     The harness captures a ``.orig`` pre-edit snapshot of every staged file at staging
     time (see ``_stage_copies``). This replaces the old, redundant ``filecmp(live, staged)``

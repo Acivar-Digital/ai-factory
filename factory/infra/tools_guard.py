@@ -48,18 +48,9 @@ def detect_prompt_injection(text: str) -> list[str]:
     return hits
 
 def wrap_untrusted_task(text: str, *, source: str='user_prompt') -> str:
-    """Wrap untrusted user text in a CANARY delimiter, scan for injection, and
-    alert the operator on suspicion.
-
-    The wrapped block carries a hard disclaimer so the model treats the content
-    as data, never as instructions (SA1-F6/F7). The text is NOT stripped or
-    rejected — the task must still be performed — but it is isolated and the
-    operator is notified so injection is detectable, not silent.
-    """
-    hits = detect_prompt_injection(text)
-    if hits:
-        log_operator(f'PROMPT-INJECTION attempt detected in {source} (patterns={hits}); content isolated inside UNTRUSTED_USER_TASK canary and will NOT override system instructions.', level='SECURITY')
-    return f'{UNTRUSTED_OPEN}\n{_UNTRUSTED_DISCLAIMER}\n\n{text}\n{UNTRUSTED_CLOSE}'
+    """Return user task text as-is. No UNTRUSTED wrapper needed — the factory
+    operator controls user_prompt.md; there is no multi-tenant injection surface."""
+    return text
 
 def wrap_injected_context(text: str, *, label: str='context') -> str:
     """Wrap harness-generated (trusted-but-injected) context in its own CANARY

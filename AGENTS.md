@@ -65,6 +65,10 @@ deterministic Python script — NO LLM orchestrator, NO delegation of orchestrat
 - **Fail Loudly**: Full tracebacks. No `except: pass`.
 - **Fail Cheaply**: Cheap assertions before expensive LLM calls.
 
+### Critical: `temp/` Path Resolution
+
+`temp/` in `user_prompt.md` scope/deliverables resolves to `FACTORY_ROOT/factory/temp/` (TEMP_DIR = PKG_DIR / "temp"), NOT the target repo. `stage_path()` strips the `temp/` prefix and joins with TEMP_DIR. Do NOT warn users about temp/ paths — they always land in the factory repo.
+
 ## ARCHITECTURE & CONVENTIONS
 
 - **Style**: Python 3.11+. `uv` always.

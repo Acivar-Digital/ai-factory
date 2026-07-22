@@ -1,8 +1,8 @@
-"""Regression tests for docs/00_fix.md / 01_fix.md — scope guardrail pyright
+"""Regression tests that scope guardrail pyright
 errors to the lines the coder actually CHANGED.
 
 Root cause (hbh1 HALT): ``guardrail_check.py`` held coders accountable for
-pre-existing errors on lines they never touched (00_fix Defect B). Architectural
+pre-existing errors on lines they never touched (Defect B). Architectural
 principle: a coder must only be held accountable for errors it introduced on the
 lines it changed ("other coder's shit is our shit").
 

@@ -331,12 +331,12 @@ async def run_execute_phase(
             for fp in files:
                 try:
                     edit_set_arg = ",".join(t.file_paths) if t.file_paths else ""
-                    # 00_fix Fix A/B: validate the STAGED copy via the single
+                    # Fix A/B: validate the STAGED copy via the single
                     # normalization seam so BOTH absolute and relative temp paths
                     # resolve to the correct staging file (absolute paths used to
                     # collapse to the live file and self-compare as a false zero-diff).
                     validate_target = stage_path(fp)
-                    # 00_fix Fix A (Q5 Option B): zero-diff vs the captured .orig
+                    # Fix A (Q5 Option B): zero-diff vs the captured .orig
                     # baseline -> genuine no-op edit. Re-spawn the coder to actually
                     # edit; block (via the SPAWN-ALL HALT) only if it persists.
                     _zd = staged_zero_diff(fp)
@@ -381,7 +381,7 @@ async def run_execute_phase(
                     )
                     continue
                 verdict_state[fp] = gj
-                # Fix E (00_fix): mechanically auto-fix lint on the staged file,
+                # Fix E: mechanically auto-fix lint on the staged file,
                 # then re-score the auto-fixed file so a coder is never burned for
                 # a trivial I001/UP034 it can't see. Only re-runs when ruff failed.
                 if gj.get("ruff_ok", True) is False:
@@ -452,7 +452,7 @@ async def run_execute_phase(
                     reasons.append("pyright")
                 if zero_diff_failed:
                     reasons.append("zero-diff (no change vs baseline)")
-                # Fix G (00_fix): surface the gate reason next to the SPAWN-ALL
+                # Fix G: surface the gate reason next to the SPAWN-ALL
                 # HALT so the operator sees it without a deep log dive.
                 log_operator(
                     f"[HALT] task {t.id} failed validation after "
@@ -530,7 +530,7 @@ async def run_execute_phase(
                 )
                 break
 
-        # --- PRE-REVIEW GATES (00_fix Fix A: single seam vs .orig baseline) ---
+        # --- PRE-REVIEW GATES (Fix A: single seam vs .orig baseline) ---
         # Zero-diff detection now lives in the validation re-spawn loop (it owns
         # re-spawn-then-block). Here we only run the Runtime Load Gate, resolved
         # through the single stage_path seam so BOTH absolute and relative temp
@@ -731,7 +731,7 @@ async def run_execute_phase(
     # the gates own recovery (supervisor_review / red_team rerun + force-pass
     # at MAX_RETRIES), so they pass strict=False and RECEIVE the incomplete
     # results to recover. The HALT must NOT pre-empt the gate's retry loop
-    # (00_fix: it previously killed the run before supervisor_review could run).
+    # (This previously killed the run before supervisor_review could run).
     incomplete: list[str] = []
     for t in workplan.groups:
         for task in t.tasks:
