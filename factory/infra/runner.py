@@ -17,7 +17,7 @@ import factory.infra._runtime as runtime
 
 # These will be created in subsequent prompts
 from factory.infra.pipeline import (
-    do_role, record_coder, run_gated, _assert_plan_gate_ok,
+    do_role, record_coder, run_gated, _assert_plan_gate_ok, _checkpoint,
     run_code_review_gate, run_red_team_gate, _recover_from_unexpected_behavior,
 )
 from pydantic_ai.exceptions import UnexpectedModelBehavior
@@ -195,6 +195,8 @@ async def main() -> None:
         plan = _assert_plan_gate_ok(history, bd, st=st, is_forced_pass=is_forced_pass)
         if plan is None:
             return  # Checkpoint stop
+        if _checkpoint("supervisor_plan", st, args.stop_after, bd, exchange, history):
+            return
 
     approved_json = runtime.RAW_OUTPUTS.get("supervisor_plan") or next((v for r, v in reversed(history) if r == "supervisor_plan"), None)
     if args.from_ and _from_idx >= _coder_idx and not approved_json:
@@ -229,6 +231,8 @@ async def main() -> None:
         history.append(("supervisor_review", batch.model_dump_json()))
     else:
         await run_gated("coder", "supervisor_review", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, record_exchange=(args.from_ == "coder"))
+    if _checkpoint("supervisor_review", st, args.stop_after, bd, exchange, history):
+        return
 
     # Red-team gate
     if plan is not None and plan.workplan and plan.workplan.groups:
@@ -237,6 +241,8 @@ async def main() -> None:
         history.append(("red_team", batch.model_dump_json()))
     else:
         await run_gated("coder", "red_team", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, hard=True, record_exchange=(args.from_ == "coder"))
+    if _checkpoint("red_team", st, args.stop_after, bd, exchange, history):
+        return
 
     save_exchange(bd, exchange)
 
