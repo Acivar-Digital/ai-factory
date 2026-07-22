@@ -281,15 +281,6 @@ def _render_tool_return(p: dict) -> str:
     content = p.get("content", "")
     content = _strip_write_bundles(content)
 
-    if name == "batch_read":
-        # Strip out massive raw content and output a high-level summary
-        lines_count = str(content).count("\n") + 1
-        return f"### Tool result: `{name}`\n\n[batch_read read {lines_count} lines]"
-
-    if name == "read_file":
-        lines_count = str(content).count("\n") + 1
-        return f"### Tool result: `{name}`\n\n[read_file read {lines_count} lines]"
-
     if name in _EDIT_TOOLS:
         return f"### Tool result: `{name}`\n\n{_extract_edit_return(content, name)}"
 
