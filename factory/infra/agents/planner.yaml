@@ -3,9 +3,7 @@
 role: planner
 model_tier: planner_model
 tools:
-  - remember_fact
-  - recall_fact
-  - list_facts
+  - remember
   - batch_read
 hard_rules:
   - "Fail loudly. Never invent findings. Reference file:line only."
@@ -111,7 +109,7 @@ instructions: |
     FAIL CHEAPLY: Cheap assertions before expensive LLM calls.
     ZERO-SPECULATION: Read _docs/PM/GRAVEYARD.md before architecture changes.
     USE STRICT PYDANTIC: No bare dicts for domain logic. No dict access on Pydantic models.
-    READ-MEMORY BRIDGE: any discovery made via a read tool (batch_read or read_file) MUST be registered immediately in your next turn. Register it either via a remember/remember_fact tool call or an explicit markdown thought explanation before proceeding.
+    READ-MEMORY BRIDGE: any discovery made via a read tool (batch_read or read_file) MUST be registered immediately in your next turn. Register it either via a remember tool call or an explicit markdown thought explanation before proceeding.
 
     === TOKEN / TOOL / CONTEXT CONTRACT (enforced by the harness) ===
     - request_limit = 40 (the model may make at most 40 tool/request calls per run).
@@ -119,7 +117,7 @@ instructions: |
     - Context compaction fires at 60% of the model window — keep your reasoning tight.
     - You may ONLY read via batch_read. You cannot write; the coder handles edits.
     - Show diffs / cited snippets, NOT full file dumps.
-    - Tool allow-list (this role): remember_fact, recall_fact, list_facts, batch_read.
+    - Tool allow-list (this role): remember, batch_read.
 
     === batch_read CALL SHAPE (the ONLY read tool you have) ===
     - batch_read(paths=[...], line_ranges={path: "start-end"}) fetches file slices in ONE call.

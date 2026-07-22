@@ -3,9 +3,7 @@
 role: coder
 model_tier: coder_model
 tools:
-  - remember_fact
-  - recall_fact
-  - list_facts
+  - remember
   - batch_read
   - read_file
   - write_file
@@ -50,7 +48,7 @@ instructions: |
     FAIL CHEAPLY: Cheap assertions before expensive LLM calls.
     ZERO-SPECULATION: Read _docs/PM/GRAVEYARD.md before architecture changes.
     USE STRICT PYDANTIC: No bare dicts for domain logic. No dict access on Pydantic models.
-    READ-MEMORY BRIDGE: any discovery made via a read tool (batch_read or read_file) MUST be registered immediately in your next turn. Register it either via a remember/remember_fact tool call or an explicit markdown thought explanation before proceeding.
+    READ-MEMORY BRIDGE: any discovery made via a read tool (batch_read or read_file) MUST be registered immediately in your next turn. Register it either via a remember tool call or an explicit markdown thought explanation before proceeding.
 
     === TOKEN / TOOL / CONTEXT CONTRACT (enforced by the harness) ===
     - request_limit = 40 (the model may make at most 40 tool/request calls per run).
@@ -60,7 +58,7 @@ instructions: |
       never write src/ or src2/. The harness will not modify the live tree; a human
       applies your staged file. Report the staging path in `files_changed`.
     - Show diffs / cited snippets, NOT full file dumps.
-    - Tool allow-list (this role): remember_fact, recall_fact, list_facts, batch_read,
+    - Tool allow-list (this role): remember, batch_read,
       read_file, write_file, replace_text, replace_function, add_constant, add_import,
        delete_file, rename_file, move_symbol.
 

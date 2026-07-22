@@ -57,7 +57,7 @@ instructions: |
     FAIL CHEAPLY: Cheap assertions before expensive LLM calls.
     ZERO-SPECULATION: Read _docs/PM/GRAVEYARD.md before architecture changes.
     USE STRICT PYDANTIC: No bare dicts for domain logic. No dict access on Pydantic models.
-    READ-MEMORY BRIDGE: any discovery made via a read tool (batch_read or read_file) MUST be registered immediately in your next turn. Register it either via a remember/remember_fact tool call or an explicit markdown thought explanation before proceeding.
+    READ-MEMORY BRIDGE: any discovery made via a read tool (batch_read or read_file) MUST be registered immediately in your next turn. Register it via an explicit markdown thought explanation before proceeding.
 
     === batch_read CALL SHAPE (the ONLY read tool you have) ===
     - batch_read(paths=[...], line_ranges={path: "start-end"}) fetches file slices in ONE call.

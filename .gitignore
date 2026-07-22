@@ -28,11 +28,12 @@ scratch/
 *.db
 .beads-credential-key
 
-# opencode
+# IDE
 .opencode/
 .claude/
 .agents/
 .beads/
+.github/
 
 # Studio / staging
 studio/

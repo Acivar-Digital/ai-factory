@@ -44,7 +44,7 @@ def test_staging_diff_gate_zero_diff(tmp_path, monkeypatch):
     plan.workplan.groups[0].tasks[0].file_paths = ["src2/a.py"]
     
     # The execution phase should fail with RuntimeError because of the blocked status
-    # 00_fix: the gate no longer raises (it recovers). The staging/load
+    # The gate no longer raises (it recovers). The staging/load
     # gating is an EXECUTE-phase concern, so assert it directly at
     # run_execute_phase (strict=True still hard-halts direct callers).
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
@@ -78,7 +78,7 @@ def test_runtime_load_gate_fails(tmp_path, monkeypatch):
     plan = _plan()
     plan.workplan.groups[0].tasks[0].file_paths = ["src2/a.py"]
     
-    # 00_fix: the gate no longer raises (it recovers). The staging/load
+    # The gate no longer raises (it recovers). The staging/load
     # gating is an EXECUTE-phase concern, so assert it directly at
     # run_execute_phase (strict=True still hard-halts direct callers).
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):

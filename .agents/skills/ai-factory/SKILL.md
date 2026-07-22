@@ -16,6 +16,66 @@ AI-Factory is a **deterministic conductor** (NOT an LLM orchestrator) that runs 
 
 The orchestrator spawns LLM agents with focused roles (planner, coder, supervisor, red-team, ops), validates their output, and gates progress through each phase. **The conductor never delegates orchestration decisions to an LLM.**
 
+## Critical: `temp/` Path Resolution
+
+`temp/` paths in `user_prompt.md` scope/deliverables resolve to **`FACTORY_ROOT/factory/temp/`** (i.e. `PKG_DIR / "temp"`), NOT to the target repo. The `stage_path()` function in `context.py` strips the `temp/` prefix and joins with `TEMP_DIR`. Example: `temp/dm_strength.py` → `factory/temp/dm_strength.py`.
+
+## CRITICAL: REPO_ROOT and Scope Path Resolution
+
+**This is the most commonly misunderstood part of the factory.**
+
+### How REPO_ROOT is resolved
+
+`REPO_ROOT` (defined in `factory/infra/control.py`) determines where the target repo lives:
+
+```python
+_CWD = os.environ.get("CWD") or _RUNTIME_ENV.get("CWD") or str(Path.cwd().resolve())
+REPO_ROOT = Path(_CWD)
+```
+
+Priority:
+1. `$CWD` environment variable
+2. `CWD=` in `factory/infra/.env` (or `<repo-root>/.env`)
+3. `Path.cwd()` — the current working directory
+
+### Where scope paths resolve
+
+The prompt's YAML `scope:` field lists paths like `src2/engine/module1_macro.py`. These resolve relative to **`REPO_ROOT`** — NOT relative to `TEMP_DIR` or `factory/temp/`.
+
+The planner phase reads code through these functions, all of which read from `REPO_ROOT`:
+- `ledger._py_tree()` → walks `REPO_ROOT / "src2"` and `REPO_ROOT / "tests"`
+- `ledger._is_dir(rel)` → checks `REPO_ROOT / rel`
+- `ledger.get_file_symbols(rel)` → resolves via `_codebase_common.resolve_secure_path()` which uses `PROJECT_ROOT` (= factory repo root, same as `REPO_ROOT` in practice)
+- Planner's `batch_read` tool → resolves relative to `PROJECT_ROOT`
+
+**The coder phase** works differently — it reads/writes through `stage_path()` which maps to `TEMP_DIR` (`factory/temp/`). The `stage_workspace_from_draft()` function copies files from `REPO_ROOT / src2/...` to `TEMP_DIR / src2/...` BEFORE the coder runs.
+
+### The two-phase path model
+
+| Phase | Path base | Function | What it reads |
+|---|---|---|---|
+| Planner | `REPO_ROOT` | `inject_repo_map()`, `batch_read` | Live target repo files at `REPO_ROOT/src2/...` |
+| Supervisor Plan | `REPO_ROOT` | `batch_read` | Live target repo files at `REPO_ROOT/src2/...` |
+| Pre-stage | `REPO_ROOT` → `TEMP_DIR` | `stage_workspace_from_draft()` | Copies `REPO_ROOT/src2/...` → `TEMP_DIR/src2/...` |
+| Coder | `TEMP_DIR` | `stage_path()`, `read_file`, `write_file` | Staged copies at `TEMP_DIR/src2/...` |
+| Supervisor Review | `TEMP_DIR` | `stage_path()` | Staged copies |
+| Red Team | `TEMP_DIR` | `stage_path()` | Staged copies |
+
+### What this means in practice
+
+- The target repo (with `src2/`) MUST be accessible at `REPO_ROOT`.
+- If `CWD` is the factory repo itself (e.g. `/home/.../ai-factory`), the target repo is NOT in the scope path unless `src2/` exists at the factory root.
+- To run the factory against a separate target repo (e.g. `baziforecaster`), set `CWD` env var to the target repo root OR ensure the target's `src2/` is at the factory `REPO_ROOT`.
+- **Never create symlinks or copy files into the factory repo** without understanding `REPO_ROOT` resolution. Check `$CWD`, `.env`, and `Path.cwd()` first.
+- The factory's `factory/temp/` directory contains STAGED COPIES of target repo files, managed by `stage_workspace_from_draft()` and `stage_path()`. These are NOT the source of truth for the planner phase.
+
+### How to diagnose scope issues
+
+1. Check `REPO_ROOT`: look at `$CWD` env var, `factory/infra/.env`, and `Path.cwd()`
+2. Verify `REPO_ROOT / "src2"` exists and contains the expected files
+3. If the planner's `batch_read` returns empty results for `src2/...` paths, the target repo is not at `REPO_ROOT`
+4. Do NOT check `factory/temp/src2/` — that's the staging area for coders, not the planner's source
+
 ## Quick Start
 
 ```bash
@@ -30,10 +90,12 @@ factory/
   common/          # Shared utilities (md_bridge, operator, registry)
   infra/           # Orchestrator engine
     runner.py      # Slim conductor entrypoint (221 lines)
+    control.py     # REPO_ROOT, PKG_DIR, TEMP_DIR, model registry, control sheet
+    ledger.py      # inject_repo_map(), _py_tree(), coder brief builder
     _runtime.py    # Module globals (phase order, raw outputs, summaries)
     exchange.py    # Exchange-turn / status-board / JSONL persistence
     agent.py       # Agent builder & per-role agent construction
-    context.py     # Staging, tier-B context injection, harness patches
+    context.py     # Staging (stage_path, stage_workspace_from_draft), tier-B context, harness patches
     validation.py  # Invariant checks, gate constants
     execution.py   # EXECUTE phase - per-task timeout, spawn-all, patching
     pipeline.py    # Gate orchestration (plan, code-review, red-team, ops)
@@ -42,6 +104,7 @@ factory/
                    #   Each has a .py class + .yaml prompt template
     tools.py       # Shadow tooling wrappers (search, read, write, AST)
   tools/           # CLI wrappers for repo tools
+  temp/            # Staging area (TEMP_DIR) — coder writes, NOT planner source
 ```
 
 ## Roles & Pipeline Phases
@@ -66,6 +129,17 @@ dict at runner scope. Reviewer closures call `load_skill(role, brief, bd)` direc
 (rather than `do_role`) to ensure the caller's brief is used, not a stale
 `state_dict["brief"]`.
 
+## Agent YAML Tool Names Must Match `_TOOL_BY_NAME`
+
+**The `tools:` list and the `Tool allow-list` instruction text in every `factory/infra/agents/<role>.yaml` MUST reference only tools registered in `_TOOL_BY_NAME`** (defined in `tools_guard.py:337`):
+
+```
+remember, batch_read, read_file, write_file, replace_text,
+replace_function, add_constant, add_import, delete_file, rename_file, move_symbol
+```
+
+`agent.py:72-76` hard-HALTs if a YAML `tools:` name is not in `_TOOL_BY_NAME`. But the instruction `Tool allow-list` text is free-form prose — there is NO validation against it. If it names a tool that doesn't exist, the LLM will trust the prose, call the non-existent tool, get a 404, and may spiral into analysis-paralysis (as happened with `list_facts`). Keep them in sync.
+
 ## Key Disciplines (LOAD-BEARING)
 
 - **Fail Fast**: Ship smallest MVP. No future-proofing.
@@ -76,6 +150,45 @@ dict at runner scope. Reviewer closures call `load_skill(role, brief, bd)` direc
 - **No model-level fallback**: Single model per role — never switch to a backup model on failure. Agent-level recovery (loopguard retry + `_recover_from_unexpected_behavior` with the SAME model) IS allowed and correct.
 - **Harness-owned guardrails**: The coder only *declares* done; the harness runs ruff + pyright + smoke gates on staged files, and re-spawns the coder (up to `CODER_VALIDATION_PASSES` times) with guardrail feedback before the review phase. If a guardrail crashes or produces unparseable output, the task MUST fail/block—it is never a silent pass.
 - **Red Team Integrity**: The `red_team_passed` gate relies solely on `findings` and `rubric_cells`. If both are empty, the audit is considered incomplete and the gate MUST fail.
+
+## Structured Output Schema: Field Descriptions Are Load-Bearing
+
+**All Pydantic output models must carry `Field(description=...)` and `Field(examples=...)` on every field.** Pydantic v2 serializes these into the JSON Schema that pydantic-ai sends to the model as the structured output tool definition. Without them, the model sees only bare types (`str`, `Literal["Yes", "No"]`) and must infer semantics from free-text prose elsewhere in the prompt.
+
+### Why bare types aren't enough
+
+The model fills in a form (tool call arguments). The JSON Schema is the form definition. If a field says `approved: Literal["Yes", "No"]` with no description, the model doesn't know:
+- What "Yes" means (approve? proceed?)
+- What "No" means (reject? block?)
+- When to use which
+- What goes in `comments`
+
+Putting instructions in the YAML prompt template is not enough — the model may not connect prose instructions to the structured output fields. The descriptions must live ON the schema itself.
+
+### The pattern
+
+```python
+class EvaluationItem(BaseModel):
+    item_id: str = Field(
+        description="Task ID from the DraftPlan. Must match a proposed task id exactly (e.g. coder01, coder02)."
+    )
+    approved: Literal["Yes", "No"] = Field(
+        description="Yes = task approved, proceed. No = task rejected — MUST explain why in comments.",
+        examples=["Yes", "No"]
+    )
+    comments: str = Field(
+        description="Required when approved=No: cite file:line, explain what's wrong, reference the brief's constraints/anti-patterns. When approved=Yes: may be empty string.",
+        examples=["", "Instruction tells coder to move _unified_medicine before line 216, but brief says 'Do NOT touch annual Tai Sui section (lines 340-399)'."]
+    )
+```
+
+### Rules
+
+1. **Every field** in every output model (`DraftPlan`, `ApprovedPlan`, `TaskResult`, `ReviewResult`, `AuditResult`, `GitResult`) MUST have `description=`
+2. Use **`examples=`** for `Literal`/`Enum` fields so the model sees valid values in the schema
+3. Put the **semantics** in descriptions, not just the type constraint. "Yes = approve, No = reject + explain" not "Must be Yes or No"
+4. The `comments` / rejection-reason fields MUST say "required when rejected, empty string when approved" so the model knows when it's mandatory
+5. Do NOT rely on YAML prompt templates to convey structured output semantics — the model may not correlate prose instructions with tool call fields
 
 ## Test Pattern: Monkeypatch Refactoring
 

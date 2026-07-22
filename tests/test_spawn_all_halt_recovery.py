@@ -1,4 +1,4 @@
-"""Regression tests for 00_fix: SPAWN-ALL HALT must NOT pre-empt the gate's
+"""Regression tests: SPAWN-ALL HALT must NOT pre-empt the gate's
 recovery loop, and harness-known-blocked tasks must be rerun regardless of the
 LLM reviewer/auditor verdict.
 
@@ -122,7 +122,7 @@ def _coder_block_first(blocked_ids: set[str], calls: dict[str, int] | None = Non
 def _reviewer_always_pass(brief: str) -> str:
     """Simulates an LLM supervisor_review that passes EVERYTHING (all 'Yes').
     If the harness trusted this verdict alone, a harness-`blocked` task would
-    never be rerun — so this is the adversarial case the 00_fix union must beat."""
+    never be rerun — so this is the adversarial case the harness union must beat."""
     evals = [EvaluationItem(item_id="coder01", approved="Yes", comments="all ok")]
     return ReviewResult(evaluations=evals).model_dump_json()
 
@@ -144,7 +144,7 @@ async def _audit_always_pass_async(brief: str) -> str:
 # ── STRICT-FLAG ────────────────────────────────────────────────────────────────
 
 def test_strict_false_returns_incomplete_instead_of_raising():
-    """00_fix: run_execute_phase(strict=False) returns the blocked TaskResult
+    """run_execute_phase(strict=False) returns the blocked TaskResult
     rather than raising [HALT], so a gate can recover it."""
     plan = _plan()
     results = asyncio.run(run_execute_phase(
@@ -159,7 +159,7 @@ def test_strict_false_returns_incomplete_instead_of_raising():
 
 
 def test_strict_true_default_still_halts():
-    """00_fix: the default strict=True MUST still hard-halt (guards uqj06).
+    """The default strict=True MUST still hard-halt (guards uqj06).
     A future change must not weaken this for top-level callers."""
     plan = _plan()
     with pytest.raises(RuntimeError) as exc:
@@ -173,7 +173,7 @@ def test_strict_true_default_still_halts():
 # ── HARNESS-BLOCKED → RERUN (code_review gate) ───────────────────────────────
 
 def test_code_review_completes_without_halt_on_blocked():
-    """00_fix: the SPAWN-ALL HALT no longer aborts the gate. The run reaches
+    """The SPAWN-ALL HALT no longer aborts the gate. The run reaches
     PROPOSE-ONLY with the blocked task surfaced (force-passed at MAX_RETRIES)."""
     plan = _plan()
     batch = asyncio.run(run_code_review_gate(
