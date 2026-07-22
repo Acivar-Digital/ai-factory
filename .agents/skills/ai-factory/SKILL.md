@@ -147,8 +147,8 @@ replace_function, add_constant, add_import, delete_file, rename_file, move_symbo
 | Tool | What's remembered | Where |
 |---|---|---|
 | `remember` | (is the mechanism) | `tools_memory.py:49` |
-| `batch_read` | Full line-numbered content of all paths read | `tools_file.py:137` |
-| `read_file` | Full line-numbered content of the file/range | `tools_file.py:72` |
+| `batch_read` | Raw line-numbered content of all paths read (no nudge/steer wrapping) | `tools_file.py:137` |
+| `read_file` | Raw line-numbered content of the file/range (no nudge/steer wrapping) | `tools_file.py:72` |
 | `write_file` | Unified diff of old→new content with line numbers | `tools_file.py:194` |
 | `replace_text` | `---OLD---` / `---NEW---` sections with the actual text | `tools_shell.py:55` |
 | `replace_function` | New function body (with path::scope header) | `tools_shell.py:69` |
@@ -158,7 +158,7 @@ replace_function, add_constant, add_import, delete_file, rename_file, move_symbo
 | `rename_file` | `source → dest` paths | `tools_file.py:233` |
 | `move_symbol` | `name: source → dest` paths | `tools_shell.py:95` |
 
-Read tools (`batch_read`, `read_file`) remember the full content so the LLM can pick up exactly where it left off. Write/edit tools remember a short summary — the LLM already knows what it wrote, it just needs confirmation. All notes survive across turns and across retries within the same role.
+Read tools (`batch_read`, `read_file`) remember the raw line-numbered content (no nudge/steer wrapping). Write/edit tools remember the actual content that changed (diff, function body, constant/import line). All notes survive across turns and across retries within the same role.
 
 The `_REMEMBER_NUDGE` ("you may call `remember(...)`") is still appended to read tool returns for backwards compatibility — the LLM may still call `remember` explicitly, which writes a duplicate entry (harmless, costs tokens).
 

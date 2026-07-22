@@ -11,8 +11,13 @@ and this project adheres to semantic versioning for the harness itself.
 
 | # | File | Issue | Fix |
 |---|------|-------|------|
-| 1 | `factory/infra/tools_file.py` | `read_file`, `batch_read`, `write_file`, `delete_file`, `rename_file` returned results but agent had to manually `remember` for cross-turn visibility | Added `_auto_remember()` helper; each tool auto-persists its result (reads: full content; writes: summary; deletes/renames: paths) |
-| 2 | `factory/infra/tools_shell.py` | `replace_text`, `replace_function`, `add_constant`, `add_import`, `move_symbol` same problem | Same fix — auto-remember diff summary, replaced scope, constant line, import line, or move paths |
+| 1 | `factory/infra/tools_file.py` | `read_file`, `batch_read` returned results wrapped with nudge/steer instructions — remembering the noise | Now remember raw line-numbered content only |
+| 2 | `factory/infra/tools_file.py` | `write_file` remembered only a tag `(N lines)` — LLM couldn't see what changed | Now remembers unified diff of old→new with `@@` line numbers |
+| 3 | `factory/infra/tools_file.py` | `delete_file`, `rename_file` omitted entirely | Now remember the paths |
+| 4 | `factory/infra/tools_shell.py` | `replace_text` remembered only char-count summary | Now remembers `---OLD---`/`---NEW---` sections with actual text |
+| 5 | `factory/infra/tools_shell.py` | `replace_function` remembered only scope name | Now remembers full new function body |
+| 6 | `factory/infra/tools_shell.py` | `add_constant` truncated to 80 chars | Now remembers full `NAME = value` line |
+| 7 | `factory/infra/tools_shell.py` | `add_import` / `move_symbol` omitted | Now remember the import line and move paths |
 
 ## 2026-07-22 — Batch 9: Fix Bogus Tool Names in Agent YAML Prompts
 
