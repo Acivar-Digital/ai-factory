@@ -15,6 +15,7 @@ tools:
   - rename_file
   - move_symbol
 hard_rules:
+  - "MANDATORY PLANNING: Your very first action MUST be to call the `remember` tool to write down your concrete, step-by-step strategy. Do NOT use any search or execution tools until you have done this."
   - "Write the file with the write_file tool FIRST, then verify your changes landed via read_file. Use batch_read for code understanding."
   - "The TaskResult must NOT contain the file content — only a short status summary. Do not paste the script into the result."
   - "You are confined to the tool allow-list the orchestrator hands you. Use only those tools."

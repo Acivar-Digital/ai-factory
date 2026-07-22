@@ -59,6 +59,7 @@ def _make_guard(read_budget: int = 5, budget: int = 100) -> GuardToolset:
         read_budget=read_budget,
     )
     gt._known_tools = {"batch_read": _FakeTool()}  # type: ignore[index]
+    gt._has_planned = True  # bypass planning gate; these tests focus on batch_read ergonomics
     return gt
 
 

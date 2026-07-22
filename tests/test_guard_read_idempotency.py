@@ -56,6 +56,7 @@ def _make_guard(read_budget: int = 5, read_file_budget: int = 10, budget: int = 
         read_file_budget=read_file_budget,
     )
     gt._known_tools = {"batch_read": _FakeTool(), "read_file": _FakeTool()}  # type: ignore[index]
+    gt._has_planned = True  # bypass planning gate; these tests focus on read idempotency
     return gt
 
 

@@ -5,6 +5,26 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Mandatory Planning Hard Gate via GuardToolset
+
+Agents suffered from "tool thrashing" (endlessly looping on discovery tools without a plan). The initial idea to gate this inside `_loopguard.py` fails because `pydantic-ai` manages tool execution internally inside `agent.run()`. This fix enforces a **hard gate** at the lowest level: `GuardToolset` in `factory/infra/tools_guard.py`. The existing `remember` tool is reused — an agent is strictly forbidden from executing any other tool until it has called `remember` to record its step-by-step plan. After 3 strikes, the gate fails loudly.
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `factory/infra/tools_guard.py` | No planning gate — agents could call search/edit tools before committing a plan | Added `_has_planned` and `_plan_nudges` state to `__post_init__`; added intercept at top of `call_tool` that blocks non-exempt tools (`remember`, `final_result`, `keep_memory`) before planning; raises `RuntimeError` after 3 blocked attempts |
+| 2 | `factory/infra/agents/coder.yaml` | No mandatory planning directive in `hard_rules` | Added `MANDATORY PLANNING` directive as first item in `hard_rules` |
+| 3 | `factory/infra/agents/planner.yaml` | Same | Same |
+| 4 | `factory/infra/agents/red_team.yaml` | Same | Same |
+| 5 | `factory/infra/agents/supervisor_plan.yaml` | Same | Same |
+| 6 | `factory/infra/agents/supervisor_review.yaml` | Same | Same |
+| 7 | `factory/infra/agents/ops.yaml` | Same | Same |
+| 8 | `factory/infra/agents/healer.yaml` | No `hard_rules` section at all | Added `hard_rules` section with `MANDATORY PLANNING` directive |
+| 9 | `AGENTS.md` | No documentation of the mandatory pre-flight plan gate | Added "Mandatory Pre-Flight Plan" section documenting the `GuardToolset` hard gate |
+| 10 | `.agents/skills/ai-factory/SKILL.md` | Same | Same |
+| 11 | `tests/test_planning_gate.py` | No regression tests for the planning gate | Added 13 tests covering: non-exempt tool blocking, `remember` sets `_has_planned`, exempt tools not blocked, tools allowed after planning, 3-strike RuntimeError, nudge counter, `final_result`/`keep_memory` exemption, write/read/replace blocking, nudge message content, and state initialization |
+| 12 | `tests/test_guard_read_idempotency.py` | Existing tests call `batch_read`/`read_file` without `remember`, now blocked by planning gate | Set `_has_planned = True` in `_make_guard` helper to bypass gate (tests focus on read idempotency, not planning) |
+| 13 | `tests/test_batch_read_ergonomics.py` | Same | Same |
+
 ## 2026-07-22 — Fix Missing Diffs & Obsolete Checkpoint Logic
 
 The Code Supervisor and Red-Team agents were not seeing what code changed at the start of their prompts. The guardrail tool relied on a lazily-taken `.checkpoints` directory (always empty, so diffs were always `"no checkpoint"`), and the diff was buried inside the verdict block rather than surfaced upfront. This fix eradicates all checkpoint terminology, implements true `.orig` baseline diffing (with new-file support), and injects the diff at the absolute beginning of every review brief.

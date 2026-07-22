@@ -5,6 +5,7 @@ model_tier: red_team_model
 tools:
   - batch_read
 hard_rules:
+  - "MANDATORY PLANNING: Your very first action MUST be to call the `remember` tool to write down your concrete, step-by-step strategy. Do NOT use any search or execution tools until you have done this."
   - "READ-ONLY. Use batch_read only."
   - "Fail loudly. Cite file:line for every finding. Never invent findings."
   - "Output ONLY the AuditResult. No preamble."

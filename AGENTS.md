@@ -63,6 +63,16 @@ deterministic Python script — NO LLM orchestrator, NO delegation of orchestrat
 - **Fail Loudly**: Full tracebacks. No `except: pass`.
 - **Fail Cheaply**: Cheap assertions before expensive LLM calls.
 
+## Mandatory Pre-Flight Plan
+
+Every agent is **strictly forbidden** from executing any tool (search, read, edit, etc.) until it has called the `remember` tool to record its concrete, step-by-step strategy. This is enforced as a **hard gate** inside `GuardToolset` (`factory/infra/tools_guard.py`):
+
+1. The `call_tool` method intercepts every tool call. If the tool name is not `remember`, `final_result`, or `keep_memory`, and the agent has not yet called `remember`, the call is **blocked** and a nudge string is returned to the LLM.
+2. After **3 blocked attempts**, the gate raises `RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")` — the run fails loudly rather than silently looping.
+3. The `remember` tool itself is exempt — calling it sets `_has_planned = True`, after which all other tools are permitted.
+
+This prevents "tool thrashing" (endlessly looping on discovery tools without a plan). The directive is also injected into every agent YAML's `hard_rules` section.
+
 ### Critical: `temp/` Path Resolution
 
 `temp/` in `user_prompt.md` scope/deliverables resolves to `FACTORY_ROOT/factory/temp/` (TEMP_DIR = PKG_DIR / "temp"), NOT the target repo. `stage_path()` strips the `temp/` prefix and joins with TEMP_DIR. Do NOT warn users about temp/ paths — they always land in the factory repo.
