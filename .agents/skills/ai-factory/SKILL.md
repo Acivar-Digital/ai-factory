@@ -149,14 +149,14 @@ replace_function, add_constant, add_import, delete_file, rename_file, move_symbo
 | `remember` | (is the mechanism) | `tools_memory.py:49` |
 | `batch_read` | Full line-numbered content of all paths read | `tools_file.py:137` |
 | `read_file` | Full line-numbered content of the file/range | `tools_file.py:72` |
-| `write_file` | Summary: `[write_file] path (N lines)` | `tools_file.py:195` |
-| `replace_text` | Summary: `[replace_text] path: replaced X chars with Y chars` | `tools_shell.py:54` |
-| `replace_function` | Summary: `[replace_function] path: scope` | `tools_shell.py:66` |
-| `add_constant` | Summary: `[add_constant] path: NAME = value` | `tools_shell.py:75` |
-| `add_import` | Summary: `[add_import] path: import line` | `tools_shell.py:83` |
-| `delete_file` | Summary: `[delete_file] path` | `tools_file.py:218` |
-| `rename_file` | Summary: `[rename_file] source → dest` | `tools_file.py:226` |
-| `move_symbol` | Summary: `[move_symbol] name: source → dest` | `tools_shell.py:91` |
+| `write_file` | Unified diff of old→new content with line numbers | `tools_file.py:194` |
+| `replace_text` | `---OLD---` / `---NEW---` sections with the actual text | `tools_shell.py:55` |
+| `replace_function` | New function body (with path::scope header) | `tools_shell.py:69` |
+| `add_constant` | Full constant line: `NAME = value` | `tools_shell.py:78` |
+| `add_import` | Full import line | `tools_shell.py:86` |
+| `delete_file` | Path of deleted file | `tools_file.py:224` |
+| `rename_file` | `source → dest` paths | `tools_file.py:233` |
+| `move_symbol` | `name: source → dest` paths | `tools_shell.py:95` |
 
 Read tools (`batch_read`, `read_file`) remember the full content so the LLM can pick up exactly where it left off. Write/edit tools remember a short summary — the LLM already knows what it wrote, it just needs confirmation. All notes survive across turns and across retries within the same role.
 

@@ -52,7 +52,7 @@ def replace_text(relative_path: str, target_text: str, replacement_text: str, is
     if ignore_whitespace:
         argv.append('--ignore-whitespace')
     result = _check_edit_result('replace_text', _run_tool('replace_text', argv))
-    _auto_remember(f'[replace_text] {relative_path}: replaced {len(target_text)} chars with {len(replacement_text)} chars')
+    _auto_remember(f'[replace_text] {relative_path}\n---OLD---\n{target_text}\n---NEW---\n{replacement_text}')
     return result
 
 def replace_function(relative_path: str, function_name: str, new_function_code: str, class_name: str | None=None) -> str:
@@ -65,7 +65,7 @@ def replace_function(relative_path: str, function_name: str, new_function_code: 
         argv += ['--class-name', class_name]
     result = _check_edit_result('replace_function', _run_tool('replace_function', argv))
     scope = f'{class_name}.{function_name}' if class_name else function_name
-    _auto_remember(f'[replace_function] {relative_path}: {scope}')
+    _auto_remember(f'[replace_function] {relative_path}::{scope}\n{new_function_code}')
     return result
 
 def add_constant(relative_path: str, constant_name: str, constant_code: str) -> str:
@@ -74,7 +74,7 @@ def add_constant(relative_path: str, constant_name: str, constant_code: str) -> 
     if _g:
         return _g
     result = _check_edit_result('add_constant', _run_tool('add_constant', [relative_path, constant_name, constant_code]))
-    _auto_remember(f'[add_constant] {relative_path}: {constant_name} = {constant_code[:80]}')
+    _auto_remember(f'[add_constant] {relative_path}: {constant_name} = {constant_code}')
     return result
 
 def add_import(relative_path: str, import_code: str) -> str:

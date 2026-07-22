@@ -191,12 +191,18 @@ def write_file(relative_path: str, content: str) -> str:
     never be told a write happened when nothing landed on disk.
     """
     _src_write_guard('write_file', relative_path)
-    result = _run_tool('write_file', [relative_path, content])
     target = (REPO_ROOT / relative_path).resolve()
+    old_lines = target.read_text().splitlines(keepends=True) if target.exists() else []
+    result = _run_tool('write_file', [relative_path, content])
     if not target.exists():
         raise RuntimeError(f'[HALT] write_file reported success but file is ABSENT on disk: {relative_path}')
-    line_count = content.count('\n') + 1
-    _auto_remember(f'[write_file] {relative_path} ({line_count} lines)')
+    new_lines = content.splitlines(keepends=True)
+    if old_lines != new_lines:
+        import difflib
+        diff = list(difflib.unified_diff(old_lines, new_lines, fromfile=relative_path, tofile=relative_path, n=3))
+        _auto_remember(f'[write_file] {relative_path}\n' + ''.join(diff))
+    else:
+        _auto_remember(f'[write_file] {relative_path} (no changes)')
     return result
 
 def _check_edit_result(tool_name: str, out: str) -> str:
