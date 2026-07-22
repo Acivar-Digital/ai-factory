@@ -7,7 +7,7 @@ from _codebase_common import (
     _normalize_content,
     fail,
     ok,
-    resolve_secure_path,
+    resolve_repo_path,
 )
 
 
@@ -36,7 +36,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        path = resolve_secure_path(args.relative_path)
+        path = resolve_repo_path(args.relative_path)
     except ValueError as e:
         print(json.dumps(fail(str(e)), indent=2))
         sys.exit(1)

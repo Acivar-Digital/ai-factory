@@ -18,6 +18,7 @@ and this project adheres to semantic versioning for the harness itself.
 | 5 | `factory/infra/tools_shell.py` | `replace_function` remembered only scope name | Now remembers full new function body |
 | 6 | `factory/infra/tools_shell.py` | `add_constant` truncated to 80 chars | Now remembers full `NAME = value` line |
 | 7 | `factory/infra/tools_shell.py` | `add_import` / `move_symbol` omitted | Now remember the import line and move paths |
+| 8 | `factory/infra/converter.py` | Converter stripped `batch_read`/`read_file` results to `[N lines]` in `.md` — the auto-remembered content was truncated before reaching the LLM | Removed special-case truncation; full line-numbered content renders in `.md` |
 
 ## 2026-07-22 — Batch 9: Fix Bogus Tool Names in Agent YAML Prompts
 

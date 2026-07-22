@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from _codebase_common import EXCLUDE_DIRS, PROJECT_ROOT, fail, ok
+from _codebase_common import EXCLUDE_DIRS, fail, ok, resolve_secure_path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -31,11 +31,12 @@ def main():
                     extension = "    " if i == len(entries) - 1 else "│   "
                     _tree(entry, prefix + extension, depth + 1)
 
-        lines.append(f"{PROJECT_ROOT.name}/")
-        _tree(PROJECT_ROOT, "", 1)
+        tree_root = resolve_secure_path(".").resolve()
+        lines.append(f"{tree_root.name}/")
+        _tree(tree_root, "", 1)
         tree_str = "\n".join(lines)
         print(json.dumps(ok(
-            f"Project structure at {PROJECT_ROOT} (depth={args.max_depth})",
+            f"Project structure at {tree_root} (depth={args.max_depth})",
             {"structure": tree_str},
         ), indent=2, ensure_ascii=False))
     except Exception as e:

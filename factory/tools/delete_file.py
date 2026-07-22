@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from _codebase_common import fail, ok, resolve_secure_path
+from _codebase_common import fail, ok, resolve_repo_path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -15,7 +15,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        path = resolve_secure_path(args.relative_path)
+        path = resolve_repo_path(args.relative_path)
     except ValueError as e:
         print(json.dumps(fail(str(e)), indent=2))
         sys.exit(1)
