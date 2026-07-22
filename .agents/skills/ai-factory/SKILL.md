@@ -300,6 +300,8 @@ Use `bd remember` to persist cross-session knowledge. Search with `bd memories <
 - **Line numbers**: Absolute (`f"{s + i + 1}: {line}"`), not relative to range. `1:` = file line 1.
 - **Files changed**: `converter.py`, `control.py`, `CHANGELOG.md`, `.agents/skills/ai-factory/SKILL.md`.
 
+- **MD_LEDGER Append Bug Fix (`factory/infra/artefacts.py`)**: Fixed an exponential token explosion issue where `_clean_messages` failed to strip the reinjected `<!-- MD_LEDGER -->` (which is injected as a `UserPromptPart` by `md_bridge.py`) during artifact persistence. The ledger twin is strictly an ephemeral runtime context bridge; `artefacts.py` now unconditionally strips the ledger prior to writing `.jsonl` / `.md` to enforce isolated, delta-only persistence.
+
 - **Status loop-back** (`factory/infra/exchange.py`, `pipeline.py`): When `red_team` or `supervisor_review` blocks, `STATUS.md` shows `current = "coder"` with `(BACK TO CODER)` indicator (`loop_back` logic, line 216-230). `pipeline.py` updates status on gate FAIL (`line 846-847`). See `CHANGELOG.md` 2026-07-22 Status Reflection Fix entry.
 
 ## HOW TO CONTINUE (IMPERATIVE)

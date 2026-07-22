@@ -5,6 +5,14 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — MD_LEDGER Exponential Append Bug Fix
+
+The orchestrator was exponentially appending its entire historical context over itself upon every loop or agent resume, leading to massive token explosion and hallucinated output in `coder01.md`. `md_bridge.py` injects the previous `.md` twin as a `UserPromptPart`, but `_clean_messages` in `artefacts.py` was checking only for `SystemPromptPart` when stripping the ledger for persistence.
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `factory/infra/artefacts.py` | `_clean_messages` failed to strip `MD_LEDGER` due to type mismatch | Updated to check against `(SystemPromptPart, UserPromptPart)` |
+
 ## 2026-07-22 — Status Reflection Fix: Gate Block Shows Loop-Back to Coder
 
 When `red_team` or `supervisor_review` blocks (`passed_ = False`), the status board (`STATUS.md`) now reflects the loop-back to `coder` (`current = "coder"` with `(BACK TO CODER)` indicator) instead of showing idle/nothing. Fix applied in `factory/infra/pipeline.py` (red_team gate updates status on FAIL) and `factory/infra/exchange.py` (`update_status_board` loop-back logic).
