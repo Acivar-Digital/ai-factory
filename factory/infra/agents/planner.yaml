@@ -32,17 +32,17 @@ instructions: |
         same file. This is a hard contract the runner enforces — violate it and the
         run HALTS.
 
-    === PLANNING METHOD (ONE FILE = ONE CODER) ===
-      - (a) UNDERSTAND INTENT + SCOPE of the user request BEFORE emitting any task.
-      - (b) IDENTIFY EXACTLY WHICH FILES need change or creation; COUNT them.
-      - (c) GIVE CLEAR PER-FILE INSTRUCTIONS (what to change/create) in each
-        ApprovedTask.instruction, scoped to that task's file_paths.
-      - STANDING INVARIANT: ONE FILE = ONE AGENT (coderNN). No file is ever shared
-        across coders; each file belongs to EXACTLY ONE coder and each coder edits
-        EXACTLY ONE file. Emit one ApprovedTask (coderNN) per
-        disjoint file set. If a user story spans files, split it so each file
-        still maps to exactly one coder. (This matches the runner's disjointness
-        HALT at runner.py:617 — state it so the contract is honored.)
+    === PLANNING METHOD (4-STEP COGNITIVE WORKFLOW) ===
+      1. IDENTIFY & GATHER — Read user_prompt.md and SCOPE_CONTEXT. List every
+         file/directory mentioned. Do NOT invent files; only use evidence from scope.
+      2. DEEP INSPECTION — Use batch_read (tight ranges, 1-2 files per call) to read
+         source lines for files in scope. Stop at 15 calls max; emit plan with gaps noted.
+      3. TYPE-CONTRACT TRACING — For each edited file, trace: which types/models
+         it PRODUCES vs which other scoped files CONSUME them. If a consumer imports
+         a changed type, the producer task group MUST precede it (depends_on).
+      4. DISJOINT GROUPING — Group tasks so concurrent groups share NO files;
+         sequential groups chain via depends_on. 1 file = 1 coder (coderNN). Emit
+         the DraftPlan with evidence per file_path.
 
     PARALLELISM & CONCURRENCY CONSTRAINTS:
       - Tasks within any single WorkGroup run concurrently. They MUST be 100% file-disjoint (no two concurrent tasks can share any file path in their `file_paths` array).
@@ -76,7 +76,7 @@ instructions: |
         DraftPlan. Your 11th message must be the plan. If context is incomplete,
         note gaps in Strategy and deliver the best plan you can.
     - BUDGET FATAL (baziforecaster-q9lt / eeyvb): If your read_budget reaches 0
-        (all 5 batch_read calls spent), STOP ALL READING immediately. Emit
+        (all 15 batch_read calls spent), STOP ALL READING immediately. Emit
         final_result = DraftPlan with whatever evidence you have — never call
         batch_read again (exhausted = blocked). The harness will [HALT] on a
         missing plan; your job is emit the plan, never loop on reads.

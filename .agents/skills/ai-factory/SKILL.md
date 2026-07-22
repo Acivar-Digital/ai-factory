@@ -357,3 +357,13 @@ To continue past supervisor_plan:
 3. Confirm the edit before running any phase.
 
 IMPERATIVE: DO NOT TOUCH OTHER REPOS (e.g. baziforecaster) UNLESS EXPLICITLY INSTRUCTED WITH EXACT FILE PATH AND EXACT EDIT CONTENT. All factory work stays inside `/home/yapilwsl/arthityap/ai-factory/`. The target repo (`baziforecaster`) is ONLY read via `TARGET_REPO` set in user_prompt.md; no direct file modifications outside factory scope unless exact edit is specified.
+
+---
+
+## FIX.md Updates (2026-07-22) — KG Injection (Option B) + Planner Tightening
+
+- `factory/tools/query_knowledge_graph.py`: Rewritten as self-contained CLI wrapper (no `libcst` / `qdrant_client` import dependency). Uses `factory/tools/_codebase_common`. Returns `exit 0` with empty results when `code_knowledge_graph.json` is missing (greenfield — Option B).
+- `factory/tools/get_file_symbols.py`: Missing `.py` files now return `success: True` + `{"symbols": []}` (exit 0), not an error.
+- `factory/infra/ledger.py`: `try/except RuntimeError` removed from `_kg_for_file` and `inject_repo_map`. Real CLI crashes propagate as hard halts (Fail Loudly); only greenfield empty results are safe.
+- `factory/infra/agents/planner.yaml`: `READ_BUDGET` corrected (`5` → `15`). Planning method replaced with concrete 4-step workflow: (1) IDENTIFY & GATHER, (2) DEEP INSPECTION, (3) TYPE-CONTRACT TRACING, (4) DISJOINT GROUPING.
+- See `CHANGELOG.md` 2026-07-22 entry for full details.

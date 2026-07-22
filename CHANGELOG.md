@@ -5,6 +5,16 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — FIX.md: KG Injection (Option B) + Planner Tightening
+
+Fixes per `docs/FIX.md`:
+
+- **KG injection (fail loudly)**: `factory/tools/query_knowledge_graph.py` rewritten as self-contained CLI (no `libcst` / `qdrant_client` dependency). Uses `factory/tools/_codebase_common`. Returns `exit 0` with empty results for missing graph (greenfield — Option B).
+- **Shadow tools (Option B)**: `get_file_symbols.py` returns `exit 0` + `{"symbols": []}` for missing files (was `success: False`).
+- **Ledger (fail loudly)**: Removed `try...except RuntimeError` blocks in `ledger.py` (`_kg_for_file` and `inject_repo_map`). Real CLI crashes now propagate as hard halts.
+- **Planner tightening**: `planner.yaml` budget fixed (`5` → `15` batch_read calls). `=== PLANNING METHOD ===` replaced with concrete 4-step workflow (IDENTIFY, INSPECTION, TYPE-CONTRACT, DISJOINT GROUPING).
+- **Tests**: Added `tests/test_fix_kg_injection.py` (6 regression tests covering KG CLI, greenfield exit 0, planner budget/workflow, and ledger swallow removal).
+
 ## 2026-07-22 — Mandatory Planning Hard Gate via GuardToolset
 
 Agents suffered from "tool thrashing" (endlessly looping on discovery tools without a plan). The initial idea to gate this inside `_loopguard.py` fails because `pydantic-ai` manages tool execution internally inside `agent.run()`. This fix enforces a **hard gate** at the lowest level: `GuardToolset` in `factory/infra/tools_guard.py`. The existing `remember` tool is reused — an agent is strictly forbidden from executing any other tool until it has called `remember` to record its step-by-step plan. After 3 strikes, the gate fails loudly.
