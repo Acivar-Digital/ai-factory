@@ -227,9 +227,17 @@ class DraftPlan(BaseModel):
 
 
 class EvaluationItem(BaseModel):
-    item_id: str
-    approved: Literal["Yes", "No"]
-    comments: str
+    item_id: str = Field(
+        description="Task ID from the DraftPlan. Must match a proposed task id exactly (e.g. coder01, coder02)."
+    )
+    approved: Literal["Yes", "No"] = Field(
+        description="Yes = task approved, proceed. No = task rejected — MUST explain why in comments.",
+        examples=["Yes", "No"]
+    )
+    comments: str = Field(
+        description="Required when approved=No: cite file:line, explain what's wrong, reference the brief's constraints/anti-patterns. When approved=Yes: may be empty string.",
+        examples=["", "Instruction tells coder to move _unified_medicine before line 216, but brief says 'Do NOT touch annual Tai Sui section (lines 340-399)'."]
+    )
 
     @model_validator(mode="before")
     @classmethod
