@@ -1,98 +1,84 @@
 {
   "epic": {
-    "title": "Fix Da Yun branch audit in module1_macro.py:216-249",
+    "title": "Fix Da Yun branch audit in module1_macro.py",
     "deliverables": [
-      "Rewrite Da Yun branch audit (module1_macro.py:216-249) with priority-sorted scan of 8 interaction types, graduated magnitude, and \u7528\u795e/\u5fcc\u795e polarity."
+      "Rewrite the Da Yun branch audit in `module1_macro.py:216-249` to support all 8 interaction types with correct priority and polarity."
     ],
-    "must_be_pydantic": false
+    "must_be_pydantic": true
   },
   "user_stories": [
     {
-      "id": "story_da_yun_audit",
-      "story": "As a developer, I want to fix the Da Yun branch audit interaction ordering & polarity implementation so that calculations are accurate.",
+      "id": "story01",
+      "story": "As a user, I want the Da Yun branch audit to use the correct canonical priority ordering and polarity to produce accurate biological/astrological outputs.",
       "acceptance_criteria": [
-        "Da Yun audit matches canonical priority order.",
-        "Graduated magnitudes are (+20, +15, +10, +5, -15, -8, -8, -8).",
-        "Polarity correctly flips sign using _unified_medicine and _unified_taboo."
+        "The branch audit logic must evaluate: branch_interaction.san_hui > branch_interaction.san_he > branch_interaction.chong > branch_interaction.liu_he > branch_interaction.ban_he > branch_interaction.xing > branch_interaction.hai > branch_interaction.po."
       ],
       "definition_of_done": [
-        "Refactored code formatting and syntax are verified clean via ruff."
+        "Code compiles and passes ruff verification."
       ]
     }
   ],
   "definition_of_done": [
-    "Da Yun branch audit logic in src2/engine/module1_macro.py rewrite passes automated lint checks.",
-    "The implementation uses only existing imports and does not modify the annual Tai Sui logic or other unrelated section of module1_macro.py.",
-    "Verification indicates that polarity and priority order conform exactly to specification."
+    "Code logic implemented in src2/engine/module1_macro.py.",
+    "Code formatted using ruff.",
+    "Tests run successfully (if any related tests exist)."
   ],
   "acceptance_criteria": [
-    "Da Yun audit evaluates all 8 interaction types in the canonical priority order (\u4e09\u4f1a > \u4e09\u5408 > \u51b2 > \u516d\u5408 > \u534a\u5408 > \u5211 > \u5bb3 > \u7834).",
-    "All 4 natal branches are scanned per interaction type, matching the highest-priority interaction type that matches *any* natal branch (no short-circuit or break on first natal branch).",
-    "Graduated baseline magnitudes are correctly applied (+20 for \u4e09\u4f1a, +15 for \u4e09\u5408, +10 for \u516d\u5408, +5 for \u534a\u5408, -15 for \u51b2, -8 for \u5211/\u5bb3/\u7834).",
-    "Polarity formula is correctly wired using existing _unified_medicine and _unified_taboo sets: combination with \u5fcc\u795e -> bad; clash with \u5fcc\u795e -> relief (good); combination with \u7528\u795e -> good; clash with \u7528\u795e -> bad.",
-    "Ruff checks and formatting pass cleanly under src2/."
+    "The Da Yun branch audit in module1_macro.py correctly implements the 8-tier canonical interaction priority: branch_interaction.san_hui > branch_interaction.san_he > branch_interaction.chong > branch_interaction.liu_he > branch_interaction.ban_he > branch_interaction.xing > branch_interaction.hai > branch_interaction.po.",
+    "The audit scans all 4 natal branches for each interaction type to find matches without short-circuiting on the first natal branch, keeping the highest priority match.",
+    "The core polarity logic correctly handles 用神 (medicine) and 忌神 (taboo) to determine the sign of the Da Yun branch impact.",
+    "The code runs through ruff check and ruff format with zero errors."
   ],
   "rubric_cube": {
     "cells": [
       {
-        "dimension": "file_disjointness",
-        "criterion": "Only one coder edits src2/engine/module1_macro.py to avoid file conflict",
+        "dimension": "correctness",
+        "criterion": "The Da Yun branch audit must check all 8 interaction types in correct canonical order.",
         "severity": "blocker",
         "passed": true,
-        "evidence": "Single subtask coder01 targeting src2/engine/module1_macro.py.",
+        "evidence": "",
         "coder_idents": [
           "coder01"
         ]
       },
       {
-        "dimension": "priority_order",
-        "criterion": "Audit check executes 8 interaction types in hierarchical priority check: \u4e09\u4f1a > \u4e09\u5408 > \u51b2 > \u516d\u5408 > \u534a\u5408 > \u5211 > \u5bb3 > \u7834",
+        "dimension": "correctness",
+        "criterion": "The polarity calculation must flip the sign correctly according to medicine and taboo rules.",
         "severity": "blocker",
         "passed": true,
-        "evidence": "Coder instruction orders checkers exactly as required by specification.",
-        "coder_idents": [
-          "coder01"
-        ]
-      },
-      {
-        "dimension": "scan_completeness",
-        "criterion": "Check all 4 natal branches for priority scan without pre-mature breaking",
-        "severity": "blocker",
-        "passed": true,
-        "evidence": "Coder instruction specifies to scan all 4 natal branches per interaction type rather than break early.",
+        "evidence": "",
         "coder_idents": [
           "coder01"
         ]
       }
     ]
   },
-  "summary": "Correcting the Da Yun branch audit in module1_macro.py:216-249 to properly prioritize interactions, scan all natal branches, assign proper baseline magnitudes, and apply correct polarity based on medicinal/taboo status.",
+  "summary": "We are rewriting the Da Yun branch audit in module1_macro.py to correctly check all 8 interaction types in canonical priority order, while using the computed polarity tables to adjust the final impacts.",
   "subtasks": [
     {
       "id": "coder01",
-      "title": "Rewrite Da Yun branch audit in module1_macro.py",
+      "title": "Da Yun Branch Audit Rewrite",
       "file_paths": [
         "src2/engine/module1_macro.py"
       ],
-      "instruction": "Rewrite Da Yun branch audit in src2/engine/module1_macro.py (lines 216-249): Priority order checking of 8 elements, scan all natal branches per interaction type, use graduated baseline magnitudes, apply polarity correctly using _unified_medicine / _unified_taboo.",
-      "acceptance": "Da Yun branch audit rewritten according to the specification and passes linter check.",
+      "instruction": "Rewrite the Da Yun branch audit in module1_macro.py to use the 8-tier canonical order and apply polarity rules. Ensure _unified_medicine and _unified_taboo are defined beforehand. Scan all 4 natal branches per type.",
+      "acceptance": "Da Yun branch audit rewritten cleanly and formatted by ruff.",
       "tool_preference": "AST-edit",
       "evidence": [
         {
           "file_path": "src2/engine/module1_macro.py",
-          "content": "Target Da Yun branch audit is in src2/engine/module1_macro.py around lines 216-249. Polarity helper and medicine/taboo sets are computed around lines 343-348."
+          "content": "Lines 216-249 in module1_macro.py contain the current branch audit logic."
         }
       ],
       "Approved": "Yes",
-      "Comments": "The plan clearly addresses the scope (lines 216-249), checks all required types in correct priority without breaking early, modifies magnitudes, and uses proper polarity calculation as required."
+      "Comments": "Plan correctly addresses the 8-tier priority order, all 8 interaction types, the polarity calculation, and the need to hoist _unified_medicine and _unified_taboo above the Da Yun block (~line 216) to reuse them for polarity."
     }
   ],
   "risks": [
-    "Variable scoping: _unified_medicine and _unified_taboo might be defined lower in the function. We must ensure they are computed/defined before the Da Yun branch audit runs.",
-    "Combined element lookup: the polarity formula requires the element of the combined group for combination types. We must ensure is resolved correctly based on the specific combination."
+    "Variable scope mismatch if _unified_medicine and _unified_taboo sets are defined lower in the function. Solved by defining/computing them early."
   ],
   "strategy": {
-    "how_to_fix": "We will refactor module1_macro.py around lines 216-249 by defining a list of interaction types sorted by priority: ('\u4e09\u4f1a', '\u4e09\u5408', '\u51b2', '\u516d\u5408', '\u534a\u5408', '\u5211', '\u5bb3', '\u7834'). For each type, we will check if any of the natal branches (or the set including ty_branch) trigger the interaction. The first type that triggers any match wins. We'll compute the target element (clashed branch for \u51b2, combined elements for combination, disruptor branch for \u5211/\u5bb3/\u7834) and apply the polarity-weighted graduated magnitude. We will reuse _unified_medicine and _unified_taboo by relocating their calculation block to execute prior to the Da Yun audit block.",
+    "how_to_fix": "We rewrite the branch audit section of module1_macro.py to use a structured scan of the 8 canonical interaction types in priority order. We define _unified_medicine and _unified_taboo sets early in the function to prevent NameError, and we apply the polarity logic to the matching interaction.",
     "tool_preference": [
       {
         "task_id": "coder01",
@@ -102,23 +88,28 @@
     "parallelisable_workplan": {
       "groups": [
         {
-          "id": "group_da_yun_audit",
+          "id": "group01",
           "depends_on": [],
           "tasks": [
             {
               "id": "coder01",
-              "title": "Rewrite Da Yun branch audit in module1_macro.py",
+              "title": "Rewrite Da Yun branch audit",
               "file_paths": [
                 "src2/engine/module1_macro.py"
               ],
-              "instruction": "Refactor the Da Yun branch audit in src2/engine/module1_macro.py (lines 216-249) as follows:\n1. Ensure _unified_medicine and _unified_taboo sets are computed before the Da Yun audit runs.\n2. Rewrite the if-blocks to check the 8 interaction types in priority order: ('\u4e09\u4f1a', '\u4e09\u5408', '\u51b2', '\u516d\u5408', '\u534a\u5408', '\u5211', '\u5bb3', '\u7834').\n3. For each priority tier, check match across all 4 natal branches. The highest-priority match wins: once a priority tier is matched, do not check lower-priority tiers, but ensure all matching branches for that tier are evaluated.\n4. Define graduated baseline magnitudes: \u4e09\u4f1a (+20), \u4e09\u5408 (+15), \u516d\u5408 (+10), \u534a\u5408 (+5), \u51b2 (-15), \u5211 (-8), \u5bb3 (-8), \u7834 (-8).\n5. Apply the polarity formula:\n  - If type in ('\u51b2', '\u5211', '\u5bb3', '\u7834'): if target element (clashed/disrupted branch element) in _unified_taboo, keep impact positive (flipped to positive outcome); if in _unified_medicine, make it negative.\n  - If type in ('\u4e09\u4f1a', '\u4e09\u5408', '\u516d\u5408', '\u534a\u5408'): if target combined element in _unified_taboo, make it negative; if in _unified_medicine, keep positive.\n6. Run 'ruff format && ruff check' on the file to ensure clean linting and formatting.",
-              "acceptance": "1. Check priority: \u4e09\u4f1a > \u4e09\u5408 > \u51b2 > \u516d\u5408 > \u534a\u5408 > \u5211 > \u5bb3 > \u7834.\n2. Checks all 8 types.\n3. No premature break on first natal branch before scanning all of them for the matched priority type.\n4. Correctly computes target element and applies polarity formula to compute magnitude.\n5. All codebase linter checks pass.",
+              "instruction": "Rewrite the Da Yun branch audit section starting at line 216. Implement the 8-tier canonical order of checks: branch_interaction.san_hui > branch_interaction.san_he > branch_interaction.chong > branch_interaction.liu_he > branch_interaction.ban_he > branch_interaction.xing > branch_interaction.hai > branch_interaction.po. Initialize _unified_medicine and _unified_taboo sets before the audit. Apply the polarity formula for the matched interaction elements and elements in medicine/taboo sets. Ensure ruff formatting compliance.",
+              "acceptance": "The Da Yun branch audit correctly returns priority-sorted, polarity-adjusted impacts, and is ruff compliant.",
               "tool_preference": "AST-edit",
-              "evidence": [],
+              "evidence": [
+                {
+                  "file_path": "src2/engine/module1_macro.py",
+                  "content": "The first 250 lines of module1_macro.py show the current sequential if-blocks from line 216 to 249."
+                }
+              ],
               "approved": true,
-              "notes": "Reuses existing imports and constants (CHONG, LIU_HE, SAN_HE, SAN_HUI, BAN_HE, XING, HAI, PO) from unified.py or current scope. Do not alter annual Tai Sui or global dictionaries.",
+              "notes": "Do not modify any annual Tai Sui or void audit sections.",
               "Approved": "Yes",
-              "Comments": "The plan clearly addresses the scope (lines 216-249), checks all required types in correct priority without breaking early, modifies magnitudes, and uses proper polarity calculation as required."
+              "Comments": "Plan correctly addresses the 8-tier priority order, all 8 interaction types, the polarity calculation, and the need to hoist _unified_medicine and _unified_taboo above the Da Yun block (~line 216) to reuse them for polarity."
             }
           ]
         }

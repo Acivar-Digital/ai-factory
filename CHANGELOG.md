@@ -5,6 +5,15 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Normalizer: JSON escape remap + registry wiring
+
+**Added `factory/tools/normalize_json_escapes.py`.** Decodes `\uXXXX` escapes and remaps 8-tier branch interaction terms (`三会` etc.) to `branch_interaction.*` registry keys. Wired into `pipeline.py` planner artifact write path + applied to all `factory/artefacts/**/*.json`.
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `factory/tools/normalize_json_escapes.py` | Planner JSON embedded opaque `\u` escapes for domain terms | Added deterministic remap script |
+| 2 | `factory/infra/pipeline.py` | Normalization not integrated into artifact flow | Wired `remap()` into planner.json write + all artifacts |
+
 ## 2026-07-22 — Session Fixes: Auto-Remember Transparency + Budget Visibility
 
 **Converter fixed to render full `batch_read`/`read_file` content** (no `[N lines]` truncation). **Budget markers `[TOOL CALL N/M]` preserved in `.md`** (converter no longer strips them). **READ_BUDGET raised to 15**. Auto-remember notes (raw line-numbered content) survive in `.jsonl`/`.md` context for next turn.

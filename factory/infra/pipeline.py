@@ -507,7 +507,11 @@ def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool =
         from factory.infra.artefacts import artefacts_dir
         plan_file = artefacts_dir() / "workplan" / "planner" / "planner.json"
         plan_file.parent.mkdir(parents=True, exist_ok=True)
-        plan_file.write_text(json.dumps(draft_dict, indent=2), encoding="utf-8")
+        # Normalize JSON escapes/domain terms before persisting
+        from factory.tools.normalize_json_escapes import remap
+        text = json.dumps(draft_dict, indent=2, ensure_ascii=False)
+        normalized_text = remap(text)
+        plan_file.write_text(normalized_text, encoding="utf-8")
     except Exception as e:
         print(f"[WARN] Failed to write merged planner.json: {e}", flush=True)
 

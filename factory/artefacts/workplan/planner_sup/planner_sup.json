@@ -3,7 +3,7 @@
     {
       "item_id": "coder01",
       "approved": "Yes",
-      "comments": "The plan clearly addresses the scope (lines 216-249), checks all required types in correct priority without breaking early, modifies magnitudes, and uses proper polarity calculation as required."
+      "comments": "Plan correctly addresses the 8-tier priority order, all 8 interaction types, the polarity calculation, and the need to hoist _unified_medicine and _unified_taboo above the Da Yun block (~line 216) to reuse them for polarity."
     }
   ]
 }
