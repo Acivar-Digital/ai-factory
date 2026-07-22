@@ -45,6 +45,7 @@ _RUNTIME_ENV = _load_runtime_env()
 
 _CWD = os.environ.get("CWD") or _RUNTIME_ENV.get("CWD") or str(Path.cwd().resolve())
 REPO_ROOT = Path(_CWD)
+os.environ.setdefault("CWD", str(REPO_ROOT))
 PKG_DIR = Path(__file__).resolve().parent.parent  # factory root package
 ORCH_ROOT = PKG_DIR / "orch"  # runtime home
 

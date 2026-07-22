@@ -1,4 +1,3 @@
-import sys
 import os
 import tempfile
 import subprocess
@@ -14,8 +13,12 @@ def test_read_file_line_numbers():
         rel_path = os.path.relpath(file_path, start=".")
         
         # Call the script using uv run python
+        env = os.environ.copy()
+        # Unset CWD and TARGET_REPO so resolve_secure_path falls back to PROJECT_ROOT
+        env.pop("CWD", None)
+        env.pop("TARGET_REPO", None)
         cmd = ["uv", "run", "python", "factory/tools/read_file.py", rel_path, "--start-line", "2", "--end-line", "3"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
         
         output = result.stdout
         
