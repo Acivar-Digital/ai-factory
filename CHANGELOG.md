@@ -5,6 +5,23 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 11.1: CWD Fallback Bridges .env to Tool Resolution
+
+**`_resolve_target_root()` now falls back to `CWD` env var (exported by `control.py`
+from `.env`) before falling back to `PROJECT_ROOT`.** Previously, if `TARGET_REPO`
+was not set (no `target_repo:` in `user_prompt.md` frontmatter), the tools resolved
+against `PROJECT_ROOT` (= factory repo) — agents saw factory files instead of
+target repo files. The `.env` file's `CWD=baziforecaster` was only read by
+`control.py` and never propagated to `_codebase_common.py`.
+
+**Fallback chain:** `TARGET_REPO` → `CWD` (from `.env` via `control.py`) → `PROJECT_ROOT`
+
+| # | File | Issue | Fix |
+|---|------|-------|------|
+| 1 | `factory/infra/control.py` | `REPO_ROOT` loaded from `.env` but never exported to env | `os.environ.setdefault("CWD", str(REPO_ROOT))` |
+| 2 | `factory/tools/_codebase_common.py` | `_resolve_target_root()` only checked `TARGET_REPO`, skipped `CWD` | Added `CWD` env var check between `TARGET_REPO` and `PROJECT_ROOT` |
+| 3 | `tests/test_tool_read_file.py` | Test leaked `CWD` into subprocess env; unused `sys` import | Cleared `CWD`/`TARGET_REPO` in subprocess env; removed `sys` |
+
 ## 2026-07-22 — Batch 11: TARGET_REPO Separates Target Source from Harness Root
 
 **All read tools now resolve against `TARGET_REPO` (set via `target_repo:` in

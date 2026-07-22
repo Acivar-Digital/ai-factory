@@ -42,14 +42,21 @@ Changing `CWD` to point at the target repo would break all harness paths.
 
 Two resolution functions in `factory/tools/_codebase_common.py`:
 
-| Function | Root | Used by | Resolves |
+| Function | Root (fallback chain) | Used by | Resolves |
 |---|---|---|---|
-| `resolve_secure_path(path)` | `TARGET_REPO` env var (fallback `PROJECT_ROOT`) | Read tools (`read_file.py`, `grep_codebase.py`, `list_files.py`, etc.) | `src2/...` against target repo |
+| `resolve_secure_path(path)` | `TARGET_REPO` → `CWD` (from `.env`) → `PROJECT_ROOT` | Read tools (`read_file.py`, `grep_codebase.py`, `list_files.py`, etc.) | `src2/...` against target repo |
 | `resolve_repo_path(path)` | `PROJECT_ROOT` (= factory repo) | Write tools (`write_file.py`, `replace_text.py`, etc.) | `factory/temp/...` against factory repo |
 
 When `TARGET_REPO` is set, ALL reads go to the target repo. Factory files
 (`.env`, `runner.py`, `control.py`) become invisible — agents have no business
 reading them.
+
+**Fallback chain explained:** `_resolve_target_root()` checks `TARGET_REPO` first
+(set via `target_repo:` in `user_prompt.md` frontmatter). If unset, it falls back
+to `CWD` (exported by `control.py` from `factory/infra/.env`). If both are unset,
+it falls back to `PROJECT_ROOT` (= the factory repo itself). This means you
+ONLY need `target_repo:` in frontmatter if target repo differs from whatever
+`CWD` points to in `.env` — but setting it explicitly is safer.
 
 ### The two-phase path model with TARGET_REPO
 

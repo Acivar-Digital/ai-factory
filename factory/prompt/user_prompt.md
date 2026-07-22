@@ -1,6 +1,7 @@
 ---
 Resume: false
 bd: baziforecaster-batch-a
+target_repo: /home/yapilwsl/arthityap/baziforecaster
 write_mode: staged
 language: python
 start_phase: planner

@@ -19,9 +19,14 @@ INCLUDE_EXTENSIONS = {".py", ".md", ".json", ".txt", ".yaml", ".yml", ".toml", "
 
 
 def _resolve_target_root() -> Path:
-    """Return TARGET_REPO if set (for reads), else PROJECT_ROOT (backward compat)."""
+    """Return TARGET_REPO if set, else CWD (exported by control.py from .env), else PROJECT_ROOT."""
     tr = os.environ.get("TARGET_REPO")
-    return Path(tr).resolve() if tr else PROJECT_ROOT.resolve()
+    if tr:
+        return Path(tr).resolve()
+    cwd = os.environ.get("CWD")
+    if cwd:
+        return Path(cwd).resolve()
+    return PROJECT_ROOT.resolve()
 
 
 def _safe_relative(path: Path) -> str:
