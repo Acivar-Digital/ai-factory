@@ -119,15 +119,14 @@ _EDIT_TOOLS = {
     "move_symbol",
 }
 
-_CONTENT_NOISE = re.compile(r"\n*\[TOOL CALL[^\n]*")
-
-
 def _strip_write_bundles(content: object) -> object:
-    """Drop the `[WRITE] …` / `[TOOL CALL N/M]` bundles that tools.py appends
-    to edit/write tool-returns. They are pure noise in the readable twin."""
+    """Drop the `[WRITE] …` bundles (but KEEP `[TOOL CALL N/M]` budget markers
+    for transparency — the agent must see how many calls/read budget remain).
+    They are NOT pure noise; they are the budget-state signal."""
     if not isinstance(content, str):
         return content
-    content = _CONTENT_NOISE.sub("", content)
+    # Keep [TOOL CALL ...] budget markers — transparency required per user directive.
+    # Only strip [WRITE] bundles.
     idx = content.find("[WRITE]")
     if idx != -1:
         content = content[:idx].rstrip()
