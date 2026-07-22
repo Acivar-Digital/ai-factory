@@ -5,6 +5,15 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 7: Fix `stop_phase` Checkpoint Not Wired in Runner
+
+**`_checkpoint()` was defined in `pipeline.py` but never called from `runner.py`.** The `stop_phase` frontmatter field was parsed and stored in `args.stop_after` but the pipeline ran through all phases regardless.
+
+| # | File | Issue | Fix |
+|---|------|-------|-----|
+| 1 | `factory/infra/runner.py` | `stop_phase` parsed from YAML frontmatter but never checked — pipeline always ran to completion | Wired `_checkpoint()` after each gate (supervisor_plan, supervisor_review, red_team) so `stop_phase` halts the pipeline at the right phase |
+| 2 | `.agents/skills/ai-factory/SKILL.md` | Missing documentation on REPO_ROOT resolution and two-phase path model | Added full docs: how `CWD`/`.env`/`cwd()` set `REPO_ROOT`, where scope paths resolve, planner vs coder path bases, and diagnostic steps |
+
 ## 2026-07-22 — Batch 6: Shadow Tools Fixes (Line Numbers, Formatting, Whitespace, Edge Cases)
 
 **Comprehensive fixes for codebase investigation and modification shadow tools.** Addressed critical bugs preventing the LLM from accurately referencing line numbers, preserving codebase formatting, and performing reliable string/regex replacements.
@@ -97,7 +106,7 @@ is correct for all callers.
 
 **Tests:** 224/224 pass, ruff clean on changed files.
 
-## 2026-07-22 — 00_fix.md audit: 7 bugfixes from third-party code review
+## 2026-07-22 — Audit: 7 bugfixes from third-party code review
 
 **Audit-driven fixes across `pipeline.py`, `execution.py`, and `control.py`**
 in response to an external code review. 8/9 claims verified; 7 real bugs fixed.
@@ -119,7 +128,7 @@ in response to an external code review. 8/9 claims verified; 7 real bugs fixed.
 **Discipline memory clarified** — "no fallback chains" means model-level fallback only; agent-level recovery (same model loopguard retry + `_recover_from_unexpected_behavior`) is the correct pattern, not raw crash.
 
 **Documentation:**
-- `docs/00_fix.md` — audit log written
+- Audit log written
 - `.agents/skills/ai-factory/SKILL.md` — updated
 - `AGENTS.md` — removed stale fact-tool references (`remember_fact.py`, `recall_fact.py`, `list_facts.py` were purged in memory unification 2026-07-21)
 - `bd` discipline memory clarified
@@ -150,11 +159,11 @@ to string-based `monkeypatch.setattr("factory.infra.module.X")` so patches hit t
 where the name is actually resolved (execution.py / context.py / agent.py import their
 dependencies with `from ... import` creating private references). All 225 tests pass.
 
-## 2026-07-21 — 00_fix.md: ModelHTTPError 400 retry in loopguard
+## 2026-07-21 — ModelHTTPError 400 retry in loopguard
 
 **ModelHTTPError 400 retry.** `_loopguard.py` now catches `ModelHTTPError(status_code=400)` inside the `while True` loop and retries up to 3 times with 5/10/15s backoff before propagating. Other status codes (401, 403, etc.) still fail loudly via the existing `except Exception` handler. Added 3 regression tests for the retry path.
 
-## 2026-07-21 — 00_fix.md implementation: memory unification, line-number prefix, nudge on search tools, discipline cheat-sheet
+## 2026-07-21 — Memory unification, line-number prefix, nudge on search tools, discipline cheat-sheet
 
 **Item 1 — Memory unification.** Deleted `admin/tools/remember_fact.py`, `recall_fact.py`, `list_facts.py` (dead round-trip: write to `facts/memory.jsonl`, read from non-existent `temp/facts.jsonl`). Purged all wrappers in `infra/tools.py` (function defs, `READ_ONLY_TOOLS`, `MODIFY_TOOLS`, `GuardToolset.call_tool` guard, `guard_tools` param, import, `GuardToolset` fields). Deleted orphaned `facts/memory.jsonl` (174 entries, never recallable). Removed `RECALL_BUDGET` from `control_orchestrator.py`. All agents use `remember()` only.
 
@@ -168,7 +177,7 @@ dependencies with `from ... import` creating private references). All 225 tests 
 
 **Tests:** Updated `test_cli_contract.py` (removed fact-store tests), `test_read_memory_bridge.py` (removed — nudge moved to function level), `TEST/test_mcp.py` (removed Memory Lane).
 
-## 2026-07-21 — Fix: SPAWN-ALL HALT defeats supervisor_review recovery (docs/00_fix.md, "spawn-all" fix)
+## 2026-07-21 — Fix: SPAWN-ALL HALT defeats supervisor_review recovery
 
 **Incident:** `hbh1` run crashed with
 `RuntimeError: [HALT] EXECUTE phase incomplete: coder03, coder07` *before*
@@ -186,7 +195,7 @@ The HALT ("no incomplete work reaches review") directly contradicted the
 gate's designed recovery. The harness had silently usurped the supervisor's
 recovery authority.
 
-**Fix (00_fix.md):**
+**Fix:**
 - `run_execute_phase` gains `strict: bool = True`. The SPAWN-ALL HALT
   now fires only when `strict=True` (top-level caller with no recovery owner).
 - All four gate call sites (`run_code_review_gate` initial `:2246` + rerun
@@ -200,7 +209,7 @@ recovery authority.
   default `strict=True`, so the HALT still fires for direct callers — guarding
   the original `uqj06` SPAWN-ALL behaviour).
 
-**Tests:** `admin/orchestrator/test/test_00_fix_strict_recovery.py`
+**Tests:** `admin/orchestrator/test/test_spawn_all_halt_recovery.py`
 (`strict=False` returns incomplete instead of raising; default `strict=True` still
 halts; gate completes without HALT on a blocked task). `test_harness_gates.py`
 `test_staging_diff_gate_zero_diff` / `test_runtime_load_gate_fails` updated to assert
@@ -208,7 +217,7 @@ the execute-phase gating directly via `run_execute_phase(strict=True)` (they
 previously relied on the early-abort HALT and passed a sync reviewer that is now
 actually invoked once the gate recovers).
 
-## 2026-07-21 — Fix: Staging Diff Gate spurious zero-diff HALT (docs/00_fix.md)
+## 2026-07-21 — Fix: Staging Diff Gate spurious zero-diff HALT
 
 **Incident:** `hbh1` EXECUTE phase aborted with
 `RuntimeError: [HALT] EXECUTE phase incomplete: coder01..coder05, coder07`.
@@ -221,7 +230,7 @@ join collapsed BOTH sides to the same physical staging file, so
 `filecmp(file, file)` was always identical → spurious block → SPAWN-ALL HALT.
 The Load-Schema Gate had the same broken concat and silently skipped relative `fp`.
 
-**Fix (Fix A + B, 00_fix.md):**
+**Fix (Fix A + B):**
 - `stage_path()` is now the SOLE normalization seam: it collapses absolute AND
   relative temp prefixes to `TEMP_DIR/<rel>`, and every gate routes through it.
 - Deleted the redundant `filecmp` Staging Diff Gate. Change-detection is unified
@@ -234,14 +243,14 @@ The Load-Schema Gate had the same broken concat and silently skipped relative `f
 - Load-Schema Gate now resolves via `stage_path(fp)` (validates both path forms).
 - SPAWN-ALL HALT kept for genuine fake-done failures.
 
-**Tests:** `admin/orchestrator/test/test_00_fix_staging_gate.py` (5 regression
+**Tests:** `admin/orchestrator/test/test_staging_gate.py` (5 regression
 cases: absolute+relative `stage_path` collapse; real edit not blocked; genuine
 zero-diff; new file; hallucinated path).
 
 ## [Unreleased] - 2026-07-20
 
 ### Fixed
-- **hbh1 validation gate root-cause fixes (00_fix.md — Defect A + Defect B + Fixes C'/E/F/G/H).**
+- **hbh1 validation gate root-cause fixes (Defect A + Defect B + Fixes C'/E/F/G/H).**
   - Root cause (two compounding harness defects, NOT "Fix A missing"): **Defect A** — `guardrail_check.py validate` ran pyright/smoke on the ISOLATED STAGING COPY (`admin/orchestrator/temp/src2/...`), so the file inferred as `admin.orchestrator.temp.src2...` and `reportMissingImports` fired on every cross-module import (e.g. `Import ".db" could not be resolved`), and `src2` was excluded from `[tool.pyright] include`. **Defect B** — the checkpoint was taken lazily *after* the coder edit, so `diff_vs_checkpoint` was always empty and the changed-line filter (`_changed_line_set`) never engaged, blocking coders on pre-existing whole-file errors.
   - Architectural principle (Francis): *"other coder's shit is our shit"* — the gate must (1) run where imports resolve and (2) hold a coder accountable only for errors it introduced on the lines it changed.
   - **Fix A' (Defect A):** `validate` now builds a throwaway validation sandbox (`build_validation_sandbox`) mirroring the repo (symlinked `.venv`/`pyproject.toml`/`src`/`src2`), copies the staged file to its TRUE package path, and runs ruff/smoke/pyright in that sandbox so relative imports resolve. Added `_virtual_live_path`, `_realize_symlink`, `_materialize_along`. The live tree is never touched.
