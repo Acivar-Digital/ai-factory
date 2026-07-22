@@ -1,50 +1,53 @@
-<!-- msg 0 | 2026-07-22-07:15:32 | user-prompt -->
+<!-- msg 0 | 2026-07-22-07:42:42 | user-prompt -->
 
 ## User
 
 <<<INJECTED_CONTEXT>>> (prior_phase_summaries)
 ## planner summary (prior phase):
-- epic.title: Fix Da Yun branch audit in module1_macro.py:216-249
-- epic.deliverables.0: Rewrite Da Yun branch audit (module1_macro.py:216-249) with priority-sorted scan of 8 interaction types, graduated magnitude, and 用神/忌神 polarity.
-- epic.must_be_pydantic: False
-- user_stories.0.id: story_da_yun_audit
-- user_stories.0.story: As a developer, I want to fix the Da Yun branch audit interaction ordering & polarity implementation so that calculations are accurate.
-- user_stories.0.acceptance_criteria.0: Da Yun audit matches canonical priority order.
-- user_stories.0.acceptance_criteria.1: Graduated magnitudes are (+20, +15, +10, +5, -15, -8, -8, -8).
-- user_stories.0.acceptance_criteria.2: Polarity correctly flips sign using _unified_medicine and _unified_taboo.
-- user_stories.0.definition_of_done.0: Refactored code formatting and syntax are verified clean via ruff.
-- definition_of_done.0: Da Yun branch audit logic in src2/engine/module1_macro.py rewrite passes automated lint checks.
-- definition_of_done.1: The implementation uses only existing imports and does not modify the annual Tai Sui logic or other unrelated section of module1_macro.py.
-- definition_of_done.2: Verification indicates that polarity and priority order conform exactly to specification.
-- acceptance_criteria.0: Da Yun audit evaluates all 8 interaction types in the canonical priority order (三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破).
-- acceptance_criteria.1: All 4 natal branches are scanned per interaction type, matching the highest-priority interaction type that matches *any* natal branch (no short-circuit or break on first natal branch).
-- acceptance_criteria.2: Graduated baseline magnitudes are correctly applied (+20 for 三会, +15 for 三合, +10 for 六合, +5 for 半合, -15 for 冲, -8 for 刑/害/破).
-- acceptance_criteria.3: Polarity formula is correctly wired using existing _unified_medicine and _unified_taboo sets: combination with 忌神 -> bad; clash with 忌神 -> relief (good); combination with 用神 -> good; clash with 用神 -> bad.
-- acceptance_criteria.4: Ruff checks and formatting pass cleanly under src2/.
-- rubric_cube.cells.0.dimension: file_disjointness
-- rubric_cube.cells.0.criterion: Only one coder edits src2/engine/module1_macro.py to avoid file conflict
+- epic.title: Fix Da Yun branch audit in module1_macro.py
+- epic.deliverables.0: Rewrite the Da Yun branch audit in `module1_macro.py:216-249` to support all 8 interaction types with correct priority and polarity.
+- epic.must_be_pydantic: True
+- user_stories.0.id: story01
+- user_stories.0.story: As a user, I want the Da Yun branch audit to use the correct canonical priority ordering and polarity to produce accurate biological/astrological outputs.
+- user_stories.0.acceptance_criteria.0: The branch audit logic must evaluate: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+- user_stories.0.definition_of_done.0: Code compiles and passes ruff verification.
+- definition_of_done.0: Code logic implemented in src2/engine/module1_macro.py.
+- definition_of_done.1: Code formatted using ruff.
+- definition_of_done.2: Tests run successfully (if any related tests exist).
+- acceptance_criteria.0: The Da Yun branch audit in module1_macro.py correctly implements the 8-tier canonical interaction priority: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+- acceptance_criteria.1: The audit scans all 4 natal branches for each interaction type to find matches without short-circuiting on the first natal branch, keeping the highest priority match.
+- acceptance_criteria.2: The core polarity logic correctly handles 用神 (medicine) and 忌神 (taboo) to determine the sign of the Da Yun branch impact.
+- acceptance_criteria.3: The code runs through ruff check and ruff format with zero errors.
+- rubric_cube.cells.0.dimension: correctness
+- rubric_cube.cells.0.criterion: The Da Yun branch audit must check all 8 interaction types in correct canonical order.
 - rubric_cube.cells.0.severity: blocker
 - rubric_cube.cells.0.passed: True
-- rubric_cube.cells.0.evidence: Single subtask coder01 targeting src2/engine/module1_macro.py.
+- rubric_cube.cells.0.evidence: 
 - rubric_cube.cells.0.coder_idents.0: coder01
-- rubric_cube.cells.1.dimension: priority_order
-- rubric_cube.cells.1.criterion: Audit check executes 8 interaction types in hierarchical priority check: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破
+- rubric_cube.cells.1.dimension: correctness
+- rubric_cube.cells.1.criterion: The polarity calculation must flip the sign correctly according to medicine and taboo rules.
 - rubric_cube.cells.1.severity: blocker
 - rubric_cube.cells.1.passed: True
-- rubric_cube.cells.1.evidence: Coder instruction orders checkers exactly as required by specification.
+- rubric_cube.cells.1.evidence: 
 - rubric_cube.cells.1.coder_idents.0: coder01
-- rubric_cube.cells.2.dimension: scan_completeness
-- rubric_cube.cells.2.criterion: Check all 4 natal branches for priority scan without pre-mature breaking
-- rubric_cube.cells.2.severity: blocker
-- rubric_cube.cells.2.passed: True
-- rubric_cube.cells.2.evidence: Coder instruction specifies to scan all 4 natal branches per interaction type rather than break early.
-- rubric_cube.cells.2.coder_idents.0: coder01
-- summary: Correcting the Da Yun branch audit in module1_macro.py:216-249 to properly prioritize interactions, scan all natal branches, assign proper baseline magnitudes, and apply correct polarity based on medicinal/taboo status.
+- summary: We are rewriting the Da Yun branch audit in module1_macro.py to correctly check all 8 interaction types in canonical priority order, while using the computed polarity tables to adjust the final impacts.
 - subtasks.0.id: coder01
-- subtasks.0.title: Rewrite Da Yun branch audit in module1_macro.py
+- subtasks.0.title: Da Yun Branch Audit Rewrite
 - subtasks.0.file_paths.0: src2/engine/module1_macro.py
-- subtasks.0.instruction: Rewrite Da Yun branch audit in src2/engine/module1_macro.py (lines 216-249): Priority order checking of 8 elements, scan all natal branches per interaction type, use graduated baseline magnitudes, apply polarity correctly using _unified_medicine / _unified_taboo.
-- subtasks.0.acceptance: Da Yun branch audit rew
+- subtasks.0.instruction: Rewrite the Da Yun branch audit in module1_macro.py to use the 8-tier canonical order and apply polarity rules. Ensure _unified_medicine and _unified_taboo are defined beforehand. Scan all 4 natal branches per type.
+- subtasks.0.acceptance: Da Yun branch audit rewritten cleanly and formatted by ruff.
+- subtasks.0.tool_preference: AST-edit
+- subtasks.0.evidence.0.file_path: src2/engine/module1_macro.py
+- subtasks.0.evidence.0.content: Lines 216-249 in module1_macro.py contain the current branch audit logic.
+- risks.0: Variable scope mismatch if _unified_medicine and _unified_taboo sets are defined lower in the function. Solved by defining/computing them early.
+- strategy.how_to_fix: We rewrite the branch audit section of module1_macro.py to use a structured scan of the 8 canonical interaction types in priority order. We define _unified_medicine and _unified_taboo sets early in the function to prevent NameError, and we apply the polarity logic to the matching interaction.
+- strategy.tool_preference.0.task_id: coder01
+- strategy.tool_preference.0.preference: AST-edit
+- strategy.parallelisable_workplan.groups.0.id: group01
+- strategy.parallelisable_workplan.groups.0.tasks.0.id: coder01
+- strategy.parallelisable_workplan.groups.0.tasks.0.title: Rewrite Da Yun branch audit
+- strategy.parallelisable_workplan.groups.0.tasks.0.file_paths.0: src2/engine/module1_macro.py
+- strategy.parallelisable_workplan.groups.0.tasks.0.instruction: Rewrite the Da Yun branch audit section starting at line 216. Implement the 8-tier c
 <<<END_INJECTED_CONTEXT>>>
 
 # EPIC
@@ -162,103 +165,109 @@ Scan ALL 4 natal branches per interaction type. The highest-priority type that m
 
 <<<INJECTED_CONTEXT>>> (prior_role_outputs)
 ## planner output:
-- epic.title: Fix Da Yun branch audit in module1_macro.py:216-249
-- epic.deliverables.0: Rewrite Da Yun branch audit (module1_macro.py:216-249) with priority-sorted scan of 8 interaction types, graduated magnitude, and 用神/忌神 polarity.
-- epic.must_be_pydantic: False
-- user_stories.0.id: story_da_yun_audit
-- user_stories.0.story: As a developer, I want to fix the Da Yun branch audit interaction ordering & polarity implementation so that calculations are accurate.
-- user_stories.0.acceptance_criteria.0: Da Yun audit matches canonical priority order.
-- user_stories.0.acceptance_criteria.1: Graduated magnitudes are (+20, +15, +10, +5, -15, -8, -8, -8).
-- user_stories.0.acceptance_criteria.2: Polarity correctly flips sign using _unified_medicine and _unified_taboo.
-- user_stories.0.definition_of_done.0: Refactored code formatting and syntax are verified clean via ruff.
-- definition_of_done.0: Da Yun branch audit logic in src2/engine/module1_macro.py rewrite passes automated lint checks.
-- definition_of_done.1: The implementation uses only existing imports and does not modify the annual Tai Sui logic or other unrelated section of module1_macro.py.
-- definition_of_done.2: Verification indicates that polarity and priority order conform exactly to specification.
-- acceptance_criteria.0: Da Yun audit evaluates all 8 interaction types in the canonical priority order (三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破).
-- acceptance_criteria.1: All 4 natal branches are scanned per interaction type, matching the highest-priority interaction type that matches *any* natal branch (no short-circuit or break on first natal branch).
-- acceptance_criteria.2: Graduated baseline magnitudes are correctly applied (+20 for 三会, +15 for 三合, +10 for 六合, +5 for 半合, -15 for 冲, -8 for 刑/害/破).
-- acceptance_criteria.3: Polarity formula is correctly wired using existing _unified_medicine and _unified_taboo sets: combination with 忌神 -> bad; clash with 忌神 -> relief (good); combination with 用神 -> good; clash with 用神 -> bad.
-- acceptance_criteria.4: Ruff checks and formatting pass cleanly under src2/.
-- rubric_cube.cells.0.dimension: file_disjointness
-- rubric_cube.cells.0.criterion: Only one coder edits src2/engine/module1_macro.py to avoid file conflict
+- epic.title: Fix Da Yun branch audit in module1_macro.py
+- epic.deliverables.0: Rewrite the Da Yun branch audit in `module1_macro.py:216-249` to support all 8 interaction types with correct priority and polarity.
+- epic.must_be_pydantic: True
+- user_stories.0.id: story01
+- user_stories.0.story: As a user, I want the Da Yun branch audit to use the correct canonical priority ordering and polarity to produce accurate biological/astrological outputs.
+- user_stories.0.acceptance_criteria.0: The branch audit logic must evaluate: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+- user_stories.0.definition_of_done.0: Code compiles and passes ruff verification.
+- definition_of_done.0: Code logic implemented in src2/engine/module1_macro.py.
+- definition_of_done.1: Code formatted using ruff.
+- definition_of_done.2: Tests run successfully (if any related tests exist).
+- acceptance_criteria.0: The Da Yun branch audit in module1_macro.py correctly implements the 8-tier canonical interaction priority: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+- acceptance_criteria.1: The audit scans all 4 natal branches for each interaction type to find matches without short-circuiting on the first natal branch, keeping the highest priority match.
+- acceptance_criteria.2: The core polarity logic correctly handles 用神 (medicine) and 忌神 (taboo) to determine the sign of the Da Yun branch impact.
+- acceptance_criteria.3: The code runs through ruff check and ruff format with zero errors.
+- rubric_cube.cells.0.dimension: correctness
+- rubric_cube.cells.0.criterion: The Da Yun branch audit must check all 8 interaction types in correct canonical order.
 - rubric_cube.cells.0.severity: blocker
 - rubric_cube.cells.0.passed: True
-- rubric_cube.cells.0.evidence: Single subtask coder01 targeting src2/engine/module1_macro.py.
+- rubric_cube.cells.0.evidence: 
 - rubric_cube.cells.0.coder_idents.0: coder01
-- rubric_cube.cells.1.dimension: priority_order
-- rubric_cube.cells.1.criterion: Audit check executes 8 interaction types in hierarchical priority check: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破
+- rubric_cube.cells.1.dimension: correctness
+- rubric_cube.cells.1.criterion: The polarity calculation must flip the sign correctly according to medicine and taboo rules.
 - rubric_cube.cells.1.severity: blocker
 - rubric_cube.cells.1.passed: True
-- rubric_cube.cells.1.evidence: Coder instruction orders checkers exactly as required by specification.
+- rubric_cube.cells.1.evidence: 
 - rubric_cube.cells.1.coder_idents.0: coder01
-- rubric_cube.cells.2.dimension: scan_completeness
-- rubric_cube.cells.2.criterion: Check all 4 natal branches for priority scan without pre-mature breaking
-- rubric_cube.cells.2.severity: blocker
-- rubric_cube.cells.2.passed: True
-- rubric_cube.cells.2.evidence: Coder instruction specifies to scan all 4 natal branches per interaction type rather than break early.
-- rubric_cube.cells.2.coder_idents.0: coder01
-- summary: Correcting the Da Yun branch audit in module1_macro.py:216-249 to properly prioritize interactions, scan all natal branches, assign proper baseline magnitudes, and apply correct polarity based on medicinal/taboo status.
+- summary: We are rewriting the Da Yun branch audit in module1_macro.py to correctly check all 8 interaction types in canonical priority order, while using the computed polarity tables to adjust the final impacts.
 - subtasks.0.id: coder01
-- subtasks.0.title: Rewrite Da Yun branch audit in module1_macro.py
+- subtasks.0.title: Da Yun Branch Audit Rewrite
 - subtasks.0.file_paths.0: src2/engine/module1_macro.py
-- subtasks.0.instruction: Rewrite Da Yun branch audit in src2/engine/module1_macro.py (lines 216-249): Priority order checking of 8 elements, scan all natal branches per interaction type, use graduated baseline magnitudes, apply polarity correctly using _unified_medicine / _unified_taboo.
-- subtasks.0.acceptance: Da Yun branch audit rew
+- subtasks.0.instruction: Rewrite the Da Yun branch audit in module1_macro.py to use the 8-tier canonical order and apply polarity rules. Ensure _unified_medicine and _unified_taboo are defined beforehand. Scan all 4 natal branches per type.
+- subtasks.0.acceptance: Da Yun branch audit rewritten cleanly and formatted by ruff.
+- subtasks.0.tool_preference: AST-edit
+- subtasks.0.evidence.0.file_path: src2/engine/module1_macro.py
+- subtasks.0.evidence.0.content: Lines 216-249 in module1_macro.py contain the current branch audit logic.
+- risks.0: Variable scope mismatch if _unified_medicine and _unified_taboo sets are defined lower in the function. Solved by defining/computing them early.
+- strategy.how_to_fix: We rewrite the branch audit section of module1_macro.py to use a structured scan of the 8 canonical interaction types in priority order. We define _unified_medicine and _unified_taboo sets early in the function to prevent NameError, and we apply the polarity logic to the matching interaction.
+- strategy.tool_preference.0.task_id: coder01
+- strategy.tool_preference.0.preference: AST-edit
+- strategy.parallelisable_workplan.groups.0.id: group01
+- strategy.parallelisable_workplan.groups.0.tasks.0.id: coder01
+- strategy.parallelisable_workplan.groups.0.tasks.0.title: Rewrite Da Yun branch audit
+- strategy.parallelisable_workplan.groups.0.tasks.0.file_paths.0: src2/engine/module1_macro.py
+- strategy.parallelisable_workplan.groups.0.tasks.0.instruction: Rewrite the Da Yun branch audit section starting at line 216. Implement the 8-tier c
 <<<END_INJECTED_CONTEXT>>>
 
 <<<INJECTED_CONTEXT>>> (phase_summaries)
 ## planner summary (L3):
-- epic.title: Fix Da Yun branch audit in module1_macro.py:216-249
-- epic.deliverables.0: Rewrite Da Yun branch audit (module1_macro.py:216-249) with priority-sorted scan of 8 interaction types, graduated magnitude, and 用神/忌神 polarity.
-- epic.must_be_pydantic: False
-- user_stories.0.id: story_da_yun_audit
-- user_stories.0.story: As a developer, I want to fix the Da Yun branch audit interaction ordering & polarity implementation so that calculations are accurate.
-- user_stories.0.acceptance_criteria.0: Da Yun audit matches canonical priority order.
-- user_stories.0.acceptance_criteria.1: Graduated magnitudes are (+20, +15, +10, +5, -15, -8, -8, -8).
-- user_stories.0.acceptance_criteria.2: Polarity correctly flips sign using _unified_medicine and _unified_taboo.
-- user_stories.0.definition_of_done.0: Refactored code formatting and syntax are verified clean via ruff.
-- definition_of_done.0: Da Yun branch audit logic in src2/engine/module1_macro.py rewrite passes automated lint checks.
-- definition_of_done.1: The implementation uses only existing imports and does not modify the annual Tai Sui logic or other unrelated section of module1_macro.py.
-- definition_of_done.2: Verification indicates that polarity and priority order conform exactly to specification.
-- acceptance_criteria.0: Da Yun audit evaluates all 8 interaction types in the canonical priority order (三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破).
-- acceptance_criteria.1: All 4 natal branches are scanned per interaction type, matching the highest-priority interaction type that matches *any* natal branch (no short-circuit or break on first natal branch).
-- acceptance_criteria.2: Graduated baseline magnitudes are correctly applied (+20 for 三会, +15 for 三合, +10 for 六合, +5 for 半合, -15 for 冲, -8 for 刑/害/破).
-- acceptance_criteria.3: Polarity formula is correctly wired using existing _unified_medicine and _unified_taboo sets: combination with 忌神 -> bad; clash with 忌神 -> relief (good); combination with 用神 -> good; clash with 用神 -> bad.
-- acceptance_criteria.4: Ruff checks and formatting pass cleanly under src2/.
-- rubric_cube.cells.0.dimension: file_disjointness
-- rubric_cube.cells.0.criterion: Only one coder edits src2/engine/module1_macro.py to avoid file conflict
+- epic.title: Fix Da Yun branch audit in module1_macro.py
+- epic.deliverables.0: Rewrite the Da Yun branch audit in `module1_macro.py:216-249` to support all 8 interaction types with correct priority and polarity.
+- epic.must_be_pydantic: True
+- user_stories.0.id: story01
+- user_stories.0.story: As a user, I want the Da Yun branch audit to use the correct canonical priority ordering and polarity to produce accurate biological/astrological outputs.
+- user_stories.0.acceptance_criteria.0: The branch audit logic must evaluate: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+- user_stories.0.definition_of_done.0: Code compiles and passes ruff verification.
+- definition_of_done.0: Code logic implemented in src2/engine/module1_macro.py.
+- definition_of_done.1: Code formatted using ruff.
+- definition_of_done.2: Tests run successfully (if any related tests exist).
+- acceptance_criteria.0: The Da Yun branch audit in module1_macro.py correctly implements the 8-tier canonical interaction priority: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+- acceptance_criteria.1: The audit scans all 4 natal branches for each interaction type to find matches without short-circuiting on the first natal branch, keeping the highest priority match.
+- acceptance_criteria.2: The core polarity logic correctly handles 用神 (medicine) and 忌神 (taboo) to determine the sign of the Da Yun branch impact.
+- acceptance_criteria.3: The code runs through ruff check and ruff format with zero errors.
+- rubric_cube.cells.0.dimension: correctness
+- rubric_cube.cells.0.criterion: The Da Yun branch audit must check all 8 interaction types in correct canonical order.
 - rubric_cube.cells.0.severity: blocker
 - rubric_cube.cells.0.passed: True
-- rubric_cube.cells.0.evidence: Single subtask coder01 targeting src2/engine/module1_macro.py.
+- rubric_cube.cells.0.evidence: 
 - rubric_cube.cells.0.coder_idents.0: coder01
-- rubric_cube.cells.1.dimension: priority_order
-- rubric_cube.cells.1.criterion: Audit check executes 8 interaction types in hierarchical priority check: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破
+- rubric_cube.cells.1.dimension: correctness
+- rubric_cube.cells.1.criterion: The polarity calculation must flip the sign correctly according to medicine and taboo rules.
 - rubric_cube.cells.1.severity: blocker
 - rubric_cube.cells.1.passed: True
-- rubric_cube.cells.1.evidence: Coder instruction orders checkers exactly as required by specification.
+- rubric_cube.cells.1.evidence: 
 - rubric_cube.cells.1.coder_idents.0: coder01
-- rubric_cube.cells.2.dimension: scan_completeness
-- rubric_cube.cells.2.criterion: Check all 4 natal branches for priority scan without pre-mature breaking
-- rubric_cube.cells.2.severity: blocker
-- rubric_cube.cells.2.passed: True
-- rubric_cube.cells.2.evidence: Coder instruction specifies to scan all 4 natal branches per interaction type rather than break early.
-- rubric_cube.cells.2.coder_idents.0: coder01
-- summary: Correcting the Da Yun branch audit in module1_macro.py:216-249 to properly prioritize interactions, scan all natal branches, assign proper baseline magnitudes, and apply correct polarity based on medicinal/taboo status.
+- summary: We are rewriting the Da Yun branch audit in module1_macro.py to correctly check all 8 interaction types in canonical priority order, while using the computed polarity tables to adjust the final impacts.
 - subtasks.0.id: coder01
-- subtasks.0.title: Rewrite Da Yun branch audit in module1_macro.py
+- subtasks.0.title: Da Yun Branch Audit Rewrite
 - subtasks.0.file_paths.0: src2/engine/module1_macro.py
-- subtasks.0.instruction: Rewrite Da Yun branch audit in src2/engine/module1_macro.py (lines 216-249): Priority order checking of 8 elements, scan all natal branches per interaction type, use graduated baseline magnitudes, apply polarity correctly using _unified_medicine / _unified_taboo.
-- subtasks.0.acceptance: Da Yun branch audit rew
+- subtasks.0.instruction: Rewrite the Da Yun branch audit in module1_macro.py to use the 8-tier canonical order and apply polarity rules. Ensure _unified_medicine and _unified_taboo are defined beforehand. Scan all 4 natal branches per type.
+- subtasks.0.acceptance: Da Yun branch audit rewritten cleanly and formatted by ruff.
+- subtasks.0.tool_preference: AST-edit
+- subtasks.0.evidence.0.file_path: src2/engine/module1_macro.py
+- subtasks.0.evidence.0.content: Lines 216-249 in module1_macro.py contain the current branch audit logic.
+- risks.0: Variable scope mismatch if _unified_medicine and _unified_taboo sets are defined lower in the function. Solved by defining/computing them early.
+- strategy.how_to_fix: We rewrite the branch audit section of module1_macro.py to use a structured scan of the 8 canonical interaction types in priority order. We define _unified_medicine and _unified_taboo sets early in the function to prevent NameError, and we apply the polarity logic to the matching interaction.
+- strategy.tool_preference.0.task_id: coder01
+- strategy.tool_preference.0.preference: AST-edit
+- strategy.parallelisable_workplan.groups.0.id: group01
+- strategy.parallelisable_workplan.groups.0.tasks.0.id: coder01
+- strategy.parallelisable_workplan.groups.0.tasks.0.title: Rewrite Da Yun branch audit
+- strategy.parallelisable_workplan.groups.0.tasks.0.file_paths.0: src2/engine/module1_macro.py
+- strategy.parallelisable_workplan.groups.0.tasks.0.instruction: Rewrite the Da Yun branch audit section starting at line 216. Implement the 8-tier c
 <<<END_INJECTED_CONTEXT>>>
 
 ---
 
-<!-- msg 1 | 2026-07-22-07:15:38 | thinking+tool-call -->
+<!-- msg 1 | 2026-07-22-07:42:58 | thinking+tool-call -->
 
 ### Thinking
 
-**Defining the Scope**
+**Assessing DraftPlan Alignment**
 
-I'm currently focused on defining the scope for this task. It seems I need to act as a plan supervisor, and the initial draft centers on rewriting a specific audit within a module. My immediate concern is understanding the "DraftPlan" and its singular subtask. My focus right now is understanding the "DraftPlan".
+Okay, I'm now taking on the role of PLAN SUPERVISOR to review this DraftPlan. I'm focusing on ensuring alignment with the epic's description and acceptance criteria. I'll need to use `batch_read` calls to evaluate this plan. I'm mindful of the research tool call limit. The goal is a flat list of evaluations linked to the assigned tasks.
 
 
 
@@ -266,83 +275,699 @@ I'm currently focused on defining the scope for this task. It seems I need to ac
 ### Tool call: `batch_read`
 
 - **paths**: - `src2/engine/module1_macro.py`
-- **line_ranges**: - **cur_lines**: 200-270
-- **imports**: 1-50
+- **line_ranges**: - **uid**: 1-500
 
 ---
 
-<!-- msg 2 | 2026-07-22-07:15:38 | tool-return -->
+<!-- msg 2 | 2026-07-22-07:42:58 | tool-return -->
 
 ### Tool result: `batch_read`
 
 
 ---
-Since you are stateless across turns, you may call `remember("<note>")` to record anything you need to execute correctly on your next turn (e.g. a focused slice, an edit decision, or a collision to avoid). Use `remember`, not `bd`.ERROR: File not found: src2/engine/module1_macro.py
+Since you are stateless across turns, you may call `remember("<note>")` to record anything you need to execute correctly on your next turn (e.g. a focused slice, an edit decision, or a collision to avoid). Use `remember`, not `bd`.=== File read: src2/engine/module1_macro.py (lines 1-250 of 630) ===
+1: import logging
+2: 
+3: from src2.core.schemas import (
+4:     ChartProfile,
+5:     MacroAnnualData,
+6:     MacroDecadeData,
+7:     MacroEraBlock,
+8:     MacroInput,
+9:     MacroOutput,
+10:     MacroSeasonalInfluence,
+11:     MacroVoidAudit,
+12:     Pillar,
+13:     TaiSuiTrigger,
+14: )
+15: from src2.core.schemas.unified import (
+16:     BAN_HE,
+17:     BRANCHES,
+18:     CHONG,
+19:     COMBINATION_STATES,
+20:     HAI,
+21:     LIU_HE,
+22:     PO,
+23:     SAN_HE,
+24:     SAN_HUI,
+25:     STEM_COMBINE_RESULTS,
+26:     STEM_COMBINES,
+27:     STEMS,
+28:     XING,
+29:     XUN_KONG,
+30: )
+31: 
+32: from .element_phase import get_element_phase, get_phase_multiplier
+33: 
+34: logger = logging.getLogger(__name__)
+35: 
+36: 
+37: # --- Core Bazi Functions ---
+38: 
+39: 
+40: def _get_stem_transformation_status(result_el: str, profile: ChartProfile, month_branch: str) -> str:
+41:     """
+42:     Check if a stem combination transforms or is just bound.
+43:     Module 1: Macro-Environmental Scan (V27).
+44:     """
+45:     month_el = (eb := BRANCHES.get(month_branch)) and eb.element
+46:     if month_el == result_el:
+47:         return COMBINATION_STATES["TRANSFORMED_ENV_SUPPORTED"]
+48: 
+49:     for p_name in ["year", "month", "day", "hour"]:
+50:         pillar = getattr(profile, f"{p_name}_pillar", None)
+51:         if pillar:
+52:             stem = pillar.stem
+53:             if stem:
+54:                 stem_el = (hs := STEMS.get(stem)) and hs.element
+55:                 if stem_el == result_el:
+56:                     return COMBINATION_STATES["TRANSFORMED_TRANSPARENT"]
+57: 
+58:     return COMBINATION_STATES["BOUND_NO_TRANSFORM"]
+59: 
+60: 
+61: def _is_branch_void(day_stem_stream: str, branch: str) -> bool:
+62:     """Check if a branch is void (Xun Kong) based on the day stem stream."""
+63:     void_branches = XUN_KONG.get(day_stem_stream, ())
+64:     return branch in void_branches
+65: 
+66: 
+67: def _calculate_interaction_score(branch_a: str, branch_b: str) -> int:
+68:     """Return the V28 interaction score for void-curing logic."""
+69:     if branch_a == branch_b:
+70:         return 0
+71:     for combo_type in [SAN_HUI, SAN_HE]:
+72:         for branches in combo_type.values():
+73:             if branch_a in branches and branch_b in branches:
+74:                 return 15
+75:     if CHONG.get(branch_a) == branch_b:
+76:         return 10
+77:     if frozenset({branch_a, branch_b}) in LIU_HE:
+78:         return 10
+79:     for pair in BAN_HE:
+80:         if branch_a in pair and branch_b in pair:
+81:             return 10
+82:     if PO.get(branch_a) == branch_b or HAI.get(branch_a) == branch_b:
+83:         return -10
+84:     return 0
+85: 
+86: 
+87: # --- V30: Era Block ---
+88: _ERA_CEILING_HOSTILE: int = 71
+89: _ERA_CEILING_DEFAULT: int = 80
+90: 
+91: # Harmful interactions (冲/刑/破/害) carry a negative native sign; 会/合/值 carry positive.
+92: HARM_TYPES: frozenset[str] = frozenset({"冲太岁", "刑太岁", "破太岁", "害太岁"})
+93: 
+94: 
+95: def _get_era_block(dy_branch: str, profile: ChartProfile) -> MacroEraBlock:
+96:     """
+97:     Classify the Da Yun branch into its San Hui elemental era and evaluate
+98:     against the profile's five god framework.
+99:     """
+100:     medicine = profile.medicine or []
+101:     taboo = profile.taboo or []
+102:     neutral = profile.neutral_elements or []
+103: 
+104:     # Identify era element via SAN_HUI membership
+105:     era_element = None
+106:     era_branches = None
+107:     for element, branches in SAN_HUI.items():
+108:         if dy_branch in branches:
+109:             era_element = element
+110:             era_branches = branches
+111:             break
+112: 
+113:     # Fallback: branch not in any SAN_HUI group
+114:     if era_element is None:
+115:         era_element = (eb := BRANCHES.get(dy_branch)) and eb.element
+116:         era_branches = {dy_branch}
+117: 
+118:     # Genuinely absent da_yun (e.g. newborn) — no era element resolvable.
+119:     if era_element is None:
+120:         era_element = "Unknown"
+121:         era_branches = {dy_branch}
+122: 
+123:     # Classify era element against five gods
+124:     if era_element in medicine:
+125:         era_label = "Medicine Era"
+126:     elif era_element in taboo:
+127:         era_label = "Hostile Era"
+128:     elif era_element in neutral:
+129:         era_label = "Neutral Era"
+130:     else:
+131:         favorable = profile.favorable_elements or []
+132:         unfavorable = profile.unfavorable_elements or []
+133:         if era_element in favorable:
+134:             era_label = "Supportive Era"
+135:         elif era_element in unfavorable:
+136:             era_label = "Friction Era"
+137:         else:
+138:             era_label = "Neutral Era"
+139: 
+140:     era_ceiling = _ERA_CEILING_HOSTILE if era_label == "Hostile Era" else _ERA_CEILING_DEFAULT
+141: 
+142:     favorable_set = set(medicine) | set(profile.favorable_elements or [])
+143:     medicine_count = 0
+144:     for b in era_branches:
+145:         b_element = (eb := BRANCHES.get(b)) and eb.element
+146:         if b_element in favorable_set:
+147:             medicine_count += 1
+148:     era_medicine_ratio = round(medicine_count / len(era_branches), 2) if era_branches else 0.0
+149: 
+150:     return MacroEraBlock(
+151:         era_element=era_element,
+152:         era_label=era_label,
+153:         era_ceiling=era_ceiling,
+154:         era_medicine_ratio=era_medicine_ratio,
+155:     )
+156: 
+157: 
+158: def calculate_macro(
+159:     profile: ChartProfile,
+160:     month_branch: str,
+161:     annual_pillar: Pillar,
+162: ) -> MacroOutput:
+163:     """
+164:     Module 1: Macro-Environmental Scan (V30).
+165:     """
+166:     day_master_stem = profile.day_pillar.stem if profile.day_pillar else "Unknown"
+167:     ten_year_pillar = profile.da_yun_pillar
+168:     medicine = profile.medicine or []
+169:     taboo = profile.taboo or []
+170:     strength_profile = profile.strength_profile
+171:     spectrum_tier = strength_profile.spectrum_tier if strength_profile else ""
+172:     day_stem_stream = profile.day_stem_stream or "Jia Zi"
+173: 
+174:     natal_branches = []
+175:     for p_name in ["year_pillar", "month_pillar", "day_pillar", "hour_pillar"]:
+176:         pillar = getattr(profile, p_name, None)
+177:         if pillar and pillar.branch:
+178:             natal_branches.append(pillar.branch)
+179: 
+180:     year_branch = profile.year_pillar.branch if profile.year_pillar else None
+181: 
+182:     # 1. 10-Year Climate
+183:     if ten_year_pillar:
+184:         ty_stem = ten_year_pillar.stem
+185:         ty_branch = ten_year_pillar.branch
+186:     else:
+187:         ty_stem = "Jia"
+188:         ty_branch = "Zi"
+189: 
+190:     ty_stem_impact = 0.0
+191:     ty_stem_combo_status = None
+192: 
+193:     ty_stem_el = (hs := STEMS.get(ty_stem)) and hs.element
+194:     ty_stem_mult = get_phase_multiplier(ty_stem_el, month_branch)
+195: 
+196:     if ty_stem_el in medicine:
+197:         ty_stem_impact = 10.0 * ty_stem_mult
+198:     elif ty_stem_el in taboo:
+199:         ty_stem_impact = -10.0 * ty_stem_mult
+200:     elif STEM_COMBINES.get(ty_stem) == day_master_stem:
+201:         combo_key = frozenset({ty_stem, day_master_stem})
+202:         result_el = STEM_COMBINE_RESULTS.get(combo_key)
+203:         ty_stem_combo_status = _get_stem_transformation_status(result_el, profile, month_branch)
+204:         if ty_stem_combo_status != COMBINATION_STATES["BOUND_NO_TRANSFORM"]:
+205:             res_mult = get_phase_multiplier(result_el, month_branch)
+206:             if result_el in medicine:
+207:                 ty_stem_impact = 10.0 * res_mult
+208:             elif result_el in taboo:
+209:                 ty_stem_impact = -10.0 * res_mult
+210:             else:
+211:                 ty_stem_impact = -5.0 * res_mult
+212:         else:
+213:             ty_stem_impact = -2.0
+214: 
+215:     # Branch Audit (check all 4 natal branches)
+216:     ty_branch_impact = 0
+217:     for nb in natal_branches:
+218:         if CHONG.get(ty_branch) == nb:
+219:             ty_branch_impact = -20
+220:             break
+221:     if ty_branch_impact == 0:
+222:         for nb in natal_branches:
+223:             if frozenset({ty_branch, nb}) in LIU_HE:
+224:                 ty_branch_impact = 20
+225:                 break
+226:     if ty_branch_impact == 0:
+227:         for nb in natal_branches:
+228:             for triangle in SAN_HE.values():
+229:                 if ty_branch in triangle and nb in triangle:
+230:                     ty_branch_impact = 20
+231:                     break
+232:             if ty_branch_impact != 0:
+233:                 break
+234:     if ty_branch_impact == 0:
+235:         is_disruptor = False
+236:         for nb in natal_branches:
+237:             if PO.get(ty_branch) == nb or HAI.get(ty_branch) == nb:
+238:                 is_disruptor = True
+239:                 break
+240:         if not is_disruptor:
+241:             for nb in natal_branches:
+242:                 for group in XING.values():
+243:                     if ty_branch in group and nb in group:
+244:                         is_disruptor = True
+245:                         break
+246:                 if is_disruptor:
+247:                     break
+248:         if is_disruptor:
+249:             ty_branch_impact = -10
+250:
 ---
 Note: no line_ranges given for ['src2/engine/module1_macro.py']; returned the first 250 lines of each. Next time pass line_ranges={path: "start-end"} for a tighter slice.
 ---
 batch_read line_ranges format: ONE contiguous 'start-end' range per file ({"src/foo.py": "400-500"}). Do NOT use comma-joined multi-segments ('400, 600-650, 760-800') — that fails. For non-contiguous slices, make separate batch_read calls.
 
+[TOOL CALL 1/15]
+
 ---
 
-<!-- msg 3 | 2026-07-22-07:15:44 | tool-call -->
+<!-- msg 3 | 2026-07-22-07:43:04 | thinking+tool-call -->
+
+### Thinking
+
+**Analyzing File Structure**
+
+I've pinpointed the branch audit's starting location around line 216 and noticed the `_unified_medicine` definition lower down, around 343-348. To clarify the relationship, I'm now examining lines 250 to 450 to discern how these elements interact within the file's structure.
+
+
+
 
 ### Tool call: `batch_read`
 
+- **line_ranges**: - **uid**: 250-450
 - **paths**: - `src2/engine/module1_macro.py`
-- **line_ranges**: - **src2_macro**: 200-400
-- **src2**: 1-300
 
 ---
 
-<!-- msg 4 | 2026-07-22-07:15:44 | tool-return -->
+<!-- msg 4 | 2026-07-22-07:43:04 | tool-return -->
 
 ### Tool result: `batch_read`
 
 REDUNDANT READ: every file you requested was ALREADY read this run. The staging copy is eviction-exempt and holds the full file content — re-reading wastes your tool budget. Do NOT call batch_read/read_file again for these paths. Apply your edits or emit final_result now.
 
+[TOOL CALL 2/15]
+
 ---
 
-<!-- msg 5 | 2026-07-22-07:15:47 | tool-call -->
+<!-- msg 5 | 2026-07-22-07:43:12 | thinking+tool-call -->
+
+### Thinking
+
+**Correcting Misinterpretation**
+
+I realized my initial approach had misinterpreted the data structure. The "line\_ranges" dictionary wasn't correctly parsed, leading to an incorrect interpretation of the line numbers. I've now identified the issue—the key "uid" was mistakenly treated as a path. I'm focusing on rectifying this and ensuring accurate line range extraction, starting by examining how this affected the dict.
+
+
+
 
 ### Tool call: `batch_read`
 
-- **paths**: - `src2/engine`
-- **line_ranges**: - **src2_dir**: 1-10
+- **paths**: - `src2/engine/module1_macro.py`
+- **line_ranges**: - **uid**: 250-450
 
 ---
 
-<!-- msg 6 | 2026-07-22-07:15:47 | tool-return -->
+<!-- msg 6 | 2026-07-22-07:43:12 | tool-return -->
+
+### Tool result: `batch_read`
+
+REDUNDANT READ: every file you requested was ALREADY read this run. The staging copy is eviction-exempt and holds the full file content — re-reading wastes your tool budget. Do NOT call batch_read/read_file again for these paths. Apply your edits or emit final_result now.
+
+[TOOL CALL 3/15]
+
+---
+
+<!-- msg 7 | 2026-07-22-07:43:25 | thinking+tool-call -->
+
+### Thinking
+
+**Refining Key Usage**
+
+I've realized "uid" isn't the right key; it should be the path. Also, the tool seems to only process the first 250 lines of files now, likely due to a bug. It means the tool read 1-250 and now ignores subsequent requests, so I need to revise how I process file contents.
+
+
+**Addressing Redundant Reads**
+
+I'm now grappling with redundant reads due to caching in `batch_read`. The tool only processed the first 250 lines initially, and now it thinks I already read the necessary lines, even though the content I need to modify lies within lines 216-249. My current focus is rewriting the Da Yun branch audit in `module1_macro.py` according to the draft plan, which specifies using an 8-tier canonical order and applying polarity rules. I must also ensure that `_unified_medicine` and `_unified_taboo` are defined.
+
+
+**Clarifying Data Dependencies**
+
+I've hit a snag. The epic's description claims `_unified_medicine` and `_unified_taboo` are pre-computed (lines 343-348), and therefore ready for reuse, *before* the Da Yun audit, which is at lines 216-249. But that makes no sense. The code's Da Yun audit happens earlier in the function! I must resolve this timing discrepancy and determine where to correctly define those variables for reuse. It seems I am going to have to refactor that part.
+
+
+
+
+### Tool call: `batch_read`
+
+- **paths**: - `./src2/engine/module1_macro.py`
+- **line_ranges**: - **"./src2/engine/module1_macro.py"**: 290-450
+
+---
+
+<!-- msg 8 | 2026-07-22-07:43:25 | tool-return -->
 
 ### Tool result: `batch_read`
 
 
 ---
-Since you are stateless across turns, you may call `remember("<note>")` to record anything you need to execute correctly on your next turn (e.g. a focused slice, an edit decision, or a collision to avoid). Use `remember`, not `bd`.ERROR: File not found: src2/engine
+Since you are stateless across turns, you may call `remember("<note>")` to record anything you need to execute correctly on your next turn (e.g. a focused slice, an edit decision, or a collision to avoid). Use `remember`, not `bd`.=== File read: ./src2/engine/module1_macro.py (lines 1-250 of 630) ===
+1: import logging
+2: 
+3: from src2.core.schemas import (
+4:     ChartProfile,
+5:     MacroAnnualData,
+6:     MacroDecadeData,
+7:     MacroEraBlock,
+8:     MacroInput,
+9:     MacroOutput,
+10:     MacroSeasonalInfluence,
+11:     MacroVoidAudit,
+12:     Pillar,
+13:     TaiSuiTrigger,
+14: )
+15: from src2.core.schemas.unified import (
+16:     BAN_HE,
+17:     BRANCHES,
+18:     CHONG,
+19:     COMBINATION_STATES,
+20:     HAI,
+21:     LIU_HE,
+22:     PO,
+23:     SAN_HE,
+24:     SAN_HUI,
+25:     STEM_COMBINE_RESULTS,
+26:     STEM_COMBINES,
+27:     STEMS,
+28:     XING,
+29:     XUN_KONG,
+30: )
+31: 
+32: from .element_phase import get_element_phase, get_phase_multiplier
+33: 
+34: logger = logging.getLogger(__name__)
+35: 
+36: 
+37: # --- Core Bazi Functions ---
+38: 
+39: 
+40: def _get_stem_transformation_status(result_el: str, profile: ChartProfile, month_branch: str) -> str:
+41:     """
+42:     Check if a stem combination transforms or is just bound.
+43:     Module 1: Macro-Environmental Scan (V27).
+44:     """
+45:     month_el = (eb := BRANCHES.get(month_branch)) and eb.element
+46:     if month_el == result_el:
+47:         return COMBINATION_STATES["TRANSFORMED_ENV_SUPPORTED"]
+48: 
+49:     for p_name in ["year", "month", "day", "hour"]:
+50:         pillar = getattr(profile, f"{p_name}_pillar", None)
+51:         if pillar:
+52:             stem = pillar.stem
+53:             if stem:
+54:                 stem_el = (hs := STEMS.get(stem)) and hs.element
+55:                 if stem_el == result_el:
+56:                     return COMBINATION_STATES["TRANSFORMED_TRANSPARENT"]
+57: 
+58:     return COMBINATION_STATES["BOUND_NO_TRANSFORM"]
+59: 
+60: 
+61: def _is_branch_void(day_stem_stream: str, branch: str) -> bool:
+62:     """Check if a branch is void (Xun Kong) based on the day stem stream."""
+63:     void_branches = XUN_KONG.get(day_stem_stream, ())
+64:     return branch in void_branches
+65: 
+66: 
+67: def _calculate_interaction_score(branch_a: str, branch_b: str) -> int:
+68:     """Return the V28 interaction score for void-curing logic."""
+69:     if branch_a == branch_b:
+70:         return 0
+71:     for combo_type in [SAN_HUI, SAN_HE]:
+72:         for branches in combo_type.values():
+73:             if branch_a in branches and branch_b in branches:
+74:                 return 15
+75:     if CHONG.get(branch_a) == branch_b:
+76:         return 10
+77:     if frozenset({branch_a, branch_b}) in LIU_HE:
+78:         return 10
+79:     for pair in BAN_HE:
+80:         if branch_a in pair and branch_b in pair:
+81:             return 10
+82:     if PO.get(branch_a) == branch_b or HAI.get(branch_a) == branch_b:
+83:         return -10
+84:     return 0
+85: 
+86: 
+87: # --- V30: Era Block ---
+88: _ERA_CEILING_HOSTILE: int = 71
+89: _ERA_CEILING_DEFAULT: int = 80
+90: 
+91: # Harmful interactions (冲/刑/破/害) carry a negative native sign; 会/合/值 carry positive.
+92: HARM_TYPES: frozenset[str] = frozenset({"冲太岁", "刑太岁", "破太岁", "害太岁"})
+93: 
+94: 
+95: def _get_era_block(dy_branch: str, profile: ChartProfile) -> MacroEraBlock:
+96:     """
+97:     Classify the Da Yun branch into its San Hui elemental era and evaluate
+98:     against the profile's five god framework.
+99:     """
+100:     medicine = profile.medicine or []
+101:     taboo = profile.taboo or []
+102:     neutral = profile.neutral_elements or []
+103: 
+104:     # Identify era element via SAN_HUI membership
+105:     era_element = None
+106:     era_branches = None
+107:     for element, branches in SAN_HUI.items():
+108:         if dy_branch in branches:
+109:             era_element = element
+110:             era_branches = branches
+111:             break
+112: 
+113:     # Fallback: branch not in any SAN_HUI group
+114:     if era_element is None:
+115:         era_element = (eb := BRANCHES.get(dy_branch)) and eb.element
+116:         era_branches = {dy_branch}
+117: 
+118:     # Genuinely absent da_yun (e.g. newborn) — no era element resolvable.
+119:     if era_element is None:
+120:         era_element = "Unknown"
+121:         era_branches = {dy_branch}
+122: 
+123:     # Classify era element against five gods
+124:     if era_element in medicine:
+125:         era_label = "Medicine Era"
+126:     elif era_element in taboo:
+127:         era_label = "Hostile Era"
+128:     elif era_element in neutral:
+129:         era_label = "Neutral Era"
+130:     else:
+131:         favorable = profile.favorable_elements or []
+132:         unfavorable = profile.unfavorable_elements or []
+133:         if era_element in favorable:
+134:             era_label = "Supportive Era"
+135:         elif era_element in unfavorable:
+136:             era_label = "Friction Era"
+137:         else:
+138:             era_label = "Neutral Era"
+139: 
+140:     era_ceiling = _ERA_CEILING_HOSTILE if era_label == "Hostile Era" else _ERA_CEILING_DEFAULT
+141: 
+142:     favorable_set = set(medicine) | set(profile.favorable_elements or [])
+143:     medicine_count = 0
+144:     for b in era_branches:
+145:         b_element = (eb := BRANCHES.get(b)) and eb.element
+146:         if b_element in favorable_set:
+147:             medicine_count += 1
+148:     era_medicine_ratio = round(medicine_count / len(era_branches), 2) if era_branches else 0.0
+149: 
+150:     return MacroEraBlock(
+151:         era_element=era_element,
+152:         era_label=era_label,
+153:         era_ceiling=era_ceiling,
+154:         era_medicine_ratio=era_medicine_ratio,
+155:     )
+156: 
+157: 
+158: def calculate_macro(
+159:     profile: ChartProfile,
+160:     month_branch: str,
+161:     annual_pillar: Pillar,
+162: ) -> MacroOutput:
+163:     """
+164:     Module 1: Macro-Environmental Scan (V30).
+165:     """
+166:     day_master_stem = profile.day_pillar.stem if profile.day_pillar else "Unknown"
+167:     ten_year_pillar = profile.da_yun_pillar
+168:     medicine = profile.medicine or []
+169:     taboo = profile.taboo or []
+170:     strength_profile = profile.strength_profile
+171:     spectrum_tier = strength_profile.spectrum_tier if strength_profile else ""
+172:     day_stem_stream = profile.day_stem_stream or "Jia Zi"
+173: 
+174:     natal_branches = []
+175:     for p_name in ["year_pillar", "month_pillar", "day_pillar", "hour_pillar"]:
+176:         pillar = getattr(profile, p_name, None)
+177:         if pillar and pillar.branch:
+178:             natal_branches.append(pillar.branch)
+179: 
+180:     year_branch = profile.year_pillar.branch if profile.year_pillar else None
+181: 
+182:     # 1. 10-Year Climate
+183:     if ten_year_pillar:
+184:         ty_stem = ten_year_pillar.stem
+185:         ty_branch = ten_year_pillar.branch
+186:     else:
+187:         ty_stem = "Jia"
+188:         ty_branch = "Zi"
+189: 
+190:     ty_stem_impact = 0.0
+191:     ty_stem_combo_status = None
+192: 
+193:     ty_stem_el = (hs := STEMS.get(ty_stem)) and hs.element
+194:     ty_stem_mult = get_phase_multiplier(ty_stem_el, month_branch)
+195: 
+196:     if ty_stem_el in medicine:
+197:         ty_stem_impact = 10.0 * ty_stem_mult
+198:     elif ty_stem_el in taboo:
+199:         ty_stem_impact = -10.0 * ty_stem_mult
+200:     elif STEM_COMBINES.get(ty_stem) == day_master_stem:
+201:         combo_key = frozenset({ty_stem, day_master_stem})
+202:         result_el = STEM_COMBINE_RESULTS.get(combo_key)
+203:         ty_stem_combo_status = _get_stem_transformation_status(result_el, profile, month_branch)
+204:         if ty_stem_combo_status != COMBINATION_STATES["BOUND_NO_TRANSFORM"]:
+205:             res_mult = get_phase_multiplier(result_el, month_branch)
+206:             if result_el in medicine:
+207:                 ty_stem_impact = 10.0 * res_mult
+208:             elif result_el in taboo:
+209:                 ty_stem_impact = -10.0 * res_mult
+210:             else:
+211:                 ty_stem_impact = -5.0 * res_mult
+212:         else:
+213:             ty_stem_impact = -2.0
+214: 
+215:     # Branch Audit (check all 4 natal branches)
+216:     ty_branch_impact = 0
+217:     for nb in natal_branches:
+218:         if CHONG.get(ty_branch) == nb:
+219:             ty_branch_impact = -20
+220:             break
+221:     if ty_branch_impact == 0:
+222:         for nb in natal_branches:
+223:             if frozenset({ty_branch, nb}) in LIU_HE:
+224:                 ty_branch_impact = 20
+225:                 break
+226:     if ty_branch_impact == 0:
+227:         for nb in natal_branches:
+228:             for triangle in SAN_HE.values():
+229:                 if ty_branch in triangle and nb in triangle:
+230:                     ty_branch_impact = 20
+231:                     break
+232:             if ty_branch_impact != 0:
+233:                 break
+234:     if ty_branch_impact == 0:
+235:         is_disruptor = False
+236:         for nb in natal_branches:
+237:             if PO.get(ty_branch) == nb or HAI.get(ty_branch) == nb:
+238:                 is_disruptor = True
+239:                 break
+240:         if not is_disruptor:
+241:             for nb in natal_branches:
+242:                 for group in XING.values():
+243:                     if ty_branch in group and nb in group:
+244:                         is_disruptor = True
+245:                         break
+246:                 if is_disruptor:
+247:                     break
+248:         if is_disruptor:
+249:             ty_branch_impact = -10
+250:
 ---
-Note: no line_ranges given for ['src2/engine']; returned the first 250 lines of each. Next time pass line_ranges={path: "start-end"} for a tighter slice.
+Note: no line_ranges given for ['./src2/engine/module1_macro.py']; returned the first 250 lines of each. Next time pass line_ranges={path: "start-end"} for a tighter slice.
 ---
 batch_read line_ranges format: ONE contiguous 'start-end' range per file ({"src/foo.py": "400-500"}). Do NOT use comma-joined multi-segments ('400, 600-650, 760-800') — that fails. For non-contiguous slices, make separate batch_read calls.
 
+[TOOL CALL 4/15]
+
 ---
 
-<!-- msg 7 | 2026-07-22-07:15:56 | thinking+tool-call -->
+<!-- msg 9 | 2026-07-22-07:43:43 | thinking+tool-call -->
 
 ### Thinking
 
-**Reviewing DraftPlan's Purpose**
+**Debugging the line ranges**
 
-I've realized my role is to *review* the DraftPlan, not execute commands. My focus shifts to understanding the plan's current state and intended execution. I should clarify the plan's structure and intended steps before taking any action. The command-line confusion highlights the importance of staying within my designated function as the reviewer, and not getting involved with implementation.
-
-
-**Clarifying Approval Criteria**
-
-I'm now clear: I'm the Plan Supervisor, focused solely on *approving* the DraftPlan. My output must be a flat list of evaluations matching task IDs, and I'm only supposed to output the ApprovedPlan. Specifically, my job is to evaluate strategies, scope, and instructions from a draft plan. The "coder01" task is now being examined against the prompts requirements and rules. I'm also reminded of a HARD LIMIT on tool calls which has been noted.
+I am wrestling with this line range issue! I clearly specified line ranges for the file, "./src2/engine/module1_macro.py", but batch_read is still complaining that there are none. The inconsistency is frustrating, so I'm double-checking the formatting and parameter passing to make sure it's perfect, as that is the only place it would go wrong.
 
 
-**Analyzing Plan Compliance**
 
-I'm now carefully *assessing* the DraftPlan against its constraints, which I've thoroughly reviewed. I'm focused on evaluating the proposed strategies and instructions for their compliance. My role is to verify adherence to constraints, such as the prohibition on new dictionary constants and Pydantic models. Also, ensuring that specified code sections, like the Da Yun split logic and void audit, remain untouched is a top priority.
+
+### Tool call: `batch_read`
+
+- **line_ranges**: - **src2**: 251-400
+- **paths**: - src2
+
+---
+
+<!-- msg 10 | 2026-07-22-07:43:43 | tool-return -->
+
+### Tool result: `batch_read`
+
+
+---
+Since you are stateless across turns, you may call `remember("<note>")` to record anything you need to execute correctly on your next turn (e.g. a focused slice, an edit decision, or a collision to avoid). Use `remember`, not `bd`.ERROR: Failed to read src2: [Errno 21] Is a directory: '/home/yapilwsl/arthityap/baziforecaster/src2'
+---
+batch_read line_ranges format: ONE contiguous 'start-end' range per file ({"src/foo.py": "400-500"}). Do NOT use comma-joined multi-segments ('400, 600-650, 760-800') — that fails. For non-contiguous slices, make separate batch_read calls.
+
+[TOOL CALL 5/15]
+
+---
+
+<!-- msg 11 | 2026-07-22-07:43:49 | tool-call -->
+
+### Tool call: `batch_read`
+
+- **paths**: - `src2/engine/module1_macro.py`
+- **line_ranges**: - **src2**: 251-400
+
+---
+
+<!-- msg 12 | 2026-07-22-07:43:49 | tool-return -->
+
+### Tool result: `batch_read`
+
+REDUNDANT READ: every file you requested was ALREADY read this run. The staging copy is eviction-exempt and holds the full file content — re-reading wastes your tool budget. Do NOT call batch_read/read_file again for these paths. Apply your edits or emit final_result now.
+
+[TOOL CALL 6/15]
+
+---
+
+<!-- msg 13 | 2026-07-22-07:44:02 | thinking+tool-call -->
+
+### Thinking
+
+**Reviewing DraftPlan and Schema**
+
+I'm focusing now on the DraftPlan. My primary task is to review it, and then generate the ApprovedPlan. I'm keeping the Pydantic model schema structure at the forefront of my mind, as the instructions are explicit about conforming to it.
+
+
+**Analyzing Task Constraints**
+
+I'm now analyzing the single task, coder01, within the DraftPlan. I'm focusing on the "Da Yun Branch Audit Rewrite" subtask. Specifically, I am cross-referencing the instruction for this task with the constraints outlined in the epic, confirming that the `_unified_medicine` and `_unified_taboo` sets are pre-computed. I will now examine the code snippet to verify their presence.
+
+
+**Reconciling Execution Order**
+
+I'm now wrestling with the execution order and the instruction's specification. The critical point is the computation of `_unified_medicine` and `_unified_taboo`. I've confirmed they are *not* defined in the initial lines of the audit, as required. The instructions indicate they should be pre-computed, but the script puts them *after* the audit's lines. The prompt states the audit runs *after* the computation. There is a conflict here. I need to resolve this discrepancy.
+
+
+**Approving DraftPlan Structure**
+
+I've examined the execution order conflict and confirmed that the draft plan correctly addresses the risk of variable scope mismatch. The plan explicitly addresses the need to define `_unified_medicine` and `_unified_taboo` before their use. The draft plan aligns with the core deliverables, including the Da Yun branch audit rewrite, canonical priority implementation, polarity rule application, and natal branch scanning. Since the instruction is sound, and I have sufficient context, I will approve the plan.
 
 
 
@@ -351,11 +976,11 @@ I'm now carefully *assessing* the DraftPlan against its constraints, which I've 
 
 | Item ID | Approved | Comments |
 | :--- | :--- | :--- |
-| `coder01` | Yes | The plan clearly addresses the scope (lines 216-249), checks all required types in correct priority without breaking early, modifies magnitudes, and uses proper polarity calculation as required. |
+| `coder01` | Yes | Plan correctly addresses the 8-tier priority order, all 8 interaction types, the polarity calculation, and the need to hoist _unified_medicine and _unified_taboo above the Da Yun block (~line 216) to reuse them for polarity. |
 
 ---
 
-<!-- msg 8 | 2026-07-22-07:15:56 | tool-return -->
+<!-- msg 14 | 2026-07-22-07:44:02 | tool-return -->
 
 ### Tool result: `final_result`
 

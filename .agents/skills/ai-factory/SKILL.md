@@ -16,6 +16,10 @@ AI-Factory is a **deterministic conductor** (NOT an LLM orchestrator) that runs 
 
 The orchestrator spawns LLM agents with focused roles (planner, coder, supervisor, red-team, ops), validates their output, and gates progress through each phase. **The conductor never delegates orchestration decisions to an LLM.**
 
+## Normalization: `normalize_json_escapes.py`
+
+`factory/tools/normalize_json_escapes.py` is a deterministic shadow tool that detects `\uXXXX` unicode escapes in JSON artifacts (e.g. planner `\u4e09` etc.), decodes them, and remaps domain terms to registry keys (`branch_interaction.*`). Wired into `pipeline.py` planner artifact flow and applied to all `factory/artefacts/**/*.json`. Not an LLM task — framework-level normalization.
+
 ## Critical: `temp/` Path Resolution
 
 `temp/` paths in `user_prompt.md` scope/deliverables resolve to **`FACTORY_ROOT/factory/temp/`** (i.e. `PKG_DIR / "temp"`), NOT to the target repo. The `stage_path()` function in `context.py` strips the `temp/` prefix and joins with `TEMP_DIR`. Example: `temp/dm_strength.py` → `factory/temp/dm_strength.py`.
