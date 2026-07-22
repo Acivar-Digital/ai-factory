@@ -282,3 +282,16 @@ Reason: `execution.py` does `from factory.common.operator import log_operator`, 
 ## Memory Protocol
 
 Use `bd remember` to persist cross-session knowledge. Search with `bd memories <keyword>`.
+
+---
+
+## Session Memory (2026-07-22: Converter + Budget Transparency Fixes)
+
+**DO NOT SCAN WHOLE REPO NEXT TIME. Read this first:**
+
+- **Converter (`converter.py`)**: `batch_read` and `read_file` results are NO LONGER truncated to `[N lines]`. Full content (line-numbered file text + `=== File read: path ===` header) renders in `.md`. The old special-case truncation (`_render_tool_return` lines 284-291) was removed.
+- **Budget markers preserved**: `_CONTENT_NOISE` regex (`converter.py:122`) was removed. `[TOOL CALL N/M]` budget markers now survive in `.md` so the agent sees its budget state every turn (before: stripped; agent blind).
+- **Auto-remember (`_auto_remember`)**: All 11 tools remember full content to `.jsonl`. `read_file`/`batch_read` remember raw line-numbered content. `write_file` remembers unified diff. The remembered notes appear in `.md` via `remember` tool-return, with file headers intact.
+- **READ_BUDGET**: Raised from 5 to 15 (`control.py:618`). All agents share the same `batch_read` cap (`read_budget` in `GuardToolset`). Per-role budgets (`ROLE_TOOL_BUDGET`): planner=10, planner_sup=10, coder=75.
+- **Line numbers**: Absolute (`f"{s + i + 1}: {line}"`), not relative to range. `1:` = file line 1.
+- **Files changed**: `converter.py`, `control.py`, `CHANGELOG.md`, `.agents/skills/ai-factory/SKILL.md`.

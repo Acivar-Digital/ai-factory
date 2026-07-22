@@ -1,5 +1,0 @@
-[tool-call] batch_read({"line_ranges":{},"paths":["src2/engine/module1_macro.py","src2/engine/unified.py"]})
-
-[tool-call] batch_read({"line_ranges":{},"paths":["src/engine/module1_macro.py","src/engine/unified.py"]})
-
-[tool-call] final_result({"evaluations":[{"approved":"No","item_id":"coder01","comments":"Instruction is missing critical constraints and rules from the Epic: 1. Must explicitly state NOT to create new dict constants and to reuse existing ones (CHONG, LIU_HE, SAN_HE, SAN_HUI, BAN_HE, XING, HAI, PO). 2. Must detail the polarity formula correctly (e.g. clashing 忌神 = relief/positive, combining 忌神 = bad, combining 用神 = good, clashing 用神 = bad). 3. Must define `ty_branch_element` correctly based on the target interaction (clashed natal branch, combined element, disruptor branch). 4. Explicitly forbid creating new Pydantic models. Please update the instruction to include these missing details."}]})

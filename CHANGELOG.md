@@ -5,6 +5,16 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Session Fixes: Auto-Remember Transparency + Budget Visibility
+
+**Converter fixed to render full `batch_read`/`read_file` content** (no `[N lines]` truncation). **Budget markers `[TOOL CALL N/M]` preserved in `.md`** (converter no longer strips them). **READ_BUDGET raised to 15**. Auto-remember notes (raw line-numbered content) survive in `.jsonl`/`.md` context for next turn.
+
+| # | File | Issue | Fix |
+|---|------|-------|------|
+| 1 | `factory/infra/converter.py` | Truncated `batch_read`/`read_file` to `[N lines]`; stripped budget markers | Remove summary truncation; remove `_CONTENT_NOISE` regex |
+| 2 | `factory/infra/control.py` | `READ_BUDGET = 5` too low | Raised to 15 |
+| 3 | `factory/infra/converter.py` | `[TOOL CALL N/M]` budget markers hidden from agent | Keep markers (transparency) |
+
 ## 2026-07-22 — Batch 11.1: CWD Fallback Bridges .env to Tool Resolution
 
 **`_resolve_target_root()` now falls back to `CWD` env var (exported by `control.py`
