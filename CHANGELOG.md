@@ -14,6 +14,14 @@ and this project adheres to semantic versioning for the harness itself.
 | 1 | `factory/infra/runner.py` | `stop_phase` parsed from YAML frontmatter but never checked — pipeline always ran to completion | Wired `_checkpoint()` after each gate (supervisor_plan, supervisor_review, red_team) so `stop_phase` halts the pipeline at the right phase |
 | 2 | `.agents/skills/ai-factory/SKILL.md` | Missing documentation on REPO_ROOT resolution and two-phase path model | Added full docs: how `CWD`/`.env`/`cwd()` set `REPO_ROOT`, where scope paths resolve, planner vs coder path bases, and diagnostic steps |
 
+## 2026-07-22 — Batch 8: Add Field Descriptions to EvaluationItem Schema
+
+**`EvaluationItem` Pydantic model had bare type annotations with no semantics.** The JSON Schema the model receives only carried types (`str`, `"Yes" | "No"`) — no descriptions or examples. The model had to infer meaning from free-text prose instead of reading it directly in the form it fills.
+
+| # | File | Issue | Fix |
+|---|------|-------|------|
+| 1 | `factory/infra/models.py` | `EvaluationItem` fields had no `Field(description=...)` — model couldn't see semantics in the structured output schema | Added `description` and `examples` to every field: `item_id` (must match task id), `approved` (Yes=proceed, No=reject+explain), `comments` (required on No, empty on Yes) |
+
 ## 2026-07-22 — Batch 6: Shadow Tools Fixes (Line Numbers, Formatting, Whitespace, Edge Cases)
 
 **Comprehensive fixes for codebase investigation and modification shadow tools.** Addressed critical bugs preventing the LLM from accurately referencing line numbers, preserving codebase formatting, and performing reliable string/regex replacements.
