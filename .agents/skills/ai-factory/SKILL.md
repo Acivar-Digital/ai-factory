@@ -113,6 +113,28 @@ invocation**, so the prompt-parsed value is picked up dynamically.
 4. Do NOT check `factory/temp/src2/` — that's the staging area for coders, not
    the planner's source
 
+### Runtime Load Gate: `factory/tools/load_schema_gate.py`
+
+The Runtime Load Gate validates staged Python files by importing them and checking
+all `BaseModel` subclasses can generate a JSON schema. It must respect the two-root
+model:
+
+- **`temp_dir`** = `repo_root / "factory" / "temp"` — staged files live here
+- **`TARGET_REPO`** = resolved via `_resolve_target_root()` (env `TARGET_REPO` →
+  env `CWD` → `repo_root`) — injected into `sys.path[1]` so unstaged `src2/` imports
+  resolve against the live target repo
+- **Module name** = real dotted name (e.g. `src2.engine.module1_macro`), NOT a
+  flattened synthetic name — relative imports (`from .element_phase import ...`)
+  require the correct `__package__` context
+- **`module.__package__`** must be set explicitly before `exec_module()` because
+  `spec_from_file_location` does not infer it from the path
+
+**Common failure mode**: If `TARGET_REPO` is not in `sys.path`, staged files that
+import `src2.core.schemas...` crash with `ModuleNotFoundError`. The orchestrator
+then prepends `[Runtime Load Gate] failed schema validation:` to the error, which
+the Red Team may misinterpret as a Coder JSON output failure (hallucination).
+Always verify `TARGET_REPO` is set when the Load Gate fails.
+
 ## Quick Start
 
 ```bash
@@ -300,7 +322,7 @@ Use `bd remember` to persist cross-session knowledge. Search with `bd memories <
 - **Line numbers**: Absolute (`f"{s + i + 1}: {line}"`), not relative to range. `1:` = file line 1.
 - **Files changed**: `converter.py`, `control.py`, `CHANGELOG.md`, `.agents/skills/ai-factory/SKILL.md`.
 
-- **MD_LEDGER Append Bug Fix (`factory/infra/artefacts.py`)**: Fixed an exponential token explosion issue where `_clean_messages` failed to strip the reinjected `<!-- MD_LEDGER -->` (which is injected as a `UserPromptPart` by `md_bridge.py`) during artifact persistence. The ledger twin is strictly an ephemeral runtime context bridge; `artefacts.py` now unconditionally strips the ledger prior to writing `.jsonl` / `.md` to enforce isolated, delta-only persistence.
+- **MD_LEDGER Append Bug Fix (`factory/infra/artefacts.py`)**: Fixed an exponential token explosion issue where `_clean_messages` failed to strip the reinjected `<!-- MD_LEDGER -->` (which is injected as a `UserPromptPart` by `md_bridge.py`) during artifact persistence. The ledger twin is strictly an ephemeral runtime context bridge; `artefacts.py` now unconditionally strips the ledger prior to writing `.jsonl` / `.md` to enforce isolated, delta-only persistence. Additionally, fixed a regression where Pydantic-AI's message merging caused the entire `ModelRequest` (including the task brief) to be discarded if the first part was the ledger; `_clean_messages` now selectively filters out only the `<!-- MD_LEDGER -->` part.
 
 - **Status loop-back** (`factory/infra/exchange.py`, `pipeline.py`): When `red_team` or `supervisor_review` blocks, `STATUS.md` shows `current = "coder"` with `(BACK TO CODER)` indicator (`loop_back` logic, line 216-230). `pipeline.py` updates status on gate FAIL (`line 846-847`). See `CHANGELOG.md` 2026-07-22 Status Reflection Fix entry.
 
