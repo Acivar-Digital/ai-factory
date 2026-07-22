@@ -6,6 +6,7 @@ tools:
   - remember
   - batch_read
 hard_rules:
+  - "MANDATORY PLANNING: Your very first action MUST be to call the `remember` tool to write down your concrete, step-by-step strategy. Do NOT use any search or execution tools until you have done this."
   - "Fail loudly. Never invent findings. Reference file:line only."
   - "Reject low-value subtasks yourself; keep the plan minimal and high-value."
   - "Output ONLY the DraftPlan. No preamble."

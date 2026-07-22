@@ -245,6 +245,16 @@ The `_REMEMBER_NUDGE` ("you may call `remember(...)`") is still appended to read
 - **Harness-owned guardrails**: The coder only *declares* done; the harness runs ruff + pyright + smoke gates on staged files, and re-spawns the coder (up to `CODER_VALIDATION_PASSES` times) with guardrail feedback before the review phase. If a guardrail crashes or produces unparseable output, the task MUST fail/block—it is never a silent pass.
 - **Red Team Integrity**: The `red_team_passed` gate relies solely on `findings` and `rubric_cells`. If both are empty, the audit is considered incomplete and the gate MUST fail.
 
+## Mandatory Pre-Flight Plan
+
+Every agent is **strictly forbidden** from executing any tool (search, read, edit, etc.) until it has called the `remember` tool to record its concrete, step-by-step strategy. This is enforced as a **hard gate** inside `GuardToolset` (`factory/infra/tools_guard.py`):
+
+1. The `call_tool` method intercepts every tool call. If the tool name is not `remember`, `final_result`, or `keep_memory`, and the agent has not yet called `remember`, the call is **blocked** and a nudge string is returned to the LLM.
+2. After **3 blocked attempts**, the gate raises `RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")` — the run fails loudly rather than silently looping.
+3. The `remember` tool itself is exempt — calling it sets `_has_planned = True`, after which all other tools are permitted.
+
+This prevents "tool thrashing" (endlessly looping on discovery tools without a plan). The directive is also injected into every agent YAML's `hard_rules` section (`factory/infra/agents/*.yaml`).
+
 ## Structured Output Schema: Field Descriptions Are Load-Bearing
 
 **All Pydantic output models must carry `Field(description=...)` and `Field(examples=...)` on every field.** Pydantic v2 serializes these into the JSON Schema that pydantic-ai sends to the model as the structured output tool definition. Without them, the model sees only bare types (`str`, `Literal["Yes", "No"]`) and must infer semantics from free-text prose elsewhere in the prompt.

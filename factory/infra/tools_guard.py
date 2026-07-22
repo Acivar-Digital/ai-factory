@@ -111,6 +111,8 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         self._read_paths: set[str] = set()
         self._read_ranges: set[tuple[str, str]] = set()
         self._seen: dict[str, str] = {}
+        self._has_planned: bool = False
+        self._plan_nudges: int = 0
 
     def _warning(self, name: str) -> str:
         keys = sorted(self._known_tools.keys())
@@ -128,6 +130,14 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         return _GuardDict(tools, self)
 
     async def call_tool(self, name: str, tool_args: dict[str, Any], ctx: Any, tool: ToolsetTool[AgentDepsT]) -> Any:
+        if name not in ('remember', 'final_result', 'keep_memory'):
+            if not self._has_planned:
+                self._plan_nudges += 1
+                if self._plan_nudges >= 3:
+                    raise RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")
+                return "SYSTEM ERROR: You MUST call the 'remember' tool to record your step-by-step plan BEFORE using any search or edit tools. You are blocked until you plan."
+        if name == 'remember':
+            self._has_planned = True
         if name not in self._known_tools:
             return self._warning(name)
         if name in _DISCOVERY_TOOLS:
