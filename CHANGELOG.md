@@ -5,6 +5,15 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Status Reflection Fix: Gate Block Shows Loop-Back to Coder
+
+When `red_team` or `supervisor_review` blocks (`passed_ = False`), the status board (`STATUS.md`) now reflects the loop-back to `coder` (`current = "coder"` with `(BACK TO CODER)` indicator) instead of showing idle/nothing. Fix applied in `factory/infra/pipeline.py` (red_team gate updates status on FAIL) and `factory/infra/exchange.py` (`update_status_board` loop-back logic).
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `factory/infra/exchange.py` | `update_status_board` showed `idle` when gate blocked; no loop-back indicator | Added `loop_back` check + `BACK TO CODER` line rendering |
+| 2 | `factory/infra/pipeline.py` | `run_red_team_gate` did not call `update_status_board` on FAIL before retry/exit | Added status update call when `passed_ = False` |
+
 ## 2026-07-22 — Normalizer: JSON escape remap + registry wiring
 
 **Added `factory/tools/normalize_json_escapes.py`.** Decodes `\uXXXX` escapes and remaps 8-tier branch interaction terms (`三会` etc.) to `branch_interaction.*` registry keys. Wired into `pipeline.py` planner artifact write path + applied to all `factory/artefacts/**/*.json`.

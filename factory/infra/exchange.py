@@ -213,13 +213,22 @@ def update_status_board(history: list[tuple[str, str]], current_role: str | None
     # run shows the true state instead of 0/5 with planner/supervisor_plan as
     # spurious TODO.
     done = list(dict.fromkeys(runtime._SKIPPED_PHASES + [r for r, _ in history]))
-    current = current_role if current_role and current_role not in done else None
+    # When a gate blocks (red_team/supervisor_review FAIL with rerun needed),
+    # show loop-back to coder so status board reflects what's going on.
+    loop_back = current_role in ("red_team", "supervisor_review") and any(
+        "FAIL" in (v if isinstance(v, str) else str(v)) for r, v in history[-3:] if r == current_role
+    )
+    if loop_back:
+        current = "coder"
+    else:
+        current = current_role if current_role and current_role not in done else None
 
     def bullet(role: str, mark: str) -> str:
         return f"- [{mark}] {role}"
 
     done_lines = [bullet(r, "x") for r in done] or ["- (none)"]
-    live_line = f"- [~] {current}" if current else "- (none)"
+    live_suffix = " (BACK TO CODER)" if (current and loop_back) else ""
+    live_line = f"- [~] {current}{live_suffix}" if current else "- (none)"
     done_set = set(done)
     todo_roles = [r for r in runtime._PHASE_ORDER if r not in done_set and r != current]
     todo_lines = [bullet(r, " ") for r in todo_roles] or ["- (none)"]

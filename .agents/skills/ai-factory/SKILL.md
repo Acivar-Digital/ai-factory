@@ -299,3 +299,16 @@ Use `bd remember` to persist cross-session knowledge. Search with `bd memories <
 - **READ_BUDGET**: Raised from 5 to 15 (`control.py:618`). All agents share the same `batch_read` cap (`read_budget` in `GuardToolset`). Per-role budgets (`ROLE_TOOL_BUDGET`): planner=10, planner_sup=10, coder=75.
 - **Line numbers**: Absolute (`f"{s + i + 1}: {line}"`), not relative to range. `1:` = file line 1.
 - **Files changed**: `converter.py`, `control.py`, `CHANGELOG.md`, `.agents/skills/ai-factory/SKILL.md`.
+
+- **Status loop-back** (`factory/infra/exchange.py`, `pipeline.py`): When `red_team` or `supervisor_review` blocks, `STATUS.md` shows `current = "coder"` with `(BACK TO CODER)` indicator (`loop_back` logic, line 216-230). `pipeline.py` updates status on gate FAIL (`line 846-847`). See `CHANGELOG.md` 2026-07-22 Status Reflection Fix entry.
+
+## HOW TO CONTINUE (IMPERATIVE)
+
+Pipeline order: planner -> supervisor_plan -> coder -> supervisor_review -> red_team -> ops.
+
+To continue past supervisor_plan:
+1. Edit `/home/yapilwsl/arthityap/ai-factory/factory/prompt/user_prompt.md` lines 7-8 (`start_phase` / `stop_phase`).
+2. Set `start_phase: coder` (or `supervisor_plan` if continuing from there) and `stop_phase: ops`.
+3. Confirm the edit before running any phase.
+
+IMPERATIVE: DO NOT TOUCH OTHER REPOS (e.g. baziforecaster) UNLESS EXPLICITLY INSTRUCTED WITH EXACT FILE PATH AND EXACT EDIT CONTENT. All factory work stays inside `/home/yapilwsl/arthityap/ai-factory/`. The target repo (`baziforecaster`) is ONLY read via `TARGET_REPO` set in user_prompt.md; no direct file modifications outside factory scope unless exact edit is specified.
