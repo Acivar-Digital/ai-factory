@@ -20,61 +20,87 @@ The orchestrator spawns LLM agents with focused roles (planner, coder, superviso
 
 `temp/` paths in `user_prompt.md` scope/deliverables resolve to **`FACTORY_ROOT/factory/temp/`** (i.e. `PKG_DIR / "temp"`), NOT to the target repo. The `stage_path()` function in `context.py` strips the `temp/` prefix and joins with `TEMP_DIR`. Example: `temp/dm_strength.py` → `factory/temp/dm_strength.py`.
 
-## CRITICAL: REPO_ROOT and Scope Path Resolution
+## CRITICAL: TARGET_REPO and the Two-Root Path Model
 
 **This is the most commonly misunderstood part of the factory.**
 
-### How REPO_ROOT is resolved
+### The problem: one root can't serve both harness and target
 
-`REPO_ROOT` (defined in `factory/infra/control.py`) determines where the target repo lives:
+`REPO_ROOT` is used for everything: harness infra (logs, runtime, staged paths,
+BD scripts) AND resolving source file paths (`src2/...`). But `src2/` lives in
+the **target repo** (`baziforecaster/`), not the factory repo (`ai-factory/`).
+Changing `CWD` to point at the target repo would break all harness paths.
 
-```python
-_CWD = os.environ.get("CWD") or _RUNTIME_ENV.get("CWD") or str(Path.cwd().resolve())
-REPO_ROOT = Path(_CWD)
-```
+**Fix: two independent roots.**
+- **`REPO_ROOT`** = factory repo. Harness infra, staging, logs, BD, status.
+  Never changes. Defined in `factory/infra/control.py` from `CWD` env var.
+- **`TARGET_REPO`** = target repo (has `src2/`). Agent reads resolve here.
+  Set via `target_repo:` in `user_prompt.md` frontmatter. The only person who
+  knows which repo to target is the user writing the prompt.
 
-Priority:
-1. `$CWD` environment variable
-2. `CWD=` in `factory/infra/.env` (or `<repo-root>/.env`)
-3. `Path.cwd()` — the current working directory
+### How `TARGET_REPO` is resolved
 
-### Where scope paths resolve
+Two resolution functions in `factory/tools/_codebase_common.py`:
 
-The prompt's YAML `scope:` field lists paths like `src2/engine/module1_macro.py`. These resolve relative to **`REPO_ROOT`** — NOT relative to `TEMP_DIR` or `factory/temp/`.
-
-The planner phase reads code through these functions, all of which read from `REPO_ROOT`:
-- `ledger._py_tree()` → walks `REPO_ROOT / "src2"` and `REPO_ROOT / "tests"`
-- `ledger._is_dir(rel)` → checks `REPO_ROOT / rel`
-- `ledger.get_file_symbols(rel)` → resolves via `_codebase_common.resolve_secure_path()` which uses `PROJECT_ROOT` (= factory repo root, same as `REPO_ROOT` in practice)
-- Planner's `batch_read` tool → resolves relative to `PROJECT_ROOT`
-
-**The coder phase** works differently — it reads/writes through `stage_path()` which maps to `TEMP_DIR` (`factory/temp/`). The `stage_workspace_from_draft()` function copies files from `REPO_ROOT / src2/...` to `TEMP_DIR / src2/...` BEFORE the coder runs.
-
-### The two-phase path model
-
-| Phase | Path base | Function | What it reads |
+| Function | Root | Used by | Resolves |
 |---|---|---|---|
-| Planner | `REPO_ROOT` | `inject_repo_map()`, `batch_read` | Live target repo files at `REPO_ROOT/src2/...` |
-| Supervisor Plan | `REPO_ROOT` | `batch_read` | Live target repo files at `REPO_ROOT/src2/...` |
-| Pre-stage | `REPO_ROOT` → `TEMP_DIR` | `stage_workspace_from_draft()` | Copies `REPO_ROOT/src2/...` → `TEMP_DIR/src2/...` |
-| Coder | `TEMP_DIR` | `stage_path()`, `read_file`, `write_file` | Staged copies at `TEMP_DIR/src2/...` |
+| `resolve_secure_path(path)` | `TARGET_REPO` env var (fallback `PROJECT_ROOT`) | Read tools (`read_file.py`, `grep_codebase.py`, `list_files.py`, etc.) | `src2/...` against target repo |
+| `resolve_repo_path(path)` | `PROJECT_ROOT` (= factory repo) | Write tools (`write_file.py`, `replace_text.py`, etc.) | `factory/temp/...` against factory repo |
+
+When `TARGET_REPO` is set, ALL reads go to the target repo. Factory files
+(`.env`, `runner.py`, `control.py`) become invisible — agents have no business
+reading them.
+
+### The two-phase path model with TARGET_REPO
+
+| Phase | Path base | Resolution | What it reads |
+|---|---|---|---|
+| Planner | `TARGET_REPO` | `resolve_secure_path()` | Live target repo files at `TARGET_REPO/src2/...` |
+| Supervisor Plan | `TARGET_REPO` | `resolve_secure_path()` | Live target repo files at `TARGET_REPO/src2/...` |
+| Pre-stage | `TARGET_REPO` → `TEMP_DIR` | `stage_workspace_from_draft()` | Copies `TARGET_REPO/src2/...` → `TEMP_DIR/src2/...` |
+| Coder | `TEMP_DIR` | `stage_path()`, `resolve_repo_path()` | Staged copies at `TEMP_DIR/src2/...` |
 | Supervisor Review | `TEMP_DIR` | `stage_path()` | Staged copies |
 | Red Team | `TEMP_DIR` | `stage_path()` | Staged copies |
 
-### What this means in practice
+### How to set TARGET_REPO
 
-- The target repo (with `src2/`) MUST be accessible at `REPO_ROOT`.
-- If `CWD` is the factory repo itself (e.g. `/home/.../ai-factory`), the target repo is NOT in the scope path unless `src2/` exists at the factory root.
-- To run the factory against a separate target repo (e.g. `baziforecaster`), set `CWD` env var to the target repo root OR ensure the target's `src2/` is at the factory `REPO_ROOT`.
-- **Never create symlinks or copy files into the factory repo** without understanding `REPO_ROOT` resolution. Check `$CWD`, `.env`, and `Path.cwd()` first.
-- The factory's `factory/temp/` directory contains STAGED COPIES of target repo files, managed by `stage_workspace_from_draft()` and `stage_path()`. These are NOT the source of truth for the planner phase.
+Add `target_repo:` to the YAML frontmatter in `factory/prompt/user_prompt.md`:
+
+```yaml
+---
+Resume: false
+bd: baziforecaster-batch-a
+target_repo: /home/yapilwsl/arthityap/baziforecaster
+write_mode: staged
+language: python
+start_phase: planner
+stop_phase: supervisor_plan
+scope:
+  - src2/engine/module1_macro.py
+  - src2/core/schemas/unified.py
+---
+```
+
+The harness parses this field in `read_prompt()` (`pipeline.py:144-146`,
+`runner.py:105-107`) and sets `os.environ["TARGET_REPO"]` immediately — before
+any tool call resolves a path.
+
+### Why env var at call time (not module-level constant)
+
+`_codebase_common.py` is imported at module load — before the prompt is parsed.
+If `TARGET_REPO` were a module-level constant, it would be set to the fallback
+(`PROJECT_ROOT`) before `read_prompt()` ever runs. Instead,
+`resolve_secure_path()` checks `os.environ.get("TARGET_REPO")` on **every
+invocation**, so the prompt-parsed value is picked up dynamically.
 
 ### How to diagnose scope issues
 
-1. Check `REPO_ROOT`: look at `$CWD` env var, `factory/infra/.env`, and `Path.cwd()`
-2. Verify `REPO_ROOT / "src2"` exists and contains the expected files
-3. If the planner's `batch_read` returns empty results for `src2/...` paths, the target repo is not at `REPO_ROOT`
-4. Do NOT check `factory/temp/src2/` — that's the staging area for coders, not the planner's source
+1. Check `target_repo:` is set in `user_prompt.md` frontmatter
+2. Verify `TARGET_REPO / "src2"` exists and contains the expected files
+3. If `batch_read` returns empty for `src2/...` paths, `TARGET_REPO` is either
+   not set or pointing to the wrong directory
+4. Do NOT check `factory/temp/src2/` — that's the staging area for coders, not
+   the planner's source
 
 ## Quick Start
 

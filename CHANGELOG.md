@@ -5,6 +5,39 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 11: TARGET_REPO Separates Target Source from Harness Root
+
+**All read tools now resolve against `TARGET_REPO` (set via `target_repo:` in
+`user_prompt.md` frontmatter) instead of the hardcoded factory repo root.**
+Previously, `REPO_ROOT` (`CWD`) served double duty as both the harness root AND
+the source-file root — but `src2/` lives in the target repo (`baziforecaster/`),
+not the factory repo (`ai-factory/`). Agents could never read `src2/...` paths
+because `_codebase_common.py:resolve_secure_path` resolved against
+`PROJECT_ROOT` (= factory repo).
+
+**New model: two independent roots.**
+- `resolve_secure_path()` — checks `TARGET_REPO` env var at call time; ALL
+  paths resolve against target repo. Factory files (`.env`, `runner.py`) become
+  invisible — agents have no business reading them.
+- `resolve_repo_path()` — always resolves against `PROJECT_ROOT` (= factory
+  repo). Used by write tools so edits land in `factory/temp/` as before.
+
+| # | File | Issue | Fix |
+|---|------|-------|------|
+| 1 | `factory/tools/_codebase_common.py` | `resolve_secure_path` hardcoded to `PROJECT_ROOT` — agent could never read `src2/...` | Added `_resolve_target_root()` that checks `TARGET_REPO` env var at call time; added `resolve_repo_path()` for write tools |
+| 2 | `factory/infra/pipeline.py` | No way for user to specify which repo has `src2/` | Parse `target_repo:` from YAML frontmatter; set `os.environ["TARGET_REPO"]` |
+| 3 | `factory/infra/runner.py` | Same missing parsing in the runner entrypoint | Same parse + env set |
+| 4 | `factory/infra/context.py` | `stage_workspace_from_draft` and `_real_source_paths` checked `REPO_ROOT / fp` — wrong when target is separate | Use `TARGET_REPO` env var (fallback `REPO_ROOT`) |
+| 5 | `factory/tools/write_file.py` | Write tool used `resolve_secure_path` — would resolve against target repo (wrong for writes) | Switched to `resolve_repo_path` |
+| 6 | `factory/tools/replace_text.py` | Same | Same |
+| 7 | `factory/tools/replace_function.py` | Same | Same |
+| 8 | `factory/tools/add_constant.py` | Same | Same |
+| 9 | `factory/tools/add_import.py` | Same | Same |
+| 10 | `factory/tools/delete_file.py` | Same | Same |
+| 11 | `factory/tools/rename_file.py` | Same | Same |
+| 12 | `factory/tools/move_symbol.py` | Same | Same |
+| 13 | `factory/tools/get_repo_structure.py` | Imported `PROJECT_ROOT` directly — wrong repo | Uses `resolve_secure_path(".")` instead |
+
 ## 2026-07-22 — Batch 10: Auto-Remember on All Tools
 
 **Every tool now auto-`remember_note()` after a successful operation so the LLM sees its own reads/writes in context next turn — no more re-reading files to verify.** The LLM has 1M token context and wants to test whether this eliminates research loops.
