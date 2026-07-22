@@ -5,6 +5,14 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Supervisor Review MD_LEDGER Zero-Byte Transcript Crash Fix
+
+The fix for the exponential append bug (`_clean_messages` filtering out `<!-- MD_LEDGER -->`) inadvertently crashed the orchestrator when running `supervisor_review` and other agents that received a brief but had no prior history. Pydantic-AI aggressively merges consecutive string payloads into a single `ModelRequest` with multiple parts. Because the previous fix `continue`'d the *entire* message when `m.parts[0]` was the ledger, it threw away the actual task brief along with the ledger. This resulted in a 0-byte `.md` transcript file being written, triggering the loopguard's aggressive halt: `RuntimeError: [HALT] MD transcript for role 'supervisor_review' was not generated or is empty!`.
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `factory/infra/artefacts.py` | `_clean_messages` discarded entire merged `ModelRequest` if part 0 was the ledger | Refactored to iterate and filter out only the `<!-- MD_LEDGER -->` from the inner `parts` list, then rebuild the `ModelRequest`. |
+
 ## 2026-07-22 — Runtime Load Gate: Two-Root Path Resolution Fix
 
 The Runtime Load Gate (`factory/tools/load_schema_gate.py`) crashed when validating staged Python files, causing the orchestrator to block `coder01` and the Red Team to hallucinate that the Coder returned invalid JSON. Three compounding bugs in `load_schema_gate.py` caused the crash:

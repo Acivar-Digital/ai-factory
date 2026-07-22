@@ -190,11 +190,20 @@ def persist_messages(
 
 def _clean_messages(messages: list[ModelMessage] | Any) -> list[ModelMessage]:
     from pydantic_ai.messages import ModelRequest, SystemPromptPart, UserPromptPart
+    import dataclasses
     clean = []
     for m in messages:
-        if isinstance(m, ModelRequest) and m.parts and isinstance(m.parts[0], (SystemPromptPart, UserPromptPart)):
-            if str(m.parts[0].content).startswith("<!-- MD_LEDGER -->"):
+        if isinstance(m, ModelRequest) and m.parts:
+            new_parts = []
+            for p in m.parts:
+                if isinstance(p, (SystemPromptPart, UserPromptPart)):
+                    if str(p.content).startswith("<!-- MD_LEDGER -->"):
+                        continue
+                new_parts.append(p)
+            if not new_parts:
                 continue
+            if len(new_parts) != len(m.parts):
+                m = dataclasses.replace(m, parts=new_parts)
         clean.append(m)
     return clean
 

@@ -8,9 +8,7 @@ deterministic Python script — NO LLM orchestrator, NO delegation of orchestrat
 
 ## How to Understand This Repo Quickly
 
-1. **Load the `ai-factory` skill** — it contains the full architecture overview, role/phase table,
-   key disciplines, test patterns, and session workflow. Run `b skill ai-factory` or use the
-   `skill` tool with name `ai-factory` to inject it.
+1. **Load the `ai-factory` skill FIRST** — Agents MUST always load the `ai-factory` skill before doing anything else. Run `b skill ai-factory` or use the `skill` tool with name `ai-factory` to inject the full architecture overview, role/phase table, key disciplines, test patterns, and session workflow. This is the first action before any investigation, planning, or execution.
 2. **Search memories** — `bd memories <keyword>` to find cross-session decisions:
    `bd memories runner` → plans phase control, `bd memories discipline` → coding philosophy,
    `bd memories harness` → all harness invariants.
