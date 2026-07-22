@@ -140,6 +140,28 @@ replace_function, add_constant, add_import, delete_file, rename_file, move_symbo
 
 `agent.py:72-76` hard-HALTs if a YAML `tools:` name is not in `_TOOL_BY_NAME`. But the instruction `Tool allow-list` text is free-form prose — there is NO validation against it. If it names a tool that doesn't exist, the LLM will trust the prose, call the non-existent tool, get a 404, and may spiral into analysis-paralysis (as happened with `list_facts`). Keep them in sync.
 
+## Tool Behaviour: Auto-Remember
+
+**Every tool auto-persists its result via `_auto_remember()` after a successful operation.** The function calls `artefacts.remember_note()` → writes to `<role>.jsonl` → auto-converts to `.md` → re-injected as `message_history` on the agent's next turn via `build_md_bridge()`. This eliminates re-read loops: the LLM sees its own prior reads and writes in context.
+
+| Tool | What's remembered | Where |
+|---|---|---|
+| `remember` | (is the mechanism) | `tools_memory.py:49` |
+| `batch_read` | Full line-numbered content of all paths read | `tools_file.py:137` |
+| `read_file` | Full line-numbered content of the file/range | `tools_file.py:72` |
+| `write_file` | Summary: `[write_file] path (N lines)` | `tools_file.py:195` |
+| `replace_text` | Summary: `[replace_text] path: replaced X chars with Y chars` | `tools_shell.py:54` |
+| `replace_function` | Summary: `[replace_function] path: scope` | `tools_shell.py:66` |
+| `add_constant` | Summary: `[add_constant] path: NAME = value` | `tools_shell.py:75` |
+| `add_import` | Summary: `[add_import] path: import line` | `tools_shell.py:83` |
+| `delete_file` | Summary: `[delete_file] path` | `tools_file.py:218` |
+| `rename_file` | Summary: `[rename_file] source → dest` | `tools_file.py:226` |
+| `move_symbol` | Summary: `[move_symbol] name: source → dest` | `tools_shell.py:91` |
+
+Read tools (`batch_read`, `read_file`) remember the full content so the LLM can pick up exactly where it left off. Write/edit tools remember a short summary — the LLM already knows what it wrote, it just needs confirmation. All notes survive across turns and across retries within the same role.
+
+The `_REMEMBER_NUDGE` ("you may call `remember(...)`") is still appended to read tool returns for backwards compatibility — the LLM may still call `remember` explicitly, which writes a duplicate entry (harmless, costs tokens).
+
 ## Key Disciplines (LOAD-BEARING)
 
 - **Fail Fast**: Ship smallest MVP. No future-proofing.
