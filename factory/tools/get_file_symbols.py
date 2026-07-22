@@ -21,7 +21,12 @@ def main():
         return
 
     if not path.exists():
-        print(json.dumps(fail(f"File not found: {args.relative_path}"), indent=2))
+        # Option B (Fail Loudly): missing file for greenfield = exit 0, empty result,
+        # NOT a non-zero error (so ledger does NOT hard-halt on new-file scopes).
+        print(json.dumps(ok(
+            f"File not found: {args.relative_path} (greenfield — empty result)",
+            {"symbols": []},
+        ), indent=2))
         return
     if path.suffix != ".py":
         print(json.dumps(fail("Not a Python file."), indent=2))

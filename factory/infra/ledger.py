@@ -22,9 +22,9 @@ from factory.infra.models import (
 
 _logger = logging.getLogger("orchestrator.ledger")
 
-# _run_tool is shared in factory.common (Fail-Loudly: raises
-# RuntimeError on timeout). inject_repo_map below preserves ledger's
-# string-return contract by catching that RuntimeError per call.
+# Option B (Fail Loudly): real CLI crashes (non-zero exit code) propagate as
+# RuntimeError and MUST hard-halt the orchestrator. Only greenfield cases
+# (missing files handled by CLI wrappers with exit 0 + empty result) are safe.
 
 
 def _is_dir(rel: str) -> bool:
@@ -162,10 +162,11 @@ def _kg_for_file(rel: str, symbols: str) -> str:
         if len(names) >= 12:
             break
     query = f"{rel} " + " ".join(names) if names else rel
-    try:
-        return _unwrap_tool_output(_run_tool("query_knowledge_graph", [query, "--max-entities", "8"]))
-    except RuntimeError as e:
-        return f"KG ERROR: {e}"
+    # Option B (Fail Loudly): do NOT swallow RuntimeError. Real CLI crashes
+    # (non-zero exit code from _run_tool) MUST propagate and hard-halt the
+    # orchestrator. Only missing-file cases (now handled in the CLI wrappers
+    # with exit 0 + empty result) are safe.
+    return _unwrap_tool_output(_run_tool("query_knowledge_graph", [query, "--max-entities", "8"]))
 
 
 def inject_repo_map(target_files: list[str]) -> str:
@@ -174,18 +175,14 @@ def inject_repo_map(target_files: list[str]) -> str:
     Combines a compact repo-structure overview with per-file symbol listings
     and a deterministic knowledge-graph (KG) lookup per file. Folders in
     `target_files` are expanded to their subtree via ``get_repo_structure``.
-
-    Subprocess failures are captured per call as ERROR lines — never raised to
-    the caller. No size cap: this bundle lands at turn-1 only (the
-    compact_memory_gate watcher bounds it on subsequent turns).
+    Option B: real CLI failures propagate (hard-halt); only greenfield empty
+    results (exit 0) are safe.
     """
     if not target_files:
         # No-scope fallback: .py-only tree + explicit note.
         lines: list[str] = ["REPO MAP (no scope declared; discover as needed)", "=" * 40]
-        try:
-            structure = _py_tree()
-        except RuntimeError as e:
-            structure = f"ERROR: {e}"
+        # Option B (Fail Loudly): real CLI errors propagate; do NOT swallow.
+        structure = _py_tree()
         lines.append("STRUCTURE (src2/ + tests/, .py only):")
         lines.append(structure)
         lines.append("-" * 40)
@@ -195,10 +192,8 @@ def inject_repo_map(target_files: list[str]) -> str:
 
     # Orientation tree: .py files under src2/ (and tests/), NOT the whole repo
     # (which would drag in _docs/, _prd/, .beads/, WEB/, audit logs, ...).
-    try:
-        structure = _py_tree()
-    except RuntimeError as e:
-        structure = f"ERROR: {e}"
+    # Option B: real errors propagate — no silent swallow.
+    structure = _py_tree()
     lines.append("STRUCTURE (src2/ + tests/, .py only):")
     lines.append(structure)
     lines.append("-" * 40)
@@ -213,10 +208,8 @@ def inject_repo_map(target_files: list[str]) -> str:
             continue
 
         lines.append(f"FILE: {rel}")
-        try:
-            symbols = _unwrap_tool_output(_run_tool("get_file_symbols", [rel]))
-        except RuntimeError as e:
-            symbols = f"ERROR: {e}"
+        # Option B (Fail Loudly): real CLI crashes propagate; do NOT swallow.
+        symbols = _unwrap_tool_output(_run_tool("get_file_symbols", [rel]))
         lines.append(symbols)
         lines.append("KG (knowledge graph):")
         lines.append(_kg_for_file(rel, symbols))
