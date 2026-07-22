@@ -25,7 +25,18 @@ from pydantic_ai.toolsets.abstract import ToolsetTool
 from pydantic_core import SchemaValidator
 from factory.common import OUTPUT_TYPE_REGISTRY, _run_tool, log_operator, resolve_model
 from factory.infra.control import CODER_READ_FILE_BUDGET, CONTROL_SHEET, ORCH_ROOT, PKG_DIR, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REPO_ROOT, SKILL_MAP, SKILL_ROLES
+from factory.infra.tools_memory import get_current_role, get_current_agent
 from factory.infra.models import ApprovedTask, Strategy, TaskResult
+
+
+def _auto_remember(note: str) -> None:
+    try:
+        from factory.infra import artefacts
+        role = get_current_role()
+        if role:
+            artefacts.remember_note(role, note, agent_id=get_current_agent())
+    except Exception:
+        pass
 
 
 def normalize_read_path(p: str) -> str:
@@ -58,7 +69,9 @@ def read_file(relative_path: str, start_line: int | None=None, end_line: int | N
         argv += ['--start-line', str(start_line)]
     if end_line is not None:
         argv += ['--end-line', str(end_line)]
-    return _REMEMBER_NUDGE + _run_tool('read_file', argv) + _STEER
+    result = _REMEMBER_NUDGE + _run_tool('read_file', argv) + _STEER
+    _auto_remember(result)
+    return result
 
 def _parse_range(rng: str) -> tuple[int | None, int | None] | None:
     """Parse a 'start-end' or 'start' line-range string into 1-indexed ints.
@@ -122,7 +135,9 @@ def batch_read(paths: list[str], line_ranges: dict[str, str] | None=None) -> str
     steer = _BATCH_READ_STEER
     if missing_ranges:
         steer = f'\n---\nNote: no line_ranges given for {missing_ranges}; returned the first {_BATCH_READ_DEFAULT_HEAD} lines of each. Next time pass line_ranges={{path: "start-end"}} for a tighter slice.' + _BATCH_READ_STEER
-    return _REMEMBER_NUDGE + '\n\n'.join(parts) + steer
+    result = _REMEMBER_NUDGE + '\n\n'.join(parts) + steer
+    _auto_remember(result)
+    return result
 
 def _src_ban_denied(norm_val: str) -> bool:
     """Return True if a normalized repo-relative path resolves inside src/ or src2/.
@@ -180,6 +195,8 @@ def write_file(relative_path: str, content: str) -> str:
     target = (REPO_ROOT / relative_path).resolve()
     if not target.exists():
         raise RuntimeError(f'[HALT] write_file reported success but file is ABSENT on disk: {relative_path}')
+    line_count = content.count('\n') + 1
+    _auto_remember(f'[write_file] {relative_path} ({line_count} lines)')
     return result
 
 def _check_edit_result(tool_name: str, out: str) -> str:
@@ -203,11 +220,15 @@ def delete_file(relative_path: str) -> str:
     _g = _src_write_guard('delete_file', relative_path)
     if _g:
         return _g
-    return _check_edit_result('delete_file', _run_tool('delete_file', [relative_path]))
+    result = _check_edit_result('delete_file', _run_tool('delete_file', [relative_path]))
+    _auto_remember(f'[delete_file] {relative_path}')
+    return result
 
 def rename_file(source_relative_path: str, destination_relative_path: str) -> str:
     """Rename/move a file and update the vector index. Returns JSON result."""
     _g = _src_write_guard('rename_file', source_relative_path, destination_relative_path)
     if _g:
         return _g
-    return _run_tool('rename_file', [source_relative_path, destination_relative_path])
+    result = _run_tool('rename_file', [source_relative_path, destination_relative_path])
+    _auto_remember(f'[rename_file] {source_relative_path} → {destination_relative_path}')
+    return result

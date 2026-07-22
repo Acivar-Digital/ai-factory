@@ -5,6 +5,15 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Batch 10: Auto-Remember on All Tools
+
+**Every tool now auto-`remember_note()` after a successful operation so the LLM sees its own reads/writes in context next turn — no more re-reading files to verify.** The LLM has 1M token context and wants to test whether this eliminates research loops.
+
+| # | File | Issue | Fix |
+|---|------|-------|------|
+| 1 | `factory/infra/tools_file.py` | `read_file`, `batch_read`, `write_file`, `delete_file`, `rename_file` returned results but agent had to manually `remember` for cross-turn visibility | Added `_auto_remember()` helper; each tool auto-persists its result (reads: full content; writes: summary; deletes/renames: paths) |
+| 2 | `factory/infra/tools_shell.py` | `replace_text`, `replace_function`, `add_constant`, `add_import`, `move_symbol` same problem | Same fix — auto-remember diff summary, replaced scope, constant line, import line, or move paths |
+
 ## 2026-07-22 — Batch 9: Fix Bogus Tool Names in Agent YAML Prompts
 
 **`planner.yaml` and `coder.yaml` listed `remember_fact`, `recall_fact`, `list_facts` as tools — none exist in `_TOOL_BY_NAME`.** The LLM trusted its system prompt, called `list_facts`, got a 404, then spiraled into analysis-paralysis trying to reconcile the discrepancy.
