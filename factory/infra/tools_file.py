@@ -69,9 +69,9 @@ def read_file(relative_path: str, start_line: int | None=None, end_line: int | N
         argv += ['--start-line', str(start_line)]
     if end_line is not None:
         argv += ['--end-line', str(end_line)]
-    result = _REMEMBER_NUDGE + _run_tool('read_file', argv) + _STEER
-    _auto_remember(result)
-    return result
+    raw = _run_tool('read_file', argv)
+    _auto_remember(raw)
+    return _REMEMBER_NUDGE + raw + _STEER
 
 def _parse_range(rng: str) -> tuple[int | None, int | None] | None:
     """Parse a 'start-end' or 'start' line-range string into 1-indexed ints.
@@ -135,9 +135,9 @@ def batch_read(paths: list[str], line_ranges: dict[str, str] | None=None) -> str
     steer = _BATCH_READ_STEER
     if missing_ranges:
         steer = f'\n---\nNote: no line_ranges given for {missing_ranges}; returned the first {_BATCH_READ_DEFAULT_HEAD} lines of each. Next time pass line_ranges={{path: "start-end"}} for a tighter slice.' + _BATCH_READ_STEER
-    result = _REMEMBER_NUDGE + '\n\n'.join(parts) + steer
-    _auto_remember(result)
-    return result
+    raw = '\n\n'.join(parts)
+    _auto_remember(raw)
+    return _REMEMBER_NUDGE + raw + steer
 
 def _src_ban_denied(norm_val: str) -> bool:
     """Return True if a normalized repo-relative path resolves inside src/ or src2/.
