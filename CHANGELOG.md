@@ -5,6 +5,18 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
+## 2026-07-22 — Fix Missing Diffs & Obsolete Checkpoint Logic
+
+The Code Supervisor and Red-Team agents were not seeing what code changed at the start of their prompts. The guardrail tool relied on a lazily-taken `.checkpoints` directory (always empty, so diffs were always `"no checkpoint"`), and the diff was buried inside the verdict block rather than surfaced upfront. This fix eradicates all checkpoint terminology, implements true `.orig` baseline diffing (with new-file support), and injects the diff at the absolute beginning of every review brief.
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `factory/tools/guardrail_check.py` | `CHECKPOINT_DIR`, `checkpoint()`, `_latest_checkpoint()` were dead code; `diff_vs_checkpoint` relied on a never-populated `.checkpoints` dir | Deleted all checkpoint code; renamed to `diff_vs_orig`; new implementation resolves `file_path.with_name(path.name + ".orig")`, falls back to empty baseline `[]` for new files, returns `difflib.unified_diff` |
+| 2 | `factory/tools/guardrail_check.py` | JSON payload key was `"diff_vs_checkpoint"` | Renamed to `"diff_vs_orig"` |
+| 3 | `factory/infra/execution.py` | Read `gj.get("diff_vs_checkpoint", "")` (always empty) | Updated to `gj.get("diff_vs_orig", "")`; updated `"no checkpoint"` sentinel to `"no diff"` |
+| 4 | `factory/infra/exchange.py` | No upfront diff rendering for reviewers | Added `_render_upfront_diffs(batch)` — extracts only `tr.verdict_diff` strings into a `=== PROPOSED CODE CHANGES (DIFF) ===` block |
+| 5 | `factory/infra/pipeline.py` | Review briefs did not surface diffs at the start | Prepended `_render_upfront_diffs(batch)` to the absolute beginning of `review_brief` in both `run_code_review_gate` and `run_red_team_gate` |
+
 ## 2026-07-22 — Supervisor Review MD_LEDGER Zero-Byte Transcript Crash Fix
 
 The fix for the exponential append bug (`_clean_messages` filtering out `<!-- MD_LEDGER -->`) inadvertently crashed the orchestrator when running `supervisor_review` and other agents that received a brief but had no prior history. Pydantic-AI aggressively merges consecutive string payloads into a single `ModelRequest` with multiple parts. Because the previous fix `continue`'d the *entire* message when `m.parts[0]` was the ledger, it threw away the actual task brief along with the ledger. This resulted in a 0-byte `.md` transcript file being written, triggering the loopguard's aggressive halt: `RuntimeError: [HALT] MD transcript for role 'supervisor_review' was not generated or is empty!`.

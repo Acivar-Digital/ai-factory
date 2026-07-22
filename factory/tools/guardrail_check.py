@@ -6,20 +6,18 @@ This is a harness-owned validation tool run by runner.py (or manually by the
 operator). It is NOT exposed to any agent's tool_allow_list — the coder never
 sees or calls it. It implements the post-edit gate:
 
-    checkpoint -> ruff check -> scoped pyright -> diff_vs_checkpoint
+    ruff check -> scoped pyright -> diff_vs_orig
 
 so a deliberately-broken coder edit can be surfaced (ruff_output + diff) back
 to a fresh coder for self-correction, without ever giving the model a shell.
 
 Modes:
-    validate  <file>  Run checkpoint-if-needed, ruff, scoped pyright, and print
-                       a single JSON line:
+    validate  <file>  Run ruff, scoped pyright, and print a single JSON line:
                        {"success": bool, "ruff_ok": bool, "pyright_ok": bool,
                         "ruff_output": str,
-                        "pyright_output": str, "diff_vs_checkpoint": str}
-    diff      <file>  Print the unified diff vs the last checkpoint (or
-                      "no checkpoint").
-    checkpoint <file> Snapshot the file into the .checkpoints dir.
+                        "pyright_output": str, "diff_vs_orig": str}
+    diff      <file>  Print the unified diff vs the .orig baseline (or
+                      "no diff" if the file is new / has no .orig).
 
 Design rules (fail-loudly on internal error, structured JSON for lint/type
 results): unexpected internal failures raise; ruff/pyright outcomes are
@@ -35,7 +33,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -43,7 +40,6 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent          # factory/tools/
 PROJECT_ROOT = SCRIPT_DIR.parent.parent               # baziforecaster/
-CHECKPOINT_DIR = PROJECT_ROOT / ".checkpoints"
 
 # Bounds for the broadened union pyright (docs/01_fix.md Task 3, D4):
 # 1 primary + <=3 dependency files, 5000 lines/file, 20000 lines total.
@@ -51,32 +47,6 @@ UNION_MAX_DEPS = 3
 UNION_MAX_FILES = UNION_MAX_DEPS + 1  # primary + deps
 UNION_MAX_LINES_PER_FILE = 5000
 UNION_MAX_TOTAL_LINES = 20000
-
-
-# ---------------------------------------------------------------------------
-# Checkpoint
-# ---------------------------------------------------------------------------
-def checkpoint(file_path: str) -> str | None:
-    """Snapshot the file into the .checkpoints dir. Returns the backup path."""
-    path = Path(file_path).resolve()
-    if not path.exists():
-        raise FileNotFoundError(f"File not found: {path}")
-
-    CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = CHECKPOINT_DIR / f"{path.stem}_{ts}{path.suffix}"
-    shutil.copy2(str(path), str(backup_path))
-    return str(backup_path)
-
-
-def _latest_checkpoint(path: Path) -> Path | None:
-    if not CHECKPOINT_DIR.exists():
-        return None
-    backups = sorted(
-        CHECKPOINT_DIR.glob(f"{path.stem}_*{path.suffix}"),
-        reverse=True,
-    )
-    return backups[0] if backups else None
 
 
 # ---------------------------------------------------------------------------
@@ -342,24 +312,36 @@ def typecheck_union(
 
 
 # ---------------------------------------------------------------------------
-# Diff vs checkpoint
+# Diff vs orig
 # ---------------------------------------------------------------------------
-def diff_vs_checkpoint(file_path: str) -> str:
-    """Unified diff of the file vs its most recent checkpoint."""
+def diff_vs_orig(file_path: str) -> str:
+    """Unified diff of the file vs its ``.orig`` baseline.
+
+    Resolution order:
+      1. Resolve the target ``file_path`` to an absolute path.
+      2. Look for the baseline file right next to it:
+         ``path.with_name(path.name + ".orig")``.
+      3. If the ``.orig`` file exists, load its lines.
+      4. If the ``.orig`` file does NOT exist (brand-new deliverable), set
+         the baseline lines to an empty array ``[]`` (simulating ``/dev/null``)
+         so the diff shows 100% added lines.
+      5. Generate and return the ``difflib.unified_diff``.
+    """
     path = Path(file_path).resolve()
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
-    cp = _latest_checkpoint(path)
-    if cp is None:
-        return "no checkpoint"
+    orig_path = path.with_name(path.name + ".orig")
+    if orig_path.exists():
+        baseline_lines = orig_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    else:
+        baseline_lines = []
 
-    checkpoint_lines = cp.read_text(encoding="utf-8").splitlines(keepends=True)
     current_lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     diff = difflib.unified_diff(
-        checkpoint_lines,
+        baseline_lines,
         current_lines,
-        fromfile=f"checkpoint/{cp.name}",
+        fromfile=f"orig/{orig_path.name}" if orig_path.exists() else "/dev/null",
         tofile=f"current/{path.name}",
         lineterm="",
     )
@@ -541,7 +523,7 @@ def validate(file_path: str, edit_set: list[str] | None = None) -> dict:
         "smoke_output": smoke_msg,
         "ruff_output": ruff_out,
         "pyright_output": pyr_out,
-        "diff_vs_checkpoint": diff_text,
+        "diff_vs_orig": diff_text,
     }
 
 
@@ -551,9 +533,8 @@ def validate(file_path: str, edit_set: list[str] | None = None) -> dict:
 def _usage() -> str:
     return (
         "Usage:\n"
-        "  guardrail_check.py validate <file>\n"
+        "  guardrail_check.py validate <file> [edit_set]\n"
         "  guardrail_check.py diff <file>\n"
-        "  guardrail_check.py checkpoint <file>\n"
     )
 
 
@@ -576,19 +557,10 @@ def main() -> int:
 
     if command == "diff":
         try:
-            print(diff_vs_checkpoint(file_path))
+            print(diff_vs_orig(file_path))
         except FileNotFoundError as e:
             print(str(e), file=sys.stderr)
             return 1
-        return 0
-
-    if command == "checkpoint":
-        try:
-            cp = checkpoint(file_path)
-        except FileNotFoundError as e:
-            print(str(e), file=sys.stderr)
-            return 1
-        print(cp)
         return 0
 
     print(f"Unknown command: {command}\n{_usage()}", file=sys.stderr)

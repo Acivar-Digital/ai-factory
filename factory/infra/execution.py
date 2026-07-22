@@ -420,7 +420,7 @@ async def run_execute_phase(
                     feedback_block += (
                         f"\n--- {fp} (RUFF) ---\n"
                         f"RUFF OUTPUT:\n{gj.get('ruff_output', '')}\n"
-                        f"DIFF VS CHECKPOINT:\n{gj.get('diff_vs_checkpoint', '')}\n"
+                        f"DIFF VS ORIG:\n{gj.get('diff_vs_orig', '')}\n"
                     )
                 if gj.get("smoke_ok", True) is False:
                     # Task 1: type-construction smoke gate (BUG 2 class) blocks.
@@ -601,8 +601,8 @@ async def run_execute_phase(
             if gj.get("smoke_ok", True) is False:
                 smk_ok = False
                 verdict_errors_parts.append(f"[smoke] {fp}: {gj.get('smoke_output', '')}")
-            diff = gj.get("diff_vs_checkpoint", "")
-            if diff and diff not in ("no checkpoint", "no diff"):
+            diff = gj.get("diff_vs_orig", "")
+            if diff and diff not in ("no diff", ""):
                 verdict_diff_parts.append(f"--- {fp} ---\n{diff}")
         # Dependency pointers (Task 5, D5): for each edited file, note upstream
         # imports discovered by the union pyright so reviewers know where to trace.

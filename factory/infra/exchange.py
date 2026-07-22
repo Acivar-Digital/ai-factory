@@ -86,6 +86,27 @@ def _render_verdict_block(batch: Any) -> str:
     return "\n".join(lines)
 
 
+def _render_upfront_diffs(batch: Any) -> str:
+    """Render ONLY the verdict_diff strings from a TaskBatch into a highly
+    visible block, placed at the absolute start of the reviewer's brief so the
+    Code Supervisor and Red-Team agents see exactly what code changed right at
+    the beginning of their prompt.
+    """
+    if batch is None:
+        return ""
+    parts: list[str] = []
+    for tr in batch.results:
+        if tr.verdict_diff:
+            parts.append(f"--- {tr.task_id} ---\n{tr.verdict_diff}")
+    if not parts:
+        return ""
+    return (
+        "=== PROPOSED CODE CHANGES (DIFF) ===\n"
+        + "\n\n".join(parts)
+        + "\n====================================\n"
+    )
+
+
 def _render_history_md(role: str, v: object) -> str:
     """Render a `history` entry to markdown for brief injection.
 
