@@ -5,6 +5,7 @@ Every worker capability is a subprocess wrapper around an existing
 receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
 """
 import json
+from pydantic_ai import ModelRetry
 from factory.common import _run_tool
 from factory.infra.ast_verifier import extract_header_symbol_contract, run_lint_regression, verify_refactored_ast
 from factory.infra.control import REPO_ROOT
@@ -37,8 +38,11 @@ def replace_text(relative_path: str, target_text: str, replacement_text: str, is
         argv.append('--ignore-whitespace')
     result = _check_edit_result('replace_text', _run_tool('replace_text', argv))
     _auto_remember(f'[replace_text] {staged}\n---OLD---\n{target_text}\n---NEW---\n{replacement_text}')
-    ast_diag = verify_edit(staged, None)
-    return f"{result}\n[AST Verification]: {ast_diag}"
+    ast_diag_str = verify_edit(staged, None)
+    parsed = json.loads(ast_diag_str)
+    if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
+        raise ModelRetry(f"AST Verification Failed: {parsed.get('message', parsed.get('error', 'CC > 5'))}. Please fix the edit to use simple guard clauses and ensure CC <= 5.")
+    return f"{result}\n[AST Verification]: {ast_diag_str}"
 
 def replace_function(relative_path: str, function_name: str, new_function_code: str, class_name: str | None=None) -> str:
     """Replace a function's body via AST manipulation. Returns JSON result."""
@@ -53,8 +57,11 @@ def replace_function(relative_path: str, function_name: str, new_function_code: 
     result = _check_edit_result('replace_function', _run_tool('replace_function', argv))
     scope = f'{class_name}.{function_name}' if class_name else function_name
     _auto_remember(f'[replace_function] {staged}::{scope}\n{new_function_code}')
-    ast_diag = verify_edit(staged, function_name)
-    return f"{result}\n[AST Verification]: {ast_diag}"
+    ast_diag_str = verify_edit(staged, function_name)
+    parsed = json.loads(ast_diag_str)
+    if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
+        raise ModelRetry(f"AST Verification Failed: {parsed.get('message', parsed.get('error', 'CC > 5'))}. Please fix the edit to use simple guard clauses and ensure CC <= 5.")
+    return f"{result}\n[AST Verification]: {ast_diag_str}"
 
 def add_constant(relative_path: str, constant_name: str, constant_code: str) -> str:
     """Add a top-level constant to a Python file (AST). Returns JSON result."""

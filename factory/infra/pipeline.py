@@ -331,14 +331,18 @@ async def record_coder(
     return out
 
 
-def _run_verify_edit(author: str, bd: str) -> str | None:
+def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | None:
     """Run verify_edit on the author's scoped staged files after a tier edit.
 
     Reads scope and target_functions from the user_prompt.md frontmatter,
     maps each to its staged copy under factory/temp/, and verifies every
     function in each file has CC <= 5 and a clean AST.
 
-    Returns a structured error string on failure, or None on success.
+    Per-file diagnostic is persisted into state_dict under
+    ``f"last_tier_diagnostic_{staged_file_path}"`` so the conductor
+    can route immediate focus to that file.
+
+    Returns the first failing file's diagnostic message, or None on success.
     """
     prompt_file = REPO_ROOT / "factory" / "prompt" / "user_prompt.md"
     if not prompt_file.exists():
@@ -380,22 +384,25 @@ def _run_verify_edit(author: str, bd: str) -> str | None:
     staged_paths = [f"factory/temp/{s}" for s in scope]
 
     for staged_file_path in staged_paths:
+        diagnostic: str | None = None
         try:
             if target_functions:
                 for fn_name in target_functions:
                     result = verify_edit(staged_file_path, fn_name)
                     parsed = json.loads(result) if result else {}
                     if parsed.get("ok") is False:
-                        return (
+                        diagnostic = (
                             f"[verify_edit] {author}: FAIL — {staged_file_path} — "
                             f"function '{fn_name}': {parsed.get('message', parsed.get('error', 'unknown error'))}"
                         )
+                        break
                     cc = parsed.get("cc", 0)
                     if cc > 5:
-                        return (
+                        diagnostic = (
                             f"[verify_edit] {author}: FAIL — {staged_file_path} — "
                             f"function '{fn_name}' has CC={cc} (target CC <= 5)"
                         )
+                        break
             else:
                 result = verify_edit(staged_file_path, None)
                 parsed = json.loads(result) if result else {}
@@ -408,21 +415,28 @@ def _run_verify_edit(author: str, bd: str) -> str | None:
                         )
                     else:
                         details = parsed.get("error", "unknown error")
-                    return (
+                    diagnostic = (
                         f"[verify_edit] {author}: FAIL — {staged_file_path} — "
                         f"{details}"
                     )
-                functions = parsed.get("functions", [])
-                for fn in functions:
-                    cc = fn.get("cc", 0)
-                    if cc > 5:
-                        return (
-                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                            f"function '{fn.get('function', '?')}' has CC={cc} "
-                            f"(target CC <= 5)"
-                        )
+                else:
+                    functions = parsed.get("functions", [])
+                    for fn in functions:
+                        cc = fn.get("cc", 0)
+                        if cc > 5:
+                            diagnostic = (
+                                f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                                f"function '{fn.get('function', '?')}' has CC={cc} "
+                                f"(target CC <= 5)"
+                            )
+                            break
         except Exception as e:
-            return f"[verify_edit] {author}: error — {staged_file_path} — {e}"
+            diagnostic = f"[verify_edit] {author}: error — {staged_file_path} — {e}"
+
+        state_dict[f"last_tier_diagnostic_{staged_file_path}"] = diagnostic or "pass"
+
+        if diagnostic is not None:
+            return diagnostic
 
     return None
 
@@ -460,7 +474,7 @@ async def run_tier(
         if record_exchange and tier in EXCHANGE_ROLES:
             append_exchange_turn(exchange, pass_counter, tier, out, bd)
 
-        _verify_result = _run_verify_edit(tier, bd)
+        _verify_result = _run_verify_edit(tier, bd, state_dict)
         if _verify_result is not None:
             print(f"[verify_edit] {tier}: {_verify_result}", flush=True)
 

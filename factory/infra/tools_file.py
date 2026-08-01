@@ -4,9 +4,11 @@ Every worker capability is a subprocess wrapper around an existing
 `factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they
 receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
 """
+import json
 import os
 from pathlib import Path
 
+from pydantic_ai import ModelRetry
 from factory.common import _run_tool
 from factory.infra.control import REPO_ROOT
 from factory.infra.tools_const import (
@@ -201,19 +203,19 @@ def write_file(relative_path: str, content: str) -> str:
     else:
         _auto_remember(f'[write_file] {staged} (no changes)')
     from factory.infra.tools_shell import verify_edit
-    ast_diag = verify_edit(staged, None)
-    return f"{result}\n[AST Verification]: {ast_diag}"
+    ast_diag_str = verify_edit(staged, None)
+    parsed = json.loads(ast_diag_str)
+    if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
+        raise ModelRetry(f"AST Verification Failed: {parsed.get('message', parsed.get('error', 'CC > 5'))}. Please fix the edit to use simple guard clauses and ensure CC <= 5.")
+    return f"{result}\n[AST Verification]: {ast_diag_str}"
 
 def _check_edit_result(tool_name: str, out: str) -> str:
     try:
-        import json
         obj = json.loads(out)
         if obj.get('status') == 'error':
-            from pydantic_ai.exceptions import ModelRetry
             raise ModelRetry(f"{tool_name} failed: {obj.get('message', '')} {obj.get('error', '')}")
         data = obj.get('data', {})
         if obj.get('status') == 'success' and 'changed' in data and (not data['changed']):
-            from pydantic_ai.exceptions import ModelRetry
             raise ModelRetry(f"{tool_name} failed: {obj.get('message', 'No changes made (target not found or already replaced).')}")
     except Exception as e:
         if type(e).__name__ == 'ModelRetry':
