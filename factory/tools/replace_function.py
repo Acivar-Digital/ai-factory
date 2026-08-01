@@ -86,7 +86,7 @@ def main():
                 )
             )
             sys.exit(1)
-        new_node = new_func.body[0]
+        new_func.body[0]
 
         target, found = _find_function(tree, args.function_name, args.class_name)
         if not found:
