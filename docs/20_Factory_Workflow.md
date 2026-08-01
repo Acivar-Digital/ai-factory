@@ -10,7 +10,7 @@ The pipeline enforces a **3-tier linear review flow**: `intern` â†’ `engineer` â
 
 **Strict Sandboxing**: All modifications target staging copies under `factory/temp/`. A baseline `.orig` snapshot is captured at staging time for `diff_vs_orig` comparison. **Zero direct edits** to `TARGET_REPO`.
 
-## 2. Strategic Design Principles (The 5 Signposts)
+## 2. Strategic Design Principles (The 7 Signposts)
 
 ### 2.1 Model Assignment Lock
 
@@ -37,6 +37,14 @@ Modification tools (`replace_function`, `replace_text`, `write_file`) run `verif
 ### 2.5 Cross-Tier Memory Persistence
 
 Mandatory `bd remember` calls persist architectural decisions, AST diagnostics, and handover contracts across turns, sessions, and LLM roles. This ensures that even across separate pipeline runs, the system retains critical context about structural decisions and failure patterns.
+
+### 2.6 Harness-Generated Live TODO Checklist
+
+`TodoList` and `TodoItem` Pydantic v2 models in `control.py`. Harness deterministically parses `target_functions` via `verify_edit` AST checks at phase start to construct a live TODO list (`- [ ]` vs `- [x]`). Item status updates automatically on tool returns and reinjects into prompt context per turn.
+
+### 2.7 API Transport Resilience (7-Attempt Exponential Backoff)
+
+`ModelAPIError` retry budget in `agent.py` expanded to 7 attempts with exponential backoff (`min(64s, (2^attempt) + jitter)`) to withstand OpenRouter 429 rate limit bursts and 502/503 micro-outages.
 
 ## 3. Workflow Execution Lifecycle
 
@@ -118,7 +126,7 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 ## Changelog
 
 ### 2026-08-02 (Pydantic-AI 2.0 & Harness Alignment Upgrade)
-- **Workflow Spec Initialized**: Created `docs/20_Factory_Workflow.md` incorporating the 5 strategic signposts.
+- **Workflow Spec Initialized**: Created `docs/20_Factory_Workflow.md` incorporating the 5 strategic signposts (later expanded to 7).
 - **Pydantic-AI 2.0 Hooks Capability**: Integrated native `@hooks.on.before_model_request` lifecycle hook in `agent.py` for context scrubbing.
 - **Strongly-Typed Dependency Injection**: Added `TierState` dependency model (`deps_type=TierState`) in `control.py` and `agent.py`.
 - **Structured Output Handover Models**: Added Pydantic v2 handoff models (`InternResult`, `EngineerResult`, `SeniorVerdict`) in `control.py`.
@@ -131,3 +139,4 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 - **Harness-Generated TODO Checklist**: Implemented `TodoItem` and `TodoList` Pydantic v2 models in `control.py` and `build_todo_checklist()` in `pipeline.py`. Live AST checklist (`[ ]` vs `[x]`) reinjects into prompt context per turn.
 - **API Transport Resilience**: Expanded `ModelAPIError` retry budget in `agent.py` from 3 to 7 attempts with exponential backoff (`2s -> 4s -> 8s -> 16s -> 32s -> 64s`) + jitter to withstand OpenRouter 429 rate limit bursts and 502/503 micro-outages.
 - **Compound Condition Rule**: Injected explicit Compound Condition Rule into `intern.yaml` and `engineer.yaml` forcing decomposition of `if A and B:` into flat single-condition guard clauses to prevent AST CC inflation.
+- **Section 2 Expanded**: Added Principle 6 (Harness-Generated Live TODO Checklist) and Principle 7 (API Transport Resilience) to Strategic Design Principles.
