@@ -38,9 +38,9 @@ def _draft():
 
 
 def test_current_phase_default_is_phase_order_member():
-    # Label unification: default must be a member of _PHASE_ORDER, NOT "PLAN".
+    # Label unification: default must be a member of _PHASE_ORDER.
     st = models.OrchestratorState(bd_id="bd1", run_dir="/tmp/x")
-    assert st.current_phase == "planner"
+    assert st.current_phase == "intern"
     assert st.current_phase in _PHASE_ORDER
 
 

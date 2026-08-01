@@ -59,8 +59,8 @@ def test_guardrail_crash_blocks_task(tmp_path, monkeypatch):
 
     def _mock_run(*args, **kwargs):
         cmd = args[0] if args else kwargs.get("args", [])
-        args_list = kwargs.get("args") or (list(args[0]) if args else [])
-        sys_argv = real_subprocess.check_output if hasattr(real_subprocess, 'check_output') else []
+        kwargs.get("args") or (list(args[0]) if args else [])
+        real_subprocess.check_output if hasattr(real_subprocess, 'check_output') else []
         if isinstance(cmd, list) and any("guardrail_check.py" in str(a) for a in cmd):
             raise RuntimeError("mock guardrail crash")
         return orig_run(*args, **kwargs)

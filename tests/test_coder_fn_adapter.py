@@ -17,7 +17,7 @@ from pydantic_ai.messages import ModelRequest, UserPromptPart
 
 from factory.infra import agent
 from factory.infra import _runtime
-from factory.infra.pipeline import record_coder, _recover_from_unexpected_behavior
+from factory.infra.pipeline import record_coder
 from factory.infra.exchange import ExchangeTurn
 
 
@@ -166,7 +166,7 @@ async def test_load_skill_does_not_write_phase_summaries_for_coder(monkeypatch) 
     _runtime.PHASE_SUMMARIES.clear()
     _runtime.PHASE_SUMMARIES["planner"] = "existing plan summary"
 
-    validated_json = await agent.load_skill("coder", "write code", bd="test-bd", task_id="coder01")
+    await agent.load_skill("coder", "write code", bd="test-bd", task_id="coder01")
     assert "coder" not in _runtime.PHASE_SUMMARIES, (
         "PHASE_SUMMARIES must NOT contain 'coder' entry to avoid concurrent-write race"
     )
@@ -175,8 +175,8 @@ async def test_load_skill_does_not_write_phase_summaries_for_coder(monkeypatch) 
 
 
 @pytest.mark.asyncio
-async def test_load_skill_writes_phase_summaries_for_planner(monkeypatch) -> None:
-    """Non-coder roles MUST still write to PHASE_SUMMARIES."""
+async def test_load_skill_writes_phase_summaries_for_engineer(monkeypatch) -> None:
+    """Non-intern roles MUST still write to PHASE_SUMMARIES."""
     monkeypatch.setattr("factory.infra.agent.build_role_agent", lambda role: (None, None))
     monkeypatch.setattr("factory.infra.agent.build_md_bridge", lambda role, agent_id=None: None)
     monkeypatch.setattr("factory.infra.agent.log_response_raw", lambda **kw: None)
@@ -188,12 +188,12 @@ async def test_load_skill_writes_phase_summaries_for_planner(monkeypatch) -> Non
     monkeypatch.setattr("factory.infra.agent._model_to_md", lambda output: str(output))
 
     async def fake_run_agent(*args, **kwargs):
-        return _MockResult("planner output", messages=[ModelRequest(parts=[UserPromptPart(content="hi")])])
+        return _MockResult("engineer output", messages=[ModelRequest(parts=[UserPromptPart(content="hi")])])
 
     monkeypatch.setattr("factory.infra.agent._run_agent_retry", fake_run_agent)
 
     _runtime.PHASE_SUMMARIES.clear()
 
-    validated_json = await agent.load_skill("planner", "make a plan", bd="test-bd")
-    assert "planner" in _runtime.PHASE_SUMMARIES
-    assert _runtime.PHASE_SUMMARIES["planner"] == "planner output"
+    await agent.load_skill("engineer", "refactor code", bd="test-bd")
+    assert "engineer" in _runtime.PHASE_SUMMARIES
+    assert _runtime.PHASE_SUMMARIES["engineer"] == "engineer output"

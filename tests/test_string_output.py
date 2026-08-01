@@ -8,7 +8,6 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from factory.infra import runner
 
 
 class MockOutput:
@@ -36,29 +35,20 @@ class MockResult:
 @pytest.mark.asyncio
 async def test_load_skill_string_output(monkeypatch) -> None:
     """Verify load_skill handles non-Pydantic string outputs and serializes cleanly."""
-    # Mock build_role_agent to avoid setting up real agent models.
-    # load_skill references these via agent.py's imports, so patch
-    # at the defining / import-site module, not the runner re-export.
+    from factory.infra import agent, _runtime
     monkeypatch.setattr("factory.infra.agent.build_role_agent", lambda role: (None, None))
-
-    # Mock build_md_bridge to return no prior history
     monkeypatch.setattr("factory.infra.agent.build_md_bridge", lambda role, agent_id=None: None)
-
-    # Mock log_response_raw, append_eval_log, and persist_role to avoid side effects
     monkeypatch.setattr("factory.infra.agent.log_response_raw", lambda **kw: None)
     monkeypatch.setattr("factory.infra.agent.append_eval_log", lambda **kw: None)
     monkeypatch.setattr("factory.infra.agent.persist_role", lambda role, result, agent_id=None: None)
 
-    # Mock _run_agent_retry to return a MockResult carrying a string output (as an async function)
     mock_result = MockResult("This is a raw markdown or string plan output")
     async def fake_run_agent(*args, **kwargs):
         return mock_result
 
     monkeypatch.setattr("factory.infra.agent._run_agent_retry", fake_run_agent)
     
-    # Run load_skill for a role (e.g. planner) and ensure it doesn't raise AttributeError
-    validated_json = await runner.load_skill(role="planner", brief="Verify me", bd="dummy-bd")
+    validated_json = await agent.load_skill(role="intern", brief="Verify me", bd="dummy-bd")
     
-    # Assert that the serialized JSON is the string representation of the output
     assert validated_json == "This is a raw markdown or string plan output"
-    assert runner.RAW_OUTPUTS["planner"] == "This is a raw markdown or string plan output"
+    assert _runtime.RAW_OUTPUTS["intern"] == "This is a raw markdown or string plan output"

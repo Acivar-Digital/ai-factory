@@ -8,23 +8,17 @@ import time
 import pytest
 
 from factory.infra.ast_analyzer import (
-    ComplexityVisitor,
-    FunctionCandidateScanner,
     scan_file_for_anti_patterns,
 )
 from factory.infra.ast_verifier import (
     ComplexityVisitor as VerifierComplexityVisitor,
     SymbolScopeVisitor,
-    _AttributeVisitor,
-    _CallVisitor,
-    _FunctionCandidateScanner,
-    _extract_function_signature,
     ensure_pydantic_imports,
     extract_header_symbol_contract,
     run_lint_regression,
     verify_refactored_ast,
 )
-from factory.infra.virtual_ast_buffer import VirtualASTBuffer, ensure_pydantic_imports as vap_ensure_pydantic_imports
+from factory.infra.virtual_ast_buffer import VirtualASTBuffer
 
 
 # ── ast_analyzer tests ──────────────────────────────────────────────────────
