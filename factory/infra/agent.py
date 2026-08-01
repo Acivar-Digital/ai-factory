@@ -1,6 +1,7 @@
 """Agent lifecycle, spawning, recovery, and telemetry."""
 from __future__ import annotations
 
+import asyncio
 import copy
 import json
 import sys
@@ -129,19 +130,40 @@ def _report_run_failure(phase: str, exc: Exception, attempt: int, reason: str) -
     )
 
 
+MAX_RETRIES = 3
+
+
 async def _run_agent_retry(agent: Agent, brief: str, *, loopguard: bool = False, phase: str = "", role: str = "", bd_id: str = "", message_history: list | None = None, agent_id: str | None = None) -> Any:
-    """Run an agent once. Retries are handled by the transport layer; here we only
-    catch the final ModelAPIError (after transport retries are exhausted) and abort
-    gracefully with a FAIL report + SystemExit(1) — never an unhandled traceback.
-    `message_history` is the role's reloaded prior history (D2 continuity bridge)."""
-    try:
-        if loopguard:
-            from types import SimpleNamespace
-            return await run_with_loopguard(agent, brief, phase=phase, role=role, state=SimpleNamespace(bd_id=bd_id), history=message_history, require_transcript=True, agent_id=agent_id)
-        return await agent.run(brief, message_history=message_history)
-    except ModelAPIError as exc:
-        _report_run_failure(phase, exc, 1, "transient provider failure (transport retries exhausted)")
-        raise SystemExit(1)
+    """Run an agent with retry-on-transient-error.
+
+    Retries up to MAX_RETRIES on ModelAPIError (transient provider
+    failures). UnexpectedModelBehavior is not retried (structural
+    issue, handled by the caller). On the final failure or on any
+    non-retryable exception, writes a FAIL report and raises
+    SystemExit(1).
+    """
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            if loopguard:
+                from types import SimpleNamespace
+                return await run_with_loopguard(agent, brief, phase=phase, role=role, state=SimpleNamespace(bd_id=bd_id), history=message_history, require_transcript=True, agent_id=agent_id)
+            return await agent.run(brief, message_history=message_history)
+        except ModelAPIError as exc:
+            if attempt >= MAX_RETRIES:
+                _report_run_failure(phase, exc, attempt, "transient provider failure after retries exhausted")
+                raise SystemExit(1)
+            delay = 5 * attempt
+            log_operator(
+                f"[WARN] [{phase}] transient model error ({exc}); "
+                f"retrying in {delay}s... (attempt {attempt}/{MAX_RETRIES})",
+                level="WARN",
+            )
+            await asyncio.sleep(delay)
+        except UnexpectedModelBehavior:
+            raise
+        except Exception as exc:
+            _report_run_failure(phase, exc, attempt, "non-retryable error")
+            raise SystemExit(1)
 
 
 def _resolve_run_dir(bd_id: str | None = None) -> Path | None:
