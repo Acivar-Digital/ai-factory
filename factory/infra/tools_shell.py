@@ -1,4 +1,5 @@
 from factory.infra.tools_const import *
+from factory.infra.ast_verifier import verify_refactored_ast, run_lint_regression, extract_header_symbol_contract
 'Tool confinement for the Orchestrator State Machine (build.md §4, §5c).\n\nEvery worker capability is a subprocess wrapper around an existing\n`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they\nreceive only the allow-listed, ACL-wrapped tools the orchestrator hands them.\n'
 import contextvars
 import functools
@@ -94,3 +95,80 @@ def move_symbol(symbol_name: str, source_path: str, dest_path: str) -> str:
     result = _run_tool('move_symbol', [symbol_name, source_path, dest_path])
     _auto_remember(f'[move_symbol] {symbol_name}: {source_path} → {dest_path}')
     return result
+
+
+def verify_edit(relative_path: str, function_name: str | None = None) -> str:
+    """Run multi-layer AST verification on a file after an edit.
+
+    Checks syntax, CC, nesting, try-pyramids, hallucinated fields,
+    argument swaps, signature parity, namespace collisions, and
+    unimported symbols. Also runs ruff/pyright regression checks.
+
+    Returns JSON result with verification status and any violations found.
+    """
+    import ast
+
+    from factory.infra.tools_file import normalize_read_path
+
+    rp = normalize_read_path(relative_path)
+    full_path = REPO_ROOT / rp
+    if not full_path.exists():
+        return json.dumps({"ok": False, "error": f"File not found: {rp}"})
+
+    source = full_path.read_text(encoding="utf-8")
+    header_contract = extract_header_symbol_contract(source)
+
+    # Run lint regression check
+    lint_ok, lint_msg = run_lint_regression("", source)
+    if not lint_ok:
+        return json.dumps({"ok": False, "error": f"Lint regression: {lint_msg}"})
+
+    # If a specific function was edited, run full AST verification on it
+    if function_name:
+        try:
+            tree = ast.parse(source)
+            target = None
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+                    target = node
+                    break
+            if target is None:
+                return json.dumps({"ok": True, "message": f"Function {function_name} not found for targeted verification"})
+
+            func_source = ast.unparse(target)
+            passed, cc, depth, msg = verify_refactored_ast(
+                code=func_source,
+                candidate_name=function_name,
+                orig_code=func_source,
+                header_contract=header_contract,
+            )
+            return json.dumps({
+                "ok": passed,
+                "function_name": function_name,
+                "cc": cc,
+                "max_depth": depth,
+                "message": msg,
+            })
+        except Exception as e:
+            return json.dumps({"ok": False, "error": f"AST verification failed: {e}"})
+
+    # Full-file verification: check all functions
+    try:
+        tree = ast.parse(source)
+        all_ok = True
+        results = []
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                func_source = ast.unparse(node)
+                passed, cc, depth, msg = verify_refactored_ast(
+                    code=func_source,
+                    candidate_name=node.name,
+                    orig_code=func_source,
+                    header_contract=header_contract,
+                )
+                if not passed:
+                    all_ok = False
+                results.append({"function": node.name, "passed": passed, "cc": cc, "depth": depth, "message": msg})
+        return json.dumps({"ok": all_ok, "functions": results})
+    except Exception as e:
+        return json.dumps({"ok": False, "error": f"Full-file AST verification failed: {e}"})

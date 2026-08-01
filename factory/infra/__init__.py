@@ -14,6 +14,9 @@ from factory.infra._runtime import (
     RAW_OUTPUTS, PHASE_SUMMARIES, SCOPE_CONTEXT,
     _PHASE_ORDER, _SKIPPED_PHASES, _RECOVERY_COUNT, _COMPACTION_COUNT,
 )
+from factory.infra.ast_verifier import verify_refactored_ast, run_lint_regression, extract_header_symbol_contract
+from factory.infra.ast_analyzer import scan_file_for_anti_patterns
+from factory.infra.virtual_ast_buffer import VirtualASTBuffer, ensure_pydantic_imports
 
 __all__ = [
     "main",
@@ -26,4 +29,7 @@ __all__ = [
     "RAW_OUTPUTS", "PHASE_SUMMARIES", "SCOPE_CONTEXT",
     "_PHASE_ORDER", "_SKIPPED_PHASES", "_RECOVERY_COUNT", "_COMPACTION_COUNT",
     "DEFAULT_AGENT_SETTINGS", "ROLE_AGENT_SETTINGS", "MAX_AGENTS",
+    "verify_refactored_ast", "run_lint_regression", "extract_header_symbol_contract",
+    "scan_file_for_anti_patterns",
+    "VirtualASTBuffer", "ensure_pydantic_imports",
 ]
