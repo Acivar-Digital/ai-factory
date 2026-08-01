@@ -411,7 +411,7 @@ class TaskState(BaseModel):
 class OrchestratorState(BaseModel):
     bd_id: str
     run_dir: str
-    current_phase: str = "planner"  # MUST be a member of _PHASE_ORDER (role keys)
+    current_phase: str = "intern"  # MUST be a member of _PHASE_ORDER (role keys)
     phase_attempts: dict[str, int] = {}
     phase_reexec: int = 0
     tasks: dict[str, TaskState] = {}

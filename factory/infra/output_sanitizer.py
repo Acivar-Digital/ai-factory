@@ -404,6 +404,7 @@ def clean_role_output(raw: str | None, model: type[T]) -> T:
     try:
         return model.model_validate_json(normalized)
     except Exception as e:
+        val_err = str(e)
         try:
             from factory.infra.control import CONTROL_SHEET
             healer_model = CONTROL_SHEET.model("healer_mode")
@@ -438,7 +439,7 @@ def clean_role_output(raw: str | None, model: type[T]) -> T:
                     return asyncio.run(healer_agent.run(
                         f"Malformed Raw Output:\n{raw}\n\n"
                         f"Target Schema:\n{schema_str}\n\n"
-                        f"Validation Error:\n{str(e)}"
+                        f"Validation Error:\n{val_err}"
                     ))
                     
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
