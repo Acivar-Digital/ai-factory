@@ -27,7 +27,7 @@ from factory.common import OUTPUT_TYPE_REGISTRY, _run_tool, log_operator, resolv
 from factory.infra.control import CODER_READ_FILE_BUDGET, CONTROL_SHEET, ORCH_ROOT, PKG_DIR, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REPO_ROOT, SKILL_MAP, SKILL_ROLES
 from factory.infra.models import ApprovedTask, Strategy, TaskResult
 from factory.infra.tools_file import _parse_range, batch_read, delete_file, normalize_read_path, read_file, rename_file, write_file
-from factory.infra.tools_shell import add_constant, add_import, move_symbol, replace_function, replace_text
+from factory.infra.tools_shell import add_constant, add_import, move_symbol, replace_function, replace_text, verify_edit
 from factory.infra.tools_memory import remember
 
 UNTRUSTED_OPEN = '<<<UNTRUSTED_USER_TASK>>>'
@@ -341,7 +341,7 @@ READ_ONLY_TOOLS = [remember, batch_read]
 _DISCOVERY_TOOLS = {'investigate', 'search', 'list_files', 'get_file_symbols', 'get_repo_structure', 'query_knowledge_graph', 'find_related_code', 'get_code_hierarchy'}
 READ_FILE_TOOLS = READ_ONLY_TOOLS + [read_file]
 _TOOL_BY_NAME = {}
-MODIFY_TOOLS = [write_file, replace_text, replace_function, add_constant, add_import, delete_file, rename_file, move_symbol]
+MODIFY_TOOLS = [write_file, replace_text, replace_function, add_constant, add_import, delete_file, rename_file, move_symbol, verify_edit]
 TOOL_REGISTRY: dict[str, list] = {'read-only': READ_ONLY_TOOLS, 'AST-edit': READ_FILE_TOOLS + MODIFY_TOOLS, 'CLI-wrapper': READ_FILE_TOOLS + MODIFY_TOOLS, 'python-first-then-agent': READ_ONLY_TOOLS}
 TOOL_REGISTRY_KEYS = {f.__name__ for funcs in TOOL_REGISTRY.values() for f in funcs}
 _TOOL_BY_NAME.update({f.__name__: f for funcs in TOOL_REGISTRY.values() for f in funcs})
