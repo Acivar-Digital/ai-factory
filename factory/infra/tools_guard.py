@@ -94,6 +94,8 @@ _READ_FATAL = 'READ BUDGET EXHAUSTED. You have finished reading. Produce your ou
 READ_FORGIVE_BUDGET = 3
 _READ_REDUNDANT = 'REDUNDANT READ: every file you requested was ALREADY read this run. The staging copy is eviction-exempt and holds the full file content — re-reading wastes your tool budget. Do NOT call batch_read/read_file again for these paths. Apply your edits or emit final_result now.'
 
+_MODIFY_TOOLS = {'replace_function', 'replace_text', 'write_file', 'add_constant', 'add_import', 'move_symbol', 'delete_file', 'rename_file'}
+
 @dataclass(kw_only=True)
 class GuardToolset(WrapperToolset[AgentDepsT]):
     """WrapperToolset that absorbs unknown-tool calls instead of crashing."""
@@ -115,6 +117,7 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         self._seen: dict[str, str] = {}
         self._has_planned: bool = False
         self._plan_nudges: int = 0
+        self._has_edited: bool = False
 
     def _warning(self, name: str) -> str:
         keys = sorted(self._known_tools.keys())
@@ -132,14 +135,22 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         return _GuardDict(tools, self)
 
     async def call_tool(self, name: str, tool_args: dict[str, Any], ctx: Any, tool: ToolsetTool[AgentDepsT]) -> Any:
-        if name not in ('remember', 'final_result', 'keep_memory'):
-            if not self._has_planned:
-                self._plan_nudges += 1
-                if self._plan_nudges >= 3:
-                    raise RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")
-                return "SYSTEM ERROR: You MUST call the 'remember' tool to record your step-by-step plan BEFORE using any search or edit tools. You are blocked until you plan."
+        if name in _MODIFY_TOOLS and not self._has_planned:
+            self._plan_nudges += 1
+            if self._plan_nudges >= 3:
+                raise RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")
+            return "SYSTEM ERROR: You MUST call the 'remember' tool to record your step-by-step plan BEFORE using modification tools (replace_function, replace_text, write_file, add_constant, add_import, move_symbol, delete_file, rename_file)."
         if name == 'remember':
             self._has_planned = True
+        if name in _MODIFY_TOOLS:
+            self._has_edited = True
+        if name == 'final_result' and not self._has_edited:
+            from factory.infra.tools_memory import get_current_role
+            role = get_current_role()
+            if role in ('intern', 'engineer'):
+                return ("SYSTEM ERROR: You cannot call final_result without modifying code! "
+                        "You MUST apply your refactoring edits to factory/temp/<target_file> using "
+                        "replace_function or replace_text, verify them with verify_edit, and ensure CC <= 5 before completing.")
         if name not in self._known_tools:
             return self._warning(name)
         if name in _DISCOVERY_TOOLS:
@@ -310,7 +321,7 @@ def log_response_raw(phase: str, role: str, ident: str, res: Any) -> None:
     (d / f'response_raw_{ident}_{ts}.txt').write_text('\n\n'.join(parts) if parts else f'(no output/tool-call parts captured; see response_raw_{ident}.json)', encoding='utf-8')
 
 READ_ONLY_TOOLS = [remember, batch_read]
-_DISCOVERY_TOOLS = {'investigate', 'search', 'list_files', 'get_file_symbols', 'get_repo_structure', 'query_knowledge_graph', 'find_related_code', 'get_code_hierarchy'}
+_DISCOVERY_TOOLS = {'investigate', 'search', 'list_files', 'get_file_symbols', 'get_repo_structure', 'query_knowledge_graph', 'find_related_code', 'get_code_hierarchy', 'grep_codebase'}
 READ_FILE_TOOLS = READ_ONLY_TOOLS + [read_file]
 _TOOL_BY_NAME = {}
 MODIFY_TOOLS = [write_file, replace_text, replace_function, add_constant, add_import, delete_file, rename_file, move_symbol, verify_edit]
