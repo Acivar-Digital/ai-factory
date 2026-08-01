@@ -376,9 +376,17 @@ def _run_verify_edit(author: str, bd: str) -> str | None:
             result = verify_edit(staged_file_path, None)
             parsed = json.loads(result) if result else {}
             if parsed.get("ok") is False:
+                failed = [f for f in parsed.get("functions", []) if not f.get("passed", True)]
+                if failed:
+                    details = "; ".join(
+                        f"fn '{f.get('function', '?')}' (CC={f.get('cc', 0)}): {f.get('message', '')}"
+                        for f in failed
+                    )
+                else:
+                    details = parsed.get("error", "unknown error")
                 return (
                     f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                    f"{parsed.get('error', 'unknown error')}"
+                    f"{details}"
                 )
             functions = parsed.get("functions", [])
             for fn in functions:
