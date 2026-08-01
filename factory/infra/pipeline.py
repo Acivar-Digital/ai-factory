@@ -6,7 +6,6 @@ import json
 import os
 import re
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -47,43 +46,18 @@ from factory.infra.output_sanitizer import (
 )
 from factory.infra.state import save_state, record_phase
 from factory.infra.tools import wrap_injected_context
-from factory.infra.tools_shell import verify_edit
 from factory.infra.validation import (
     EXCHANGE_ROLES, REVIEW_PASS_FIELD, MAX_RETRIES, PLAN_INVARIANT_RETRIES,
     check_plan_invariants, _downstream_closure,
 )
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
-MAX_FILE_SIZE = 1_000_000
-VERIFY_EDIT_TIMEOUT = 30
-CHECKPOINT_TTL_SECONDS = 86400
 
 
 def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, str | None]:
     """Parse the user prompt with an optional YAML front-matter block.
 
     Returns ``(resume_flag, task_spec, scope, start_phase, stop_phase)``.
-
-    Format::
-
-        ---
-        Resume: false
-        bd: baziforecaster-hbh1
-        start_phase: planner
-        stop_phase: supervisor_plan
-        scope:
-          - src2/core/schemas/unified.py
-          - src2/engine/
-        ---
-        # EPIC
-        ...freeform markdown body...
-
-    The front-matter is delimited by leading ``---`` / closing ``---``. If no
-    front-matter is present the first line MUST be a strict ``Resume:
-    True|False`` (legacy format) — fail loudly otherwise. ``scope`` is a
-    context hint only (never wired to an ACL); defaults to ``[]`` when absent.
-    ``start_phase`` / ``stop_phase`` control which pipeline segment runs:
-    if set, they override CLI ``--from`` / ``--stop-after``.
     """
     if not prompt_file.exists():
         return False, "Create a python script that prints 'This Harness is Working'", [], None, None
@@ -176,10 +150,7 @@ def _recover_from_unexpected_behavior(
     e: UnexpectedModelBehavior,
     agent_id: str | None = None,
 ) -> str:
-    """Recover structured output when the model hallucinates a tool call.
-
-    Both `do_role` and `record_coder` share this path. Raises on unrecoverable.
-    """
+    """Recover structured output when the model hallucinates a tool call."""
     real_messages = _load_role_messages(role, agent_id=agent_id)
     raw = extract_model_json(real_messages)
     if not raw:
@@ -363,68 +334,6 @@ async def record_coder(
     return out
 
 
-async def process_file(
-    filepath: str,
-    brief: str,
-    bd: str,
-    history: list[tuple[str, str]],
-    exchange: list[ExchangeTurn],
-    pass_counter: dict[str, int],
-    prior: list[ExchangeTurn],
-    state_dict: dict[str, Any],
-) -> str:
-    """Run the intern on a file, verify the edit, then pass to the Boss.
-
-    After the intern produces an edit, ``verify_edit`` is called
-    automatically for AST verification + lint regression.  If verification
-    fails, the errors are injected into the prompt so the Boss can see
-    what went wrong and fix it.
-    """
-    print("\n=== [conductor -> intern] (verify_edit pipeline) ===", flush=True)
-    intern_out = await load_skill("intern", brief, bd)
-    out_md = PHASE_SUMMARIES.get("intern", intern_out)
-    history.append(("intern", out_md))
-    PHASE_SUMMARIES["intern"] = out_md
-    print(f"\n--- intern ---\n{out_md}", flush=True)
-    update_status_board(history, "intern", bd)
-
-    verify_result: str | None = None
-    if intern_out and intern_out.strip():
-        try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(verify_edit, filepath), timeout=VERIFY_EDIT_TIMEOUT,
-            )
-            verify_result = result
-            try:
-                vobj = json.loads(result)
-                if vobj.get("ok") is True:
-                    print(f"[verify_edit] {filepath}: PASS", flush=True)
-                else:
-                    print(f"[verify_edit] {filepath}: FAIL — {result}", flush=True)
-            except json.JSONDecodeError:
-                print(f"[verify_edit] {filepath}: non-JSON result: {result}", flush=True)
-        except asyncio.TimeoutError:
-            verify_result = json.dumps({"ok": False, "error": f"verify_edit timed out after {VERIFY_EDIT_TIMEOUT}s"})
-            print(f"[verify_edit] {filepath}: TIMEOUT after {VERIFY_EDIT_TIMEOUT}s", flush=True)
-        except Exception as e:
-            verify_result = json.dumps({"ok": False, "error": str(e)})
-            print(f"[verify_edit] {filepath}: ERROR — {e}", flush=True)
-
-    if verify_result is not None:
-        try:
-            vobj = json.loads(verify_result)
-            if vobj.get("ok") is not True:
-                error_detail = vobj.get("error", verify_result)
-                brief += f"\n\n=== VERIFY_EDIT FAILURE ===\nAST/lint verification failed for {filepath}:\n{error_detail}\nFix the verification errors before proceeding to review."
-        except json.JSONDecodeError:
-            brief += f"\n\n=== VERIFY_EDIT FAILURE ===\nVerification produced non-JSON output for {filepath}:\n{verify_result}"
-
-    state_dict["brief"] = brief
-    print("\n=== [conductor -> boss] (with verify_edit context) ===", flush=True)
-    boss_out = await do_role("boss", brief, bd, history, exchange, pass_counter, prior, state_dict)
-    return boss_out
-
-
 def passed(reviewer: str, out: str) -> bool:
     """Read the reviewer's pass/fail from its JSON output."""
     try:
@@ -576,7 +485,6 @@ def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool =
         from factory.infra.artefacts import artefacts_dir
         plan_file = artefacts_dir() / "workplan" / "planner" / "planner.json"
         plan_file.parent.mkdir(parents=True, exist_ok=True)
-        # Normalize JSON escapes/domain terms before persisting
         from factory.tools.normalize_json_escapes import remap
         text = json.dumps(draft_dict, indent=2, ensure_ascii=False)
         normalized_text = remap(text)
@@ -689,10 +597,7 @@ def _sync_state(st: Any) -> None:
 
 
 def _checkpoint(phase: str, st: Any, stop_after: str | None, bd: str, exchange: list, history: list) -> bool:
-    """Persist validated outputs + advance current_phase.
-
-    Returns True when --stop-after <phase> was requested (caller must STOP).
-    """
+    """Persist validated outputs + advance current_phase."""
     _sync_state(st)
     record_phase(st, phase)
     save_state(st)
@@ -914,7 +819,6 @@ async def run_red_team_gate(
         if passed_:
             print(f"[gate] red_team attempt {attempt}: PASS -> proceed to ops")
             return batch
-        # When red_team FAILS, status board must show loop-back to coder.
         update_status_board(history if history is not None else [], "red_team", bd)
         if attempt == MAX_RETRIES:
             print(f"[WARN] [gate] red_team attempt {attempt}: FORCED PASS -> overriding evaluations and proceeding (propose-only, unpushed)", flush=True)
@@ -929,9 +833,6 @@ async def run_red_team_gate(
                     marker = f"[FORCED PASS attempt {attempt} — UNVERIFIED, review files: {files}]"
                     ev.comments = (marker + " " + (ev.comments or "")).strip()
                     ev.approved = "Yes"
-            # Update the last exchange entry in-place with the modified audit
-            # instead of appending a duplicate, to avoid corrupting the exchange
-            # history (the review's double-append bug fix).
             if exchange and exchange[-1].role == "red_team":
                 exchange[-1].content = audit.model_dump_json()
             return batch
@@ -1024,58 +925,28 @@ async def run_ops_phase(
     return result
 
 
-def save_checkpoint(filepath: Path, entry: dict[str, Any]) -> None:
-    """Atomically append a checkpoint entry to a JSONL file."""
-    line = json.dumps(entry, ensure_ascii=False) + "\n"
-    tmp_fd, tmp_path = tempfile.mkstemp(dir=filepath.parent, suffix=".tmp")
-    try:
-        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-            f.write(line)
-        os.replace(tmp_path, filepath)
-    except Exception:
-        if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
-        raise
+CHECKPOINT_TTL_SECONDS = 86400
 
 
-def load_checkpoint(filepath: Path) -> dict[str, dict]:
-    """Load checkpoint entries from a JSONL file, filtering out entries
-    when the file's modification time exceeds CHECKPOINT_TTL_SECONDS."""
-    if not filepath.exists():
+def load_checkpoint(checkpoint_file: Path | str) -> dict[str, Any]:
+    """Load AST verification checkpoint file if present and within TTL."""
+    path = Path(checkpoint_file)
+    if not path.exists():
         return {}
     try:
-        mtime = filepath.stat().st_mtime
+        mtime = path.stat().st_mtime
         if time.time() - mtime > CHECKPOINT_TTL_SECONDS:
             return {}
-    except OSError:
-        return {}
-
-    entries: dict[str, dict] = {}
-    try:
-        with filepath.open(encoding="utf-8") as f:
+        res = {}
+        with path.open("r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
-                try:
-                    entry = json.loads(line)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-                key = entry.get("file_path", "")
-                entries[key] = entry
-    except OSError:
+                data = json.loads(line)
+                if isinstance(data, dict) and "file_path" in data:
+                    res[data["file_path"]] = data
+        return res
+    except Exception:
         return {}
 
-    return entries
-
-
-def _preflight_check(filepath: Path) -> str | None:
-    """Check file size before parsing. Returns a warning string if the file
-    exceeds the size limit, or None if the file is OK to parse."""
-    size = filepath.stat().st_size
-    if size > MAX_FILE_SIZE:
-        return (
-            f"File exceeds size limit ({size} bytes > {MAX_FILE_SIZE} bytes). "
-            "Skipping pre-flight check."
-        )
-    return None

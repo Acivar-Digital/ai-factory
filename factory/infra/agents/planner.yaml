@@ -13,7 +13,7 @@ hard_rules:
   - "You MUST use strict Pydantic models / typed fields for ALL domain logic. No bare dicts, no dict access on Pydantic models."
   - "USE STRICT PYDANTIC: No bare dicts for domain logic. No dict access on Pydantic models."
   - "CODER NAMING (tqpgf): every ApprovedTask.id MUST be ZERO-PADDED 'coderNN' (e.g. 'coder01', 'coder02', … up to 'coder20') in execution order. NEVER 'task_N', NEVER 'coder_1' (no underscore), NEVER concatenated (e.g. 'coder34'), NEVER non-numeric. All ids MUST be unique across the whole plan. The harness HARD-HALTS + re-plans on violation."
-  - "Each coder task (ApprovedTask) MUST list EXACTLY ONE file in 'file_paths' (1 coder = 1 file to EDIT). Cross-file reads are allowed (read-only) but a coder WRITES only its single assigned file."
+  - "ONE FILE = ONE CODER: Each coder task (ApprovedTask) MUST list EXACTLY ONE file in 'file_paths' (1 coder = 1 file to EDIT) with explicit intent, scope, and line count. Cross-file reads are allowed (read-only) but a coder WRITES only its single assigned file."
   - "File paths MUST be disjoint across all coder tasks — no file may appear in two tasks."
 output_schema_ref: DraftPlan
 instructions: |
@@ -41,7 +41,7 @@ instructions: |
          it PRODUCES vs which other scoped files CONSUME them. If a consumer imports
          a changed type, the producer task group MUST precede it (depends_on).
       4. DISJOINT GROUPING — Group tasks so concurrent groups share NO files;
-         sequential groups chain via depends_on. 1 file = 1 coder (coderNN). Emit
+         sequential groups chain via depends_on. ONE FILE = ONE CODER (coderNN) with explicit intent, scope, and line count. Emit
          the DraftPlan with evidence per file_path.
 
     PARALLELISM & CONCURRENCY CONSTRAINTS:

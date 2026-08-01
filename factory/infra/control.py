@@ -18,14 +18,6 @@ from factory.infra.http_client import create_resilient_http_client
 # =====================================================================
 # RUNTIME PATH CONFIGURATION (single source of truth)
 # =====================================================================
-# The orch/ runtime tree (logs, reports, context, prompt, temp) is rooted at
-#     ORCH_ROOT = REPO_ROOT / SANDBOX_DIR / "orch"
-# where REPO_ROOT and SANDBOX_DIR are loaded from factory/infra/.env
-# so the sandbox location is REUSABLE WITHOUT code changes:
-#     CWD     = "/abs/path/to/repo"      # repo root
-#     SandBox = "factory"     # subdir under CWD that hosts runtime
-# Edit .env to relocate the runtime tree. Safe defaults fall back to the
-# current working directory + "factory".
 def _load_runtime_env() -> dict[str, str]:
     env: dict[str, str] = {}
     p = Path(__file__).resolve().parent / ".env"
@@ -61,12 +53,6 @@ USER_PROMPT_PATH = PKG_DIR / "prompt" / "user_prompt.md"  # committed task spec
 # =====================================================================
 # 0. DEFAULT PYDANTIC-AI STRUCTURED-OUTPUT CONVENTION (injected for ALL models)
 # =====================================================================
-# Untrained / free-tier models (e.g. hy3_free) are NOT fine-tuned on the
-# pydantic-ai output convention, so they emit prose / `tool_calls` with null
-# content / reasoning instead of a valid `final_result` call. We spell the
-# convention out and prepend it to EVERY structured-output agent's system
-# prompt (see tools.load_skill / tools.build_worker_spec). pydantic-ai's
-# output tool is always named `final_result` (pydantic_ai/result.py).
 PYDANTIC_AI_INSTRUCTIONS = (
     "You run inside the pydantic-ai agent framework and MUST return structured output. "
     "Provide your final answer by calling the `final_result` tool EXACTLY ONCE, with "
@@ -90,9 +76,7 @@ class SystemSettings(BaseSettings):
         extra="ignore",
     )
 
-    # MCPMart Gateway (Port 18000) -- secrets supplied via env / .env only.
-    # NEVER commit a real key; None forces env resolution and fails loudly at
-    # request time if unset (SA1-F1 remediation).
+    # MCPMart Gateway (Port 18000)
     mcpmart_base_url: str = Field(default="http://10.32.34.243:18000/v1/openai")
     mcpmart_api_key: str | None = Field(default='localfreegemini')
 
@@ -107,50 +91,22 @@ class SystemSettings(BaseSettings):
     literouter_url: str = Field(default="http://localhost:7766/v1")
     literouter_auth_key: str | None = Field(default='sk-lr-8f2a9e3b1c4d7e5f')
 
-    # Application & Infrastructure -- DB credentials come from env (DATABASE_URL).
+    # Application & Infrastructure
     database_url: str = Field(default="")
     valkey_host: str = Field(default="10.32.34.243")
     valkey_port: int = Field(default=6379)
 
-    # Telegram Bot -- token supplied via env (TELEGRAM_BOT_TOKEN), never committed.
+    # Telegram Bot
     telegram_bot_token: str = Field(default="")
     telegram_admin_id: int = Field(default=0)
     telegram_api_base: str = Field(default="http://127.0.0.1:9999")
 
 
-# Instantiate settings
 settings = SystemSettings()
 
 # =====================================================================
 # 2. PROVIDERS REGISTRY
 # =====================================================================
-# All providers are instantiated once using the validated settings
-#
-# Shared transport client WITH EXPLICIT TIMEOUTS. pydantic-ai's default
-# `create_async_http_client()` ships with NO timeout, so a dead/unreachable
-# endpoint hangs the event loop forever (the observed "run just hangs at
-# calling model"). connect=15s fails fast on unreachable hosts; read=300s
-# still permits long generations; the outer run_with_loopguard wait_for is
-# the final backstop. The client itself (pool/HTTP2/TLS/timeout config) is
-# built in `http_client.create_resilient_http_client`; RETRYABLE_STATUS and
-# MAX_MODEL_RETRIES are re-exported from that module for `runner._run_agent_retry`.
-
-# =====================================================================
-# 2a. RETRY STRATEGY (agent layer, NOT transport layer)
-# =====================================================================
-# Transient HTTP blips (429 rate-limits, 5xx gateway hiccups) are retried at the
-# AGENT layer by `runner._run_agent_retry` via tenacity `wait_exponential` — NOT
-# by a custom httpx transport. A transport-level replay would discard the
-# accumulated agent conversation, so retries stay above the provider boundary:
-# the same single model call is simply re-issued with jittered exponential
-# backoff, no context loss. On exhaustion `_run_agent_retry` writes a structured
-# FAIL report and exits with SystemExit(1) (graceful abort, no traceback crash).
-
-# Hard wall-clock ceiling for every CLI subprocess the orchestrator spawns
-# (tool wrappers + coder sub-script). Without this, a hung CLI (e.g. a stuck
-# investigate.py or .git/hooks/pre-push) blocks the asyncio loop forever —
-# the per-turn AGENT_RUN_TIMEOUT wait_for cannot interrupt a synchronous
-# subprocess.run (see review.md R6).
 TOOL_SUBPROCESS_TIMEOUT = 300.0
 
 
@@ -186,18 +142,11 @@ def _redact_headers(headers) -> dict:
 
 
 def _redact_url(url: object) -> str:
-    """Drop query string so tokens passed as URL params never hit disk."""
     text = str(url)
     return text.split("?", 1)[0] + ("?***REDACTED_QUERY***" if "?" in text else "")
 
 
 def _redact_payload(payload: str) -> str:
-    """Recursively mask credential-shaped keys in JSON request/response bodies.
-
-    Also redacts whole-value secrets: any string that looks like a bearer /
-    API key / sk-... token is masked in place so auth material is never written
-    to the traffic log on disk (SA1-F5).
-    """
     lowered = payload.lower()
 
     def _mask(value):
@@ -217,7 +166,6 @@ def _redact_payload(payload: str) -> str:
     try:
         return json.dumps(_mask(json.loads(payload)), ensure_ascii=False, indent=2)
     except Exception:
-        # Non-JSON body: blanket-mask obvious secret strings before writing.
         if any(s in lowered for s in ("bearer ", "sk-", "sk_", "api_key", "apikey", "password", "secret")):
             return "***REDACTED_BODY***"
         return payload[:20000]
@@ -284,15 +232,9 @@ PROVIDERS: dict[str, OpenAIProvider] = {
 }
 
 # =====================================================================
-# 2b. STARTUP GATEWAY REACHABILITY PROBE (fail-loud on dead gateways)
+# 2b. STARTUP GATEWAY REACHABILITY PROBE
 # =====================================================================
-# The orchestrator only "works" if the model-gateway services are up. A dead
-# gateway previously surfaced as a cryptic httpx.ConnectError mid-run. This
-# probe runs ONCE at startup and names exactly which gateway(s) are down so
-# the operator can start the service (or fix .env URLs) instead of guessing.
 class GatewayProbeURLs(BaseModel):
-    """Typed map of model-gateway name -> base URL, probed at startup."""
-
     mcpmart: str
     antigravity: str
     literouter: str
@@ -306,12 +248,6 @@ GATEWAY_PROBE = GatewayProbeURLs(
 
 
 async def verify_gateways_reachable() -> None:
-    """Raise RuntimeError listing any unreachable model gateways.
-
-    A 2xx/3xx/4xx response means the host is reachable; only connection
-    failures / timeouts / bad URLs count as down. Run once at startup so a
-    dead gateway fails loudly with a clear message instead of a mid-run hang.
-    """
     unreachable: list[str] = []
     async with create_resilient_http_client() as client:
         for name, url in GATEWAY_PROBE.model_dump().items():
@@ -521,16 +457,9 @@ gemini_2_5_pro = OpenAIChatModel(
 )
 
 # =====================================================================
-# 4. CONTROL SHEET (Role-to-Model Object Mapping) — Pydantic model (D06-C)
+# 4. CONTROL SHEET (Role-to-Model Object Mapping)
 # =====================================================================
-# Harness model split (runner.py is the deterministic conductor; no LLM orchestrator).
-# Coder/planner = deepseek_flash (cheap); supervisors = deepseek_flash;
-# red_team = deepseek_flash; ops = laguna_xs. Swap freely by editing
-# load_control_sheet() — models are sourced from the instantiated OpenAIChatModel
-# objects above, NEVER hard-coded as raw "provider:model" strings.
 class ControlSheet(BaseModel):
-    """Typed model-key -> instantiated OpenAIChatModel registry (no plain dict)."""
-
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     models: dict[str, OpenAIChatModel]
@@ -542,21 +471,15 @@ class ControlSheet(BaseModel):
 
 
 def load_control_sheet() -> ControlSheet:
-    """Build the CONTROL_SHEET Pydantic model from the instantiated orchestrator models."""
     return ControlSheet(
         models={
-            "planner_model": gemini_3_5_flash_low,
+            "planner_model": gemini_3_1_pro_low,
             "supervisor_plan_model" : gemini_3_1_pro_low,
             "supervisor_review_model": gemini_3_1_pro_low,
-            "coder_model": gemini_3_5_flash_low,
+            "coder_model": gemini_3_1_pro_low,
             "red_team_model": gemini_3_1_pro_low,
             "ops_model": laguna_xs,
             "compact_model": gemini_3_5_flash_extra_low,
-            # codebase_model: the sandboxed discovery/analysis model for /search
-            # and /investigate CLIs. Sourced from the antigravity_manager gateway
-            # (same family as the legacy gemini_3_5_flash_extra_low) so the
-            # tools stay INSIDE the orchestrator sandbox instead of reaching
-            # out to the external admin/deepseek_flash/controls.py CONTROL_SHEET.
             "codebase_model": gemini_3_5_flash_extra_low,
             "healer_mode" : gemini_3_5_flash_extra_low,
         }
@@ -567,7 +490,7 @@ CONTROL_SHEET = load_control_sheet()
 
 
 # =====================================================================
-# 5. COMPACTION CONFIG (token-budget Context Compaction Gate, build.md §8.5)
+# 5. COMPACTION CONFIG (token-budget Context Compaction Gate)
 # =====================================================================
 
 
@@ -577,17 +500,6 @@ class PerRoleConfig(BaseModel):
 
 
 class CompactionConfig(BaseModel):
-    """Pydantic model for compaction gate parameters — no plain dict access.
-
-    summarizer_model: key into CONTROL_SHEET (runner does CONTROL_SHEET[key]);
-        compact_model = laguna_xs (cheapest) is the recommended small summariser.
-    compact_at_fraction: trigger when history >= this fraction of the RUNNING agent's
-        context window (token-based, not message-count).
-    hard_max_tokens: absolute ceiling regardless of model window.
-    keep_recent_messages: tail always retained untouched.
-    token_estimate: "char_div_4" (cheap) or "tiktoken" (if available).
-    """
-
     summarizer_model: str = "compact_model"
     compact_at_fraction: float = 0.6
     hard_max_tokens: int = 70000
@@ -609,28 +521,16 @@ COMPACTION_CONFIG = CompactionConfig()
 # =====================================================================
 # 6. ORCHESTRATOR CONTROL KNOBS
 # =====================================================================
-# WIP semaphore cap (Q11-A): bounds concurrent subagents -> no rate-limit crashes.
 MAX_AGENTS = 20
 
-# Read-Bucket Protocol (RBP) budgets — central config, imported by tools.GuardToolset.
-# batch_read attempts are uniform for ALL agents (kills the 15-call research loop).
 READ_BUDGET = 15
-# Raw read_file is coder-only (pre-edit targeted reads); non-coders get 0.
 CODER_READ_FILE_BUDGET = 10
-# When True, OPS phase BLOCKS on a human approval sentinel before pushing.
 REQUIRE_HUMAN_GATE = False
 
 # =====================================================================
 # 7. SKILL_MAP (M2) — role -> template + ROLE model key + output_type + tools
 # =====================================================================
-# D4 slim: the SkillSpec carries NO model/output_type. Those BIND AT SPAWN
-# from this map (M3 `load_skill`). `tool_bucket` indexes TOOL_REGISTRY in
-# tools.py; "" means the role gets no tools (broadcast-only phases).
-# `output_type` is a string key resolved by M3; harmless here for M2.
-# Replaced the former plain dict with Pydantic models (D06-C).
 class SkillEntry(BaseModel):
-    """One role's spawn binding (template + model key + output type + tool bucket)."""
-
     template: str
     model_key: str
     output_type: str
@@ -639,13 +539,10 @@ class SkillEntry(BaseModel):
 
 
 class SkillMap(BaseModel):
-    """Typed role -> SkillEntry registry (no plain dict)."""
-
     roles: dict[str, SkillEntry]
 
 
 def load_skill_map() -> SkillMap:
-    """Build the SKILL_MAP Pydantic model from the frozen role config."""
     return SkillMap(
         roles={
             "planner": SkillEntry(
@@ -711,19 +608,11 @@ def load_skill_map() -> SkillMap:
 SKILL_MAP = load_skill_map()
 
 
-# The 6 orchestrator roles (D8 eager forge order).
 SKILL_ROLES: list[str] = list(SKILL_MAP.roles.keys())
 
 
-# Per-role AGENT-LEVEL model settings. These OVERRIDE the model-level defaults
-# carried by each OpenAIChatModel in CONTROL_SHEET for the matching key
-# (pydantic-ai: agent.model_settings wins over model.settings). Single source
-# of truth for agent behaviour -- look up by role; fall back to DEFAULT.
 DEFAULT_AGENT_SETTINGS = ModelSettings(parallel_tool_calls=False)
 
 ROLE_AGENT_SETTINGS: dict[str, ModelSettings] = {
     role: DEFAULT_AGENT_SETTINGS for role in SKILL_ROLES
 }
-
-
-# (Section 8 deleted per grill-me B1 — no fallback; raw crash on failure)
