@@ -1,0 +1,345 @@
+# ============================================================================
+# BaziForecaster Audit Rubric
+# ============================================================================
+# This file defines CODEBASE-SPECIFIC scoring criteria for each audit tier.
+# The auditor agent must apply these criteria IN ADDITION to generic red-team
+# principles. When in doubt, these rules override generic heuristics.
+#
+# Severity scale:
+#   Critical  — data loss, credential leak, GDPR violation, broken production path
+#   High      — feature broken for users, stale reference causing silent failure
+#   Medium    — non-critical error handling gap, missed optimisation, style risk
+#   Low       — cleanup, doc inconsistency, minor code smell
+#   Info      — observation, no action required
+# ============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 1 — SECURITY
+# What "security" means for a Telegram Bazi bot handling personal birth data.
+# ─────────────────────────────────────────────────────────────────────────────
+security:
+  description: >
+    BaziForecaster handles sensitive personal data: Telegram user IDs, birth dates,
+    birth locations, and Bazi chart data. Security failures here are GDPR violations,
+    not just code bugs.
+
+  critical_patterns:
+    - pattern: "hardcoded database path"
+      example: 'db = Database("bot.db")'
+      rationale: >
+        SQLite path must come from env var or config, not a literal string.
+        A hardcoded path silently creates a second orphaned database if the
+        working directory changes (e.g., on VPS restart). coordinator.py is
+        the known offender — verify it was fixed.
+      grep: 'Database\(".*\.db"\)'
+
+    - pattern: "hardcoded API key or token"
+      example: 'OPENROUTER_API_KEY = "sk-..."'
+      rationale: >
+        All secrets must come from os.environ or .env via python-dotenv.
+        Grep for common key patterns in src2/ and admin/.
+      grep: '(sk-|Bearer |api_key\s*=\s*")[^{]'
+
+    - pattern: "user birth data in logs"
+      example: 'logger.info(f"User dob: {dob}")'
+      rationale: >
+        Birth dates, user_id, gender, and location are PII. They must never
+        appear in log output at any level. Structured logfire spans are acceptable
+        only if they are marked private or excluded from export.
+      grep: 'log.*dob|log.*birth|log.*user_id|print.*dob'
+
+    - pattern: "GDPR delete incomplete"
+      rationale: >
+        compliance.py delete_user() MUST cascade to ALL tables that hold user data:
+        DailyForecast, Session, NatalChart, UserProfile (and any future tables).
+        Missing a table = GDPR violation. Verify with read_file on compliance.py.
+      files_to_check:
+        - src2/core/services/compliance.py
+
+  high_patterns:
+    - pattern: "raw Session() instead of scoped_session"
+      rationale: >
+        The database layer uses SQLAlchemy's scoped_session for thread-safe
+        session management. Creating a raw Session() bypasses this and causes
+        session leaks in the async Telegram handler context.
+      grep: "= Session()\|Session(bind="
+
+    - pattern: "Telegram webhook secret not validated"
+      rationale: >
+        If the bot uses webhooks, the X-Telegram-Bot-Api-Secret-Token header
+        must be validated on every incoming request.
+
+  scoring_notes: >
+    A single Critical finding makes go_live_safe = False with no exceptions.
+    The known pre-existing Critical finding (coordinator.py hardcoded db path)
+    must be reported even if it predates this diff — it is still a blocker.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 2 — LOGIC
+# What "logic correctness" means for the ChronomancerCache → DailyForecast migration.
+# ─────────────────────────────────────────────────────────────────────────────
+logic:
+  description: >
+    Logic correctness in BaziForecaster means: all execution paths in the Telegram
+    handler pipeline are deterministic, error handling is explicit and typed, and
+    any rename or refactor has zero stale references in src2/. The auditor.yaml
+    "notes" field will specify WHAT changed in the current run — this rubric defines
+    HOW to evaluate any change, regardless of what it is.
+
+  permanent_standards:
+    - standard: "No stale symbol references after a rename"
+      how_to_check: >
+        When auditor.yaml notes describe a rename (e.g., class A → B), grep src2/
+        for the OLD name. Any hit outside of Alembic migration files is Critical.
+      severity: Critical
+
+    - standard: "Every new DB column must be handled in all insert paths"
+      how_to_check: >
+        When a new column is added to a model, grep for all places that construct
+        or insert that model. Each call site must supply the new column's value.
+        Omitting it on a NOT NULL column without a default = runtime crash.
+      severity: Critical
+
+    - standard: "3-pillar robustness must survive any migration"
+      how_to_check: >
+        Users without a birth hour are supported (hour_pillar = None).
+        Any change to coordinator.py, agents.py, or DB schema must handle
+        None hour gracefully. A NOT NULL column without a default on a row
+        that might have hour=None is a Critical failure.
+      files_to_always_check:
+        - src2/interfaces/telegram/chronomancer/coordinator.py
+        - src2/interfaces/telegram/chronomancer/agents.py
+      severity: Critical
+
+    - standard: "Error handling must be explicit — no bare except/pass"
+      how_to_check: >
+        Grep changed files for bare `except:` or `except Exception: pass`.
+        Silent failures hide bugs. Every exception must be logged or re-raised.
+      grep: "except.*:\\s*\\n\\s*pass"
+      severity: High
+
+    - standard: "__init__.py exports stay consistent with class renames"
+      how_to_check: >
+        When a class is renamed, verify the export in __init__.py uses the new
+        name. Old name must not be re-exported as an alias without documentation.
+      files_to_always_check:
+        - src2/interfaces/telegram/chronomancer/__init__.py
+        - src2/core/__init__.py
+      severity: High
+
+  known_decisions_do_not_reverse:
+    - "Flat 0.3 hidden stem weight in module2_root.py is intentional — do not flag"
+    - "Uniform hidden_ratio=1.0 in clash calculation is intentional — do not flag"
+    - "Missing hour pillar treated as None (not an error) — do not flag"
+    - "Output drain included in clash-adjusted formula is intentional — do not flag"
+
+  scoring_notes: >
+    The auditor.yaml "notes" field describes what SPECIFIC rename or change to
+    verify for the current run. Use this rubric's standards to score HOW WELL
+    that change was executed. Do not invent blast-radius checks beyond what
+    the notes describe — stay focused.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 3 — PERFORMANCE
+# What "performance" means for a Telegram bot with SQLAlchemy + async handlers.
+# ─────────────────────────────────────────────────────────────────────────────
+performance:
+  description: >
+    BaziForecaster uses asyncio (python-telegram-bot) with synchronous SQLAlchemy.
+    The critical performance failure mode is blocking the event loop with sync DB
+    operations inside async handlers. Secondary concern: N+1 queries on DailyForecast.
+
+  critical_patterns:
+    - pattern: "sync DB call inside async handler"
+      rationale: >
+        Any direct db.* call inside an async def (Telegram handler) blocks the
+        entire event loop while the DB query runs. This must be wrapped in
+        asyncio.run_in_executor or the call must be deferred.
+        Look for db.get_*, db.save_*, db.delete_* called directly inside
+        async def handle_* or async def callback_* functions.
+      grep: "await.*db\.\|async def.*:\n.*db\."
+      files_to_check:
+        - src2/interfaces/telegram/chronomancer/coordinator.py
+        - src2/interfaces/telegram/chronomancer/agents.py
+
+    - pattern: "N+1 query on DailyForecast"
+      rationale: >
+        If daily forecast retrieval loops over users and calls get_daily_forecast()
+        once per user, that is an N+1. Should be a single bulk query.
+      grep: "for.*user.*get_daily_forecast\|for.*in.*users"
+
+  high_patterns:
+    - pattern: "is_permanent filter using == False instead of .is_(False)"
+      rationale: >
+        SQLAlchemy generates non-index-safe SQL for == False comparisons on
+        Boolean columns. Must use .is_(False) for proper index use.
+      grep: "is_permanent == False\|is_permanent != True"
+      example_correct: "DailyForecast.is_permanent.is_(False)"
+
+    - pattern: "narrative cache miss on every call"
+      rationale: >
+        The narrative field (renamed from narrative_cache) should be checked
+        before calling the LLM. If coordinator.py always regenerates the narrative
+        even when one exists in the DB, that wastes tokens and adds latency.
+      files_to_check:
+        - src2/interfaces/telegram/chronomancer/coordinator.py
+
+    - pattern: "SQLAlchemy session not removed after request"
+      rationale: >
+        scoped_session.remove() must be called at the end of every handler
+        to return the session to the pool. Missing removes cause connection leaks.
+      grep: "\.remove()\|Session.remove"
+
+  low_patterns:
+    - pattern: "redundant re-computation of Bazi pillars"
+      rationale: >
+        Bazi engine calls are deterministic and pure. If the same birth data is
+        used twice in one handler, cache the result rather than calling twice.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 4 — TELEMETRY
+# What "go-live readiness" means for a production Telegram bot.
+# ─────────────────────────────────────────────────────────────────────────────
+telemetry:
+  description: >
+    Production readiness for BaziForecaster means: no print() in src2/, structured
+    logfire spans with correct levels, no TODO/FIXME/HACK markers in migrated code,
+    and all dev-only flags gated behind environment variables.
+
+  critical_patterns:
+    - pattern: "print() in production handlers"
+      grep: "^\\s*print("
+      scope: "src2/"
+      rationale: >
+        All output in src2/ must use the structured logger (logfire or Python logging).
+        print() bypasses log levels and is invisible to monitoring tools.
+      severity: High
+
+    - pattern: "TODO/FIXME/HACK in migrated files"
+      grep: "TODO|FIXME|HACK|XXX"
+      scope: "src2/"
+      rationale: >
+        Any marker left in production code is a deferred decision. Flag each one
+        with its file and line number so the developer can resolve before go-live.
+      severity: Medium
+
+    - pattern: "SIFU_MODE or dev flags not gated by env var"
+      rationale: >
+        Sifu Mode and any debug overrides must be controlled by environment variables,
+        not hardcoded booleans. A True hardcoded SIFU_MODE in production would
+        change the bot's persona for all users.
+      grep: "SIFU_MODE\s*=\s*True\|sifu_mode\s*=\s*True"
+      severity: Critical
+
+    - pattern: "OpenRouter/LLM calls not logged for billing audit"
+      rationale: >
+        Every LLM call must produce a logfire span with model name and token count
+        for billing reconciliation. Unlogged LLM calls = unauditable spend.
+      files_to_check:
+        - src2/interfaces/telegram/chronomancer/agents.py
+
+  go_live_checklist:
+    - "Zero ChronomancerCache references in src2/"
+    - "Zero chronomancer_cache table references in src2/"
+    - "compliance.py deletes from DailyForecast (not legacy table name)"
+    - "coordinator.py database path comes from env var, not hardcoded string"
+    - "All DailyForecast inserts supply is_permanent value"
+    - "No print() in src2/ handlers"
+    - "No SIFU_MODE = True hardcoded"
+
+  scoring_notes: >
+    This tier produces the final go-live verdict. Even if Tiers 1-3 are clean,
+    a hardcoded SIFU_MODE = True or print() in a production handler is a High
+    finding that blocks go-live. Apply the checklist above as a minimum bar.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 5 — MAINTAINABILITY (Technical Debt)
+# INFORMATIONAL ONLY — findings here NEVER block go-live.
+# Run this tier periodically (not on every deploy) to track accumulated debt.
+# ─────────────────────────────────────────────────────────────────────────────
+maintainability:
+  description: >
+    BaziForecaster has an ongoing src/ → src2/ migration. Technical debt audit
+    tracks what's accumulating over time, not what's broken today. No finding
+    in this tier should block go-live — it surfaces a backlog, not a gate.
+
+  go_live_impact: none  # this tier never sets go_live_safe = False
+
+  migration_debt:
+    - standard: "src/ references in src2/ code"
+      how_to_check: >
+        Grep src2/ for imports from src/. Any `from src.` import in src2/ is
+        migration debt — it means new code still depends on the old module.
+      grep: "from src\\."
+      scope: "src2/"
+      severity: Medium
+
+    - standard: "Legacy bot/ references still active"
+      how_to_check: >
+        Check if any src2/ code imports from src/bot/ or src/engine/ instead
+        of the new src2/core/ equivalents.
+      grep: "from src\\.bot\\.|from src\\.engine\\."
+      scope: "src2/"
+      severity: Medium
+
+  structural_debt:
+    - standard: "Circular import risk"
+      how_to_check: >
+        admin/code_hygiene/action/fix_circular_deps.py documents known circular
+        dependency chains. Check if any new imports in changed files create
+        new cycles between src2/core/, src2/interfaces/, src2/application/.
+      files_to_check:
+        - admin/code_hygiene/action/fix_circular_deps.py
+      severity: Low
+
+    - standard: "Functions exceeding reasonable complexity"
+      how_to_check: >
+        Grep changed files for functions longer than ~80 lines. Not a hard rule,
+        but functions this long in coordinator.py or agents.py are hard to test
+        and reason about. Flag for refactoring consideration.
+      severity: Low
+
+  test_debt:
+    - standard: "New public functions in src2/ with no unit test"
+      how_to_check: >
+        For each new function added in the diff, check if TEST/unit/ contains
+        a corresponding test. Missing tests for DB-touching functions (save_*,
+        get_*, delete_*) are Medium debt. Missing tests for pure engine functions
+        are Low debt.
+      severity: Medium
+
+    - standard: "Gold test coverage for changed pipeline paths"
+      how_to_check: >
+        If coordinator.py or agents.py changed, verify that at least one
+        TEST/GOLD/ scenario exercises the changed code path.
+        Check TEST/GOLD/run.py for the coverage mapping.
+      files_to_check:
+        - TEST/GOLD/run.py
+      severity: Medium
+
+  code_quality_debt:
+    - standard: "Missing type hints on public functions"
+      how_to_check: >
+        Grep changed files for `def ` without a return type annotation `->`.
+        Public functions (no leading underscore) in src2/ should have full
+        type hints for IDE support and static analysis.
+      grep: "^def [^_]"
+      severity: Low
+
+    - standard: "Dead code or commented-out blocks"
+      how_to_check: >
+        Grep changed files for large commented-out code blocks (3+ consecutive
+        comment lines that look like code, not documentation). These should be
+        deleted, not left in place.
+      grep: "^\\s*#.*=\\|^\\s*#.*def \\|^\\s*#.*import "
+      severity: Low
+
+  scoring_notes: >
+    Report all findings as Informational or Low/Medium only. Do NOT set
+    go_live_safe = False for this tier under any circumstances — maintainability
+    debt is tracked, not gated. Present findings as a numbered backlog list that
+    the team can prioritise in future sprints.

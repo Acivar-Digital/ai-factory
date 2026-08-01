@@ -1,0 +1,52 @@
+# ============================================================
+# Red-Team Fiduciary Audit — Configuration
+# ============================================================
+# Edit this file to define the scope of your audit, then run:
+#
+#   uv run python -m admin.auditor.audit
+#
+# CLI flags override these values when provided.
+# ============================================================
+
+# ── SCOPE ────────────────────────────────────────────────────
+# Uncomment EXACTLY ONE scope block.
+
+# Option A: Audit by date range
+# since: "2026-07-01"
+# until: "2026-07-02"   # optional upper bound
+
+# Option B: Audit the last N commits
+# last: 5
+
+# Option C: Audit a specific commit (or two for a range)
+# commit:
+#   - "abc123"
+#   - "def456"   # optional: omit for single-commit audit
+
+# ── CURRENT SCOPE ────────────────────────────────────────────
+# Auditing ALL commits from 2026-07-01 (yesterday's full session):
+#   wlq6.1–6.6: ChronomancerCache → DailyForecast rename + DB migration
+#   ifa1:       git_push_agent versioning upgrade
+#   iij3:       model resolution centralisation + VALKEY config
+#   + is_permanent schema, runner pipeline rewrite, coordinator updates
+since: "2026-07-01"
+until: "2026-07-02"
+
+# ── TIERS ────────────────────────────────────────────────────
+# Logic completed — 14 findings (3 Critical). Re-running crashed tiers.
+tiers: [performance, telemetry]
+
+# ── NOTES ────────────────────────────────────────────────────
+# Context for the agent — focus areas based on the change set
+notes: >
+  Focus on: (1) ChronomancerCache → DailyForecast rename blast radius — confirm
+  all callers in coordinator.py, agents.py, compliance.py, reset_90.py, and
+  clear_daily_forecasts.py were updated consistently. (2) DB migration correctness
+  — chronomancer_cache table renamed to daily_forecasts, verify no stale references
+  remain. (3) is_permanent column addition — check all insert/select paths handle
+  the new column. (4) forecast_store rename in chronomancer module — confirm
+  __init__.py exports and all imports updated. (5) GDPR delete path in compliance.py
+  — verify DailyForecast delete hits the correct table with no silent failure.
+  (6) git_push_agent versioning logic — flag any hardcoded paths or credential leaks.
+  NOTE: Diff is capped at 2,000 lines. Use grep_codebase to chase anything not visible
+  in the truncated diff.

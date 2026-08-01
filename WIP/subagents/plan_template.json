@@ -1,0 +1,22 @@
+{
+  "fixes": [
+    {
+      "fix_id": "F1",
+      "file": "src2/interfaces/telegram/chronomancer/forecast_store.py",
+      "description": "Add get_daily_forecast() to ForecastStore: query baziforecaster.db for today's forecast by user_id + date. BEFORE: No method exists. AFTER: def get_daily_forecast(self, user_id: str, date: str) -> dict | None: ...",
+      "strategy": "text_replace",
+      "why_strategy": "Single method addition — safest, isolated insert",
+      "verify_cmd": "uv run ruff check src2/interfaces/telegram/chronomancer/forecast_store.py"
+    },
+    {
+      "fix_id": "F2",
+      "file": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "description": "Wire get_daily_forecast into handle_daily: replace stub with real cache lookup. BEFORE: handle_daily returns placeholder. AFTER: calls forecast_store.get_daily_forecast(user_id, today) first, returns cached if found, else calls orchestrator.",
+      "strategy": "ast_surgical",
+      "why_strategy": "Targeted replace_function on handle_daily — minimal blast radius",
+      "verify_cmd": null
+    }
+  ],
+  "risk_level": "Medium",
+  "order_rationale": "F1 adds the data access layer (safe, no callers), F2 wires into the existing handler (depends on F1)"
+}

@@ -1,0 +1,69 @@
+{
+  "scanned_files_count": 118,
+  "audit_results": [
+    {
+      "name": "STEM_MAP and BRANCH_MAP constants",
+      "file_path": "src2/core/calendar/populate_calendar.py",
+      "line": 9,
+      "status": "DUPLICATION",
+      "severity": "LOW",
+      "reason": "These are static mapping constants used for Bazi/Calendar translations. Having them duplicated across core and engine modules suggests they should be moved to a shared constants or utility file to ensure consistency.",
+      "updated_at": "2026-07-07T22:18:09.936186+08:00"
+    },
+    {
+      "name": "Heavenly Stems list",
+      "file_path": "src2/engine/daily_pillar.py",
+      "line": 33,
+      "status": "DUPLICATION",
+      "severity": "LOW",
+      "reason": "This is a static list of the Ten Heavenly Stems used in Chinese astrology/calendar calculations. Since it is a fundamental constant used across multiple engine modules, it should be defined once in a shared constants file.",
+      "updated_at": "2026-07-07T22:18:17.956451+08:00"
+    },
+    {
+      "name": "branch_mapping_logic",
+      "file_path": "src2/engine/module12_compatibility.py",
+      "line": 304,
+      "status": "DUPLICATION",
+      "severity": "HIGH",
+      "reason": "The code implements a specific business logic mapping for branches (Yin, Wu, Xu -> Mao, etc.). This identical logic is repeated across two different engine modules, indicating a clear violation of DRY principles and should be refactored into a shared utility function.",
+      "updated_at": "2026-07-07T22:18:26.623363+08:00"
+    },
+    {
+      "name": "RAG context concatenation logic",
+      "file_path": "src2/engine/monthly_generator.py",
+      "line": 113,
+      "status": "DUPLICATION",
+      "severity": "LOW",
+      "reason": "The code implements a specific business logic for filtering and joining RAG context strings based on a sentinel value ('No specific references found.'). This logic is repeated across two different engine files and should be refactored into a shared utility function.",
+      "updated_at": "2026-07-07T22:18:34.801645+08:00"
+    },
+    {
+      "name": "calculate_end_date_logic",
+      "file_path": "src2/engine/monthly_generator.py",
+      "line": 186,
+      "status": "DUPLICATION",
+      "severity": "HIGH",
+      "reason": "The code block contains specific business logic for calculating the end date of a month, including a fallback for 2027 solar months and a hardcoded 29-day offset. This logic is repeated across two different engine files and should be refactored into a shared utility.",
+      "updated_at": "2026-07-07T22:18:43.508448+08:00"
+    },
+    {
+      "name": "find_best_month_logic",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 119,
+      "status": "DUPLICATION",
+      "severity": "HIGH",
+      "reason": "The code implements a specific business logic for finding the latest month entry that is less than or equal to a target date. This logic is repeated across two different files in the the same module, indicating a copy-paste violation that should be refactored into a shared utility function.",
+      "updated_at": "2026-07-07T22:18:52.280694+08:00"
+    },
+    {
+      "name": "Person profile mapping logic",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 142,
+      "status": "DUPLICATION",
+      "severity": "LOW",
+      "reason": "The code block is a data mapping function that transforms a person object (p) into a dictionary. This logic is repeated across two different files, which is a clear violation of DRY principles and should be refactored into a shared utility or a method on the person model.",
+      "updated_at": "2026-07-07T22:19:00.722119+08:00"
+    }
+  ],
+  "failed_audits": []
+}

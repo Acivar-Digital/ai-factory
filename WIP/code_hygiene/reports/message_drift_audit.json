@@ -1,0 +1,16 @@
+{
+  "scanned_files_count": 118,
+  "audit_results": [
+    {
+      "name": "status",
+      "file_path": "src2/interfaces/telegram/messages.yaml",
+      "line": 1,
+      "type": "unused_message",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "Message key `status` is defined in `messages.yaml` but not active in codebase.",
+      "updated_at": "2026-07-07T22:19:03.560896+08:00"
+    }
+  ],
+  "failed_audits": []
+}

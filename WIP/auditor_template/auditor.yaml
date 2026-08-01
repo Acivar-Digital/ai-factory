@@ -1,0 +1,48 @@
+# ============================================================
+# Red-Team Fiduciary Audit — Configuration
+# ============================================================
+# Edit this file to define the scope of your audit, then run:
+#
+#   uv run python -m admin.auditor_template.audit
+#
+# CLI flags override these values when provided.
+# ============================================================
+
+# ── SCOPE ────────────────────────────────────────────────────
+# Leave all scope variables commented out or null to audit
+# uncommitted working directory changes automatically.
+
+# Option A: Audit by date range
+# since: "2026-07-01"
+# until: "2026-07-02"
+
+# Option B: Audit the last N commits
+# last: 1
+
+# Option C: Audit a specific commit (or two for a range)
+# commits:
+#   - "abc123"
+
+# ── CURRENT SCOPE ────────────────────────────────────────────
+# Default: working directory changes
+since: null
+until: null
+last: null
+commits: null
+
+# ── TIERS ────────────────────────────────────────────────────
+# Tiers to run: security | logic | performance | telemetry | maintainability
+# Or set to "all" to run everything.
+tiers: [security, logic, performance, telemetry]
+
+# ── NOTES ────────────────────────────────────────────────────
+# Context for the agent — focus areas based on the change set
+notes: >
+  Verify overall correctness and logic of our recent AST codebase cleanup.
+  Confirm that removing dead code functions does not break callers.
+
+# ── TARGET PATHS ─────────────────────────────────────────────
+# Restrict the audit scope to specific directories/files
+paths:
+  - "src2/"
+

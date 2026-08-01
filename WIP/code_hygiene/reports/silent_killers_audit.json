@@ -1,0 +1,926 @@
+{
+  "scanned_files_count": 118,
+  "audit_results": [
+    {
+      "name": "RuntimeError",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 35,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to detect if an asyncio event loop is already running in the current thread. This is a safe and standard pattern for libraries that need to bridge synchronous and asynchronous code.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/core/rotator.py",
+      "line": 72,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The code silently swallows all exceptions during a file write operation (json.dump) intended for training data collection. Since this is likely a side-effect/logging-like operation for training data, failing to write the file does not crash the main application logic, but it is still a blind swallow of a generic Exception. However, in the context of a 'silent killer' audit, this is typically considered a low-to-medium risk because it prevents a crash in the context of a telemetry/logging operation. But strictly speaking, it is a 'swallowed exception' pattern. Given it's a training data dump, it's a safe fallback to not crash the app for a telemetry failure.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/core/rotator.py",
+      "line": 24,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value 'unknown' for agent_name is a safe fallback for telemetry/logging purposes. Missing attributes in a span are common and providing a default prevents the crash of the processor without losing critical system state.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/core/rotator.py",
+      "line": 36,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The code attempts to parse JSON messages, falling back to the raw string if parsing fails. Since this is for logging training data to a file, preserving the raw data for later analysis rather than crashing the application is a preferred behavior.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/core/rotator.py",
+      "line": 82,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The try-except block wraps optional telemetry/logging instrumentation (Logfire/OpenTelemetry). Failure to initialize these tools does not affect the core functionality of the KeyRotator class, making this a safe fallback.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/core/services/compliance.py",
+      "line": 95,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is captured in a list (storage_errors) and logged as an error. The loop continues to attempt deletion of other files, which is the correct behavior for a cleanup process to ensure maximum possible data removal.",
+      "updated_at": null
+    },
+    {
+      "name": "ClientError",
+      "file_path": "src2/core/services/storage.py",
+      "line": 44,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "Catching ClientError to return a boolean for file_exists is a standard and recommended pattern for Boto3 to check for object existence.",
+      "updated_at": null
+    },
+    {
+      "name": "RuntimeError",
+      "file_path": "src2/core/tools/bd_cli.py",
+      "line": 28,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and explicitly handled by printing the error message to stderr and exiting with a non-zero status code, which is the correct 'fail loudly' behavior for a CLI tool.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/core/tools/formatter.py",
+      "line": 99,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with default values (e.g., 'Unknown', 'N/A', '?') is appropriate here as this is a PDF reporting tool. In a reporting context, displaying a placeholder for missing data rather than crashing the entire document generation process is the expected and desired behavior.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/core/tools/formatter.py",
+      "line": 102,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'dict.get' with default values ('N/A', '?', etc.) is a safe fallback pattern for generating a report/PDF. In this context, it ensures the report is generated without crashing if some data fields are missing, providing a placeholder instead of a a failure.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/da_yun.py",
+      "line": 111,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a fallback to 'Unknown' for the 'element' attribute of a heavenly stem is a safe fallback for data retrieval from a static mapping (HEAVENLY_STEMS). It prevents the crash of the calculation engine during a loop that generates a cycle of 10 items, ensuring the application remains available while providing a clear indicator ('Unknown') of missing data.",
+      "updated_at": null
+    },
+    {
+      "name": "NotImplementedError",
+      "file_path": "src2/engine/daily_pillar.py",
+      "line": 129,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and handled by setting 'best' to None, which then triggers a fallback mechanism to check the previous year. This is a controlled fallback strategy for data availability rather than a silent failure.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/engine/daily_pillar.py",
+      "line": 180,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception handling is used to gracefully handle cases where data for the previous year's solar months is unavailable (NotImplementedError) or malformed (ValueError), which is an optional optimization to populate the anchors dictionary. Populating anchors from the previous year is a fallback mechanism to ensure continuity, and failing to do so silently is acceptable as the main loop (lines 185-210) will still function using the current year's data and the search logic.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/engine/daily_pillar.py",
+      "line": 204,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed up to allow the attempt to find anchors from the previous year's data. This is a safe fallback because the code explicitly checks if an anchor was found (lines 208-215) and will raise a ValueError if no anchor is is available, ensuring the system fails loudly if the data is truly missing.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module12_compatibility.py",
+      "line": 515,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value 'Unknown' is a safe fallback for a lookup in a configuration dictionary (TEN_GODS_CHARACTERISTICS). It ensures the stability of the engine's calculation logic without crashing, providing a descriptive 'Unknown' value for the subsequent logic and string formatting.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module1_macro.py",
+      "line": 184,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value of 'Unknown' for the element of a heavenly stem is a safe fallback. If a stem is not found in the HEAVENLY_STEMS dictionary, it is treated as 'Unknown', which then fails to match any 'medicine' or 'taboo' lists, resulting in a neutral impact (0.0). This is a safe, predictable behavior for data-driven calculations in this domain.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module6_ten_gods.py",
+      "line": 176,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for a mapping of stems to Ten Gods is a safe, descriptive fallback for data processing in a domain-specific logic where missing mappings are handled gracefully without crashing the process.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module6_ten_gods.py",
+      "line": 206,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for a stem lookup in the TEN_GODS_MATRIX is a safe fallback. In the context of astrological calculations, providing a placeholder for an invalid or missing stem rather than crashing the entire engine during a complex calculation process is generally preferred, and the result will naturally be 'Unknown' in the final output.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module6_ten_gods.py",
+      "line": 261,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for 'dm_map' lookup is a safe, descriptive fallback for data mapping in a domain-specific analysis engine. It prevents the crash of the entire analysis pipeline while providing a clear indicator in the output that a specific mapping was missing.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module6_ten_gods.py",
+      "line": 682,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for a ten-god mapping is a safe, descriptive fallback for data that may be missing from a matrix, preventing a crash while maintaining visibility of the missing data.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module7_shen_sha.py",
+      "line": 29,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for 'stem' and 'branch' in the month metadata is a safe fallback. It prevents the crash of the function when optional metadata is provided but incomplete, and allows the subsequent 'detect_stars' function to handle the 'Unknown' value gracefully or skip it.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module7_shen_sha.py",
+      "line": 30,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for 'stem' and 'branch' in the creation of a Pillar object is a safe fallback. It prevents the crash of the engine during the process of the-month metadata processing, and since the subsequent logic (detect_stars) detect_stars likely handles 'Unknown' values or the overall logic allows for missing metadata. It is a standard pattern for handling optional or potentially incomplete metadata.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module8_scoring.py",
+      "line": 72,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default 'unknown' is used within an error message (f-string) to prevent the crash of the exception handler itself. This is a safe pattern to ensure the error message is descriptive without causing a secondary exception.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module9_triggers.py",
+      "line": 242,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for pillar stems and branches is a safe, descriptive fallback for optional or missing metadata, preventing a crash while maintaining visibility of the missing data.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/module9_triggers.py",
+      "line": 243,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for pillar stems and branches is a safe default for display or non-critical logic, and the code continues to process other triggers without crashing.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/engine/monthly_generator.py",
+      "line": 74,
+      "type": "swallowed_exception",
+      "status": "SILENT_KILLER",
+      "severity": "HIGH",
+      "reason": "The code catches all exceptions during the LLM keyword generation step and silently falls back to empty keyword sets. This prevents the LLM failure from crashing the application, but it results in 'all_queries' being empty, which silently skips the entire RAG (Retrieval Augmented Generation) process without any logging or warning. This is a dangerous silent failure because the quality of the final output will be significantly degraded without the user or developer knowing why the LLM failed.",
+      "updated_at": null
+    },
+    {
+      "name": "NotImplementedError",
+      "file_path": "src2/engine/monthly_generator.py",
+      "line": 192,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to provide a safe fallback for date calculations when data for the next year (2027) is not yet implemented/available. This prevents the crash of the monthly generator for the current year's end-of-year transition, allowing the process to continue with a reasonable approximation (29 days).",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/orchestrator.py",
+      "line": 175,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with 'Unknown' as a fallback for the day master's element is a safe, descriptive fallback for data that may be missing or invalid in the reference tables (HEAVENLY_STEMS). It prevents the crash of the orchestrator during profile processing.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/engine/orchestrator.py",
+      "line": 203,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed to allow the 'age' variable to remain 'None' if the date of birth (dob) is malformed. Since 'age' is an optional field in the profile and the code provides a safe default (None), this is a safe fallback for non-critical data derivation.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/orchestrator.py",
+      "line": 312,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value 'Unknown' for 'type' and a frozenset for 'branches' is a safe fallback pattern for processing data from an interaction results object. It prevents the crash of the orchestrator during calculation of combination strengths, ensuring that the engine continues to actually process the other valid combinations.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/orchestrator.py",
+      "line": 530,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with 'Unknown' as a fallback is a safe pattern here because the code explicitly checks if month_data exists (if month_data else None) and provides a default value for missing keys to prevent a KeyError while maintaining the system's ability to pillars to be partially defined.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/orchestrator.py",
+      "line": 530,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with 'Unknown' as a fallback is a safe pattern here because the code explicitly checks if month_data exists (if month_data else None) and provides a default value for missing keys to prevent a KeyError while maintaining the system's ability to pillars to be partially defined.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/prompt_engine.py",
+      "line": 147,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with fallbacks ('Unknown' and empty string) is used here for auxiliary diagnostic/logging data (RAG context history) and is wrapped in a try-except block. It is a safe, non-critical path that does not affect the main engine result.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/engine/prompt_maker.py",
+      "line": 133,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and ignored to allow the function to attempt alternative parsing strategies (regex-based extraction) before finally raising a ValueError if all attempts fail. This is a safe fallback pattern.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/engine/prompt_maker.py",
+      "line": 139,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed to allow the function to attempt multiple fallback parsing strategies (direct JSON, markdown blocks, and regex search). Since a final ValueError is raised if all attempts fail, it is not a silent killer.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/engine/prompt_maker.py",
+      "line": 145,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed to allow the function to try alternative parsing strategies (multiple regex patterns) before finally logging a warning and raising a ValueError if all attempts fail. This is a safe fallback pattern.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/prompt_stitcher.py",
+      "line": 40,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with default values ('N/A', 'Unknown Month', etc.) is a safe fallback pattern for assembling a prompt for an LLM. Since the prompt is intended for synthesis, providing a placeholder like 'N/A' is preferable to crashing the entire report generation process for a missing optional field.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/prompt_stitcher.py",
+      "line": 46,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'dict.get' with a default value ('N/A') is used here to construct a string for a prompt. Since the purpose is to provide data to an LLM for synthesis, providing a placeholder like 'N/A' is a safe and explicit way to handle missing optional data without crashing the process.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/prompt_stitcher.py",
+      "line": 48,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value ('N/A') is a standard safe fallback for optional data fields in a report-generation context. It ensures the prompt construction doesn't crash on missing data, which is acceptable for LLM prompts.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/prompt_stitcher.py",
+      "line": 49,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value of 'N/A' is a safe fallback for optional data fields in a report generation context. It ensures the prompt construction continues without crashing, providing a clear indicator ('N/A') in the prompt that the LLM can handle.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/prompt_stitcher.py",
+      "line": 62,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of 'Unknown' as a fallback for 'ge_ju_type' is a safe, descriptive fallback for a prompt construction process. It prevents the crash of the prompt generation, allowing the LLM to handle the missing data point rather than failing the entire report generation process.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/engine/prompt_stitcher.py",
+      "line": 75,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with defaults ('Month', 'N/A') is a safe fallback for optional or potentially missing fields in a report summary. It prevents the crash of the final review process while allowing the 'N/A' marker to be clearly visible in thes summary provided to the LLM reviewer.",
+      "updated_at": null
+    },
+    {
+      "name": "NotImplementedError",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 639,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and handled by providing a reasonable default fallback (adding 29 days to the start date) to ensure the continuity of the solar month calculation when data for the next year is not yet implemented or available. This is a safe fallback for a non-critical path.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/app.py",
+      "line": 116,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to provide a status indicator ('error' or 'offline') in a health check endpoint. This is the intended behavior for health checks, as the endpoint itself should not crash when checking the dependencies it is meant to monitor.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/app.py",
+      "line": 124,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to provide a health check status ('offline'), which is the intended behavior for a monitoring endpoint. This is not a silent failure but a reporting mechanism.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/app.py",
+      "line": 160,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and logged at the DEBUG level. While it is a broad catch-all, it is used here to prevent a failure in the query of active Celery tasks from crashing the entire Telegram bot interface. Since the bot can still provide historical logs from a file as a fallback, this is a safe, non-critical failure.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/app.py",
+      "line": 212,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed to provide a safe fallback value ('SUCCESS') for a task status when JSON parsing fails. Since this is for reporting stats in a response, a slight inaccuracy in status reporting is preferable to crashing the entire request.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/app.py",
+      "line": 460,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value 'Unknown' for a stakeholder's name is a safe fallback for UI display purposes. It prevents the crash of the bot during a confirmation message, ensuring the user can still proceed with the deletion process.",
+      "updated_at": null
+    },
+    {
+      "name": "ValueError",
+      "file_path": "src2/interfaces/telegram/app.py",
+      "line": 660,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The code safely handles invalid date formats by falling back to None, which is then passed to the handle_forecast_category function. This is a standard optional parameter pattern rather than a dangerous failure.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/bgem3_bridge.py",
+      "line": 28,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and logged to stderr, which is the standard way to handle malformed input in a bridge/proxy utility to prevent a single bad line from crashing the entire communication stream.",
+      "updated_at": null
+    },
+    {
+      "name": "KeyboardInterrupt",
+      "file_path": "src2/interfaces/telegram/bgem3_bridge.py",
+      "line": 57,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "Catching KeyboardInterrupt at the top-level entry point of a script to prevent the stack trace from being printed to the console when a user manually stops the process (Ctrl+C) is a standard, safe, and intended pattern in CLI tools.",
+      "updated_at": null
+    },
+    {
+      "name": "ValueError",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 98,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is caught and converted into a user-facing error message. This is a standard pattern for handling invalid user input in a bot interface.",
+      "updated_at": null
+    },
+    {
+      "name": "NotImplementedError",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 116,
+      "type": "swallowed_exception",
+      "status": "SILENT_KILLER",
+      "severity": "HIGH",
+      "reason": "The code catches a NotImplementedError and falls back to a known working year (2026) to avoid a crash. This is a dangerous silent failure because it returns incorrect calendar data for any year that is not 2026, instead of failing loudly when the solar calendar logic is missing for a specific year.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 290,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to provide a fallback value ('Unknown') for a non-critical UI display string (the weekday name). Failing the entire agent tool execution due to a malformed date string in a report would be disproportionate; providing a fallback is the correct UX pattern here.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 297,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to provide a safe fallback value ('Unknown') for a non-critical UI display string (the weekday name). Failing the entire request due to a malformed date string in a list of ranked results is disproportionate; providing a fallback is the appropriate UX pattern here.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 351,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The try-except block wraps a loop iterating over reports. If a single report is malformed or missing expected keys, the code silently skips it and continues to the next. This is a safe fallback pattern for processing a list of potential matches where the rest of the list can still be successful.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 349,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value ('Unknown') for a month name is a safe fallback for display purposes in a UI/Telegram bot interface, ensuring the user receives a readable output rather than a crash.",
+      "updated_at": null
+    },
+    {
+      "name": "ValueError",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 380,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and converted into a user-facing error message (\"Target date out of transit bounds.\"), which is not a silent failure but an explicit notification to the end-user.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 645,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The try-except block wraps a loop iterating over reports. If a specific report is malformed or missing expected keys, the code silently skips it to attempt to find a valid one in the rest of the list. This is a safe fallback pattern for processing a list of potentially inconsistent data structures.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 643,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value ('Unknown') for a month name is a safe fallback for UI/display purposes in a telegram bot, ensuring the user receives a readable string instead of a crash.",
+      "updated_at": null
+    },
+    {
+      "name": "ValueError",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 674,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is caught and converted into a user-facing error message (\"Target date out of transit bounds.\"), which is a controlled and informative failure.",
+      "updated_at": null
+    },
+    {
+      "name": "NotImplementedError",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 51,
+      "type": "swallowed_exception",
+      "status": "SILENT_KILLER",
+      "severity": "HIGH",
+      "reason": "The code catches a NotImplementedError from get_solar_months and falls back to a hardcoded year (2026). This is a silent failure that masks a missing implementation for the specific target year, potentially providing incorrect astronomical/calendar data for the user without warning.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/chronomancer/rag.py",
+      "line": 148,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The try-except block is used as a a safe fallback mechanism to handle potentially malformed JSON from an LLM response. If JSON parsing fails, the code gracefully degrades to returning the raw output string, which is still amissible as a query.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/ier_parser.py",
+      "line": 147,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception handling for date parsing is a safe fallback. It skips invalid date strings provided by the LLM, ensuring the list of extracted dates is simply filtered for valid ones rather than crashing the entire extraction process.",
+      "updated_at": null
+    },
+    {
+      "name": "ValueError",
+      "file_path": "src2/interfaces/telegram/intake/calendar_node.py",
+      "line": 71,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed to allow the function to return None, which is explicitly handled by the caller (the profile creation logic) as an optional value. This is a safe fallback pattern for parsing optional input data.",
+      "updated_at": null
+    },
+    {
+      "name": "ValueError",
+      "file_path": "src2/interfaces/telegram/intake/calendar_node.py",
+      "line": 149,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and ignored to iterate through multiple possible date formats. A final check (line 152) ensures that if no format matched, a ValueError is raised, ensuring the failure is not silent.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/intake/intake.py",
+      "line": 294,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is caught to provide a user-friendly validation error message to the Telegram user, and the session is reset to a safe state.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/logging_utils.py",
+      "line": 28,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed to prevent the application from crashing during logging initialization. Since sys.stdout.reconfigure is an optional optimization for UTF-8 encoding on Windows, failing back to the default encoding is a non-fatal, safe fallback.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 47,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and handled by printing a status message and returning False, which explicitly signals a connection failure during a preflight check. This is a safe, expected pattern for diagnostic tools.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 41,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value 'Unknown' for the bot username is used solely for logging/display purposes in a preflight check. It does not affect the logic or the same-state transition of the application, and the system correctly returns True if the API response is successful.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 91,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is caught and reported via print_status, and the function returns False to indicate failure. This is a safe, expected pattern for a preflight check.",
+      "updated_at": null
+    },
+    {
+      "name": "CalledProcessError",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 107,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to handle the case where 'pgrep' returns a non-zero exit code (indicating the process is not running), which is a safe and expected flow to trigger the subsequent start-up logic.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 131,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and reported via print_status, providing visibility into the failure. It returns a boolean indicating failure, allowing the caller to handle the status. This is a standard preflight check pattern.",
+      "updated_at": null
+    },
+    {
+      "name": "CalledProcessError",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 127,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and handled by returning a False status, which is part of a preflight check sequence. This is an intended failure state for a diagnostic tool, not a silent failure.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 155,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is caught and reported via print_status and returns False, which is the intended behavior for a preflight check function designed to validate connectivity and credentials.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 180,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and handled by returning a boolean False, which is the intended behavior for a 'preflight' check. The error is also logged via print_status, so it is not silent.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 207,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and handled by returning a boolean False, which is the intended behavior for a preflight check function designed to report connectivity status.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 227,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught and handled by returning a boolean status (False) and logging the error via print_status, which is the intended behavior for a preflight check.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 245,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is caught to provide a clear status update via print_status and returns a boolean indicating failure. This is a standard preflight check pattern.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 282,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is not swallowed; it is printed to stderr. Furthermore, this is a notification block intended to alert an admin about a failure in the preflight check. If the notification itself fails, it should not crash the preflight process, as the primary goal is to report the status of the rest of the system.",
+      "updated_at": null
+    },
+    {
+      "name": "TimeoutError",
+      "file_path": "src2/interfaces/telegram/queue_worker.py",
+      "line": 107,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The TimeoutError is explicitly caught and ignored because it is the expected behavior of asyncio.wait_for when no signal is received within the timeout period, allowing the loop to re-check the database. This is a standard pattern for non-blocking polling loops.",
+      "updated_at": null
+    },
+    {
+      "name": "CancelledError",
+      "file_path": "src2/interfaces/telegram/queue_worker.py",
+      "line": 109,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "Handling asyncio.CancelledError by logging and breaking the loop is the standard and correct way to gracefully shut down an asynchronous task in Python. It is not a silent failure, but a controlled termination.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/report_utils.py",
+      "line": 248,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with default values ('Unknown', 'Untitled') is a safe fallback for generating report files. It prevents the crash of the entire export process for a single malformed report entry, allowing the remaining reports to be processed.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/tailoring.py",
+      "line": 213,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to provide a safe default state for the tailoring process. Since the data is stored in session metadata (which can be volatile or outdated), falling back to a default state is a safe and expected pattern to ensure the user experience is not interrupted by a corrupted session state.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/ui_components.py",
+      "line": 29,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with fallbacks ('unknown', 'Unknown') is used here to ensure the UI component can still render a list of stakeholders even if some non-critical data fields are missing. This is a safe fallback for display purposes in a Telegram bot UI.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/ui_components.py",
+      "line": 30,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value 'Unknown' for a person's name in a UI display list is a safe fallback. It prevents the crash of the bot's UI when encountering incomplete data, ensuring the user can still see and potentially manage (e.g., delete) the existing records.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/ui_components.py",
+      "line": 37,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is swallowed to provide a safe fallback to an empty dictionary when JSON parsing of an optional profile field fails. This is a safe fallback for UI display purposes.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/ui_components.py",
+      "line": 54,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The exception is caught to provide a graceful fallback to the raw input string if date parsing fails, which is appropriate for a UI display component where crashing the entire message construction is undesirable.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/validators.py",
+      "line": 113,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The fallback to 'Unknown' is used solely for logging/contextualizing violations found later in the same function. It does not bypass validation logic or hide errors; rather, it ensures the validator can report which month is failing validation.",
+      "updated_at": null
+    },
+    {
+      "name": "Exception",
+      "file_path": "src2/interfaces/telegram/validators.py",
+      "line": 190,
+      "type": "swallowed_exception",
+      "status": "SILENT_KILLER",
+      "severity": "HIGH",
+      "reason": "The try-except block swallows ValueError and TypeError during a float conversion of a score. If the score is invalid (e.g., None or a non-numeric string), the range check is skipped entirely without adding a violation, allowing invalid data to pass through the validator.",
+      "updated_at": null
+    },
+    {
+      "name": "dict.get",
+      "file_path": "src2/interfaces/telegram/validators.py",
+      "line": 305,
+      "type": "silent_fallback",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The use of .get() with a default value 'Unknown' for 'month_name' is a safe fallback. If the key is missing, the validator continues to check other fields and will likely trigger a 'CALENDAR_WORD_COUNT' violation for the missing fields, ensuring the error is not silently ignored.",
+      "updated_at": null
+    },
+    {
+      "name": "RuntimeError",
+      "file_path": "src2/worker/tasks.py",
+      "line": 23,
+      "type": "swallowed_exception",
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The RuntimeError is caught to handle the case where no event loop is currently running in the thread (a common occurrence in Celery workers), providing a safe and necessary fallback to create a new loop. This is a standard asyncio pattern for integrating async code into synchronous workers.",
+      "updated_at": null
+    }
+  ],
+  "failed_audits": []
+}
