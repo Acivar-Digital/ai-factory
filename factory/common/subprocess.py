@@ -69,14 +69,16 @@ def _run_proc(
 def _run_tool(tool: str, argv: list[str]) -> str:
     """Run `uv run python factory/tools/<tool>.py <argv>` and return stdout.
 
-    A non-zero CLI returncode (e.g. a blocked/denied write) raises RuntimeError
-    so the harness fails loud instead of swallowing the error as a benign tool
-    result string. A hung CLI is killed and fails loudly (RuntimeError) on timeout.
+    On non-zero exit code the tool's stdout (if non-empty) is returned as-is,
+    otherwise a JSON error envelope ``{"success": false, "message": "<stderr>"}``
+    is returned so the LLM can see the error and self-correct.
+    A hung CLI is killed and fails loudly (RuntimeError) on timeout.
     """
-    proc = _run_proc(
+    rc, stdout, stderr = _run_proc(
         ["uv", "run", "--no-sync", "python", str(PKG_DIR / "tools" / f"{tool}.py"), *argv],
         cwd=REPO_ROOT,
-        return_format="completed",
-        raise_on_error=True,
+        return_format="tuple",
     )
-    return proc.stdout.strip() or "0 matches"
+    if rc != 0:
+        return stdout.strip() or f'{{"success": false, "message": "{stderr.strip()}"}}'
+    return stdout.strip() or "0 matches"
