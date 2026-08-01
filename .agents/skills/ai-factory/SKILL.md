@@ -243,6 +243,9 @@ The `_REMEMBER_NUDGE` ("you may call `remember(...)`") is still appended to read
 - **Pydantic Only**: All domain data = strict Pydantic v2 models. No standalone Enums.
 - **No model-level fallback**: Single model per role — never switch to a backup model on failure. Agent-level recovery (loopguard retry + `_recover_from_unexpected_behavior` with the SAME model) IS allowed and correct.
 - **Harness-owned guardrails**: The coder only *declares* done; the harness runs ruff + pyright + smoke gates on staged files, and re-spawns the coder (up to `CODER_VALIDATION_PASSES` times) with guardrail feedback before the review phase. If a guardrail crashes or produces unparseable output, the task MUST fail/block—it is never a silent pass.
+- **AST verification pipeline**: After the coder produces an edit, `verify_edit` runs 7-layer AST verification (syntax, CC/nesting, attribute hallucination, call swap, signature parity, namespace collision, unimported symbols) plus ruff/pyright lint regression. If verification fails, the errors are injected into the Boss prompt so it can fix the issues. The `VirtualASTBuffer` enables in-memory AST replacement for surgical verification without touching disk.
+- **Pre-flight anti-pattern detection**: Before the coder touches a file, `scan_file_for_anti_patterns` checks for try pyramids (priority 1), deep nesting >3 (priority 2), and CC >5 (priority 3). Anti-pattern warnings are prepended to the coder's prompt.
+- **Checkpoint/resume**: Pipeline results are persisted to JSONL checkpoint files (atomic writes via `os.replace`). On restart, completed files are skipped. Checkpoints expire after 24 hours (TTL).
 - **Red Team Integrity**: The `red_team_passed` gate relies solely on `findings` and `rubric_cells`. If both are empty, the audit is considered incomplete and the gate MUST fail.
 
 ## Mandatory Pre-Flight Plan

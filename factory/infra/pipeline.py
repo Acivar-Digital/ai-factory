@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,7 @@ from factory.infra.output_sanitizer import (
 )
 from factory.infra.state import save_state, record_phase
 from factory.infra.tools import wrap_injected_context
+from factory.infra.tools_shell import verify_edit
 from factory.infra.validation import (
     EXCHANGE_ROLES, REVIEW_PASS_FIELD, MAX_RETRIES, PLAN_INVARIANT_RETRIES,
     check_plan_invariants, _downstream_closure,
@@ -53,6 +55,8 @@ from factory.infra.validation import (
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
 MAX_FILE_SIZE = 1_000_000
+VERIFY_EDIT_TIMEOUT = 30
+CHECKPOINT_TTL_SECONDS = 86400
 
 
 def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, str | None]:
@@ -357,6 +361,68 @@ async def record_coder(
     PHASE_SUMMARIES["coder"] = out_md
     update_status_board(history, "coder", bd)
     return out
+
+
+async def process_file(
+    filepath: str,
+    brief: str,
+    bd: str,
+    history: list[tuple[str, str]],
+    exchange: list[ExchangeTurn],
+    pass_counter: dict[str, int],
+    prior: list[ExchangeTurn],
+    state_dict: dict[str, Any],
+) -> str:
+    """Run the intern on a file, verify the edit, then pass to the Boss.
+
+    After the intern produces an edit, ``verify_edit`` is called
+    automatically for AST verification + lint regression.  If verification
+    fails, the errors are injected into the prompt so the Boss can see
+    what went wrong and fix it.
+    """
+    print("\n=== [conductor -> intern] (verify_edit pipeline) ===", flush=True)
+    intern_out = await load_skill("intern", brief, bd)
+    out_md = PHASE_SUMMARIES.get("intern", intern_out)
+    history.append(("intern", out_md))
+    PHASE_SUMMARIES["intern"] = out_md
+    print(f"\n--- intern ---\n{out_md}", flush=True)
+    update_status_board(history, "intern", bd)
+
+    verify_result: str | None = None
+    if intern_out and intern_out.strip():
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(verify_edit, filepath), timeout=VERIFY_EDIT_TIMEOUT,
+            )
+            verify_result = result
+            try:
+                vobj = json.loads(result)
+                if vobj.get("ok") is True:
+                    print(f"[verify_edit] {filepath}: PASS", flush=True)
+                else:
+                    print(f"[verify_edit] {filepath}: FAIL — {result}", flush=True)
+            except json.JSONDecodeError:
+                print(f"[verify_edit] {filepath}: non-JSON result: {result}", flush=True)
+        except asyncio.TimeoutError:
+            verify_result = json.dumps({"ok": False, "error": f"verify_edit timed out after {VERIFY_EDIT_TIMEOUT}s"})
+            print(f"[verify_edit] {filepath}: TIMEOUT after {VERIFY_EDIT_TIMEOUT}s", flush=True)
+        except Exception as e:
+            verify_result = json.dumps({"ok": False, "error": str(e)})
+            print(f"[verify_edit] {filepath}: ERROR — {e}", flush=True)
+
+    if verify_result is not None:
+        try:
+            vobj = json.loads(verify_result)
+            if vobj.get("ok") is not True:
+                error_detail = vobj.get("error", verify_result)
+                brief += f"\n\n=== VERIFY_EDIT FAILURE ===\nAST/lint verification failed for {filepath}:\n{error_detail}\nFix the verification errors before proceeding to review."
+        except json.JSONDecodeError:
+            brief += f"\n\n=== VERIFY_EDIT FAILURE ===\nVerification produced non-JSON output for {filepath}:\n{verify_result}"
+
+    state_dict["brief"] = brief
+    print("\n=== [conductor -> boss] (with verify_edit context) ===", flush=True)
+    boss_out = await do_role("boss", brief, bd, history, exchange, pass_counter, prior, state_dict)
+    return boss_out
 
 
 def passed(reviewer: str, out: str) -> bool:
@@ -970,6 +1036,37 @@ def save_checkpoint(filepath: Path, entry: dict[str, Any]) -> None:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
         raise
+
+
+def load_checkpoint(filepath: Path) -> dict[str, dict]:
+    """Load checkpoint entries from a JSONL file, filtering out entries
+    when the file's modification time exceeds CHECKPOINT_TTL_SECONDS."""
+    if not filepath.exists():
+        return {}
+    try:
+        mtime = filepath.stat().st_mtime
+        if time.time() - mtime > CHECKPOINT_TTL_SECONDS:
+            return {}
+    except OSError:
+        return {}
+
+    entries: dict[str, dict] = {}
+    try:
+        with filepath.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                key = entry.get("file_path", "")
+                entries[key] = entry
+    except OSError:
+        return {}
+
+    return entries
 
 
 def _preflight_check(filepath: Path) -> str | None:

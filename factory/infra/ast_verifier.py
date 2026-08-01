@@ -14,6 +14,7 @@ Provides 5+ sandbox layers:
 import ast
 import logging
 import subprocess
+import time
 import uuid
 from typing import Any
 
@@ -21,7 +22,66 @@ from factory.infra.control import REPO_ROOT
 
 logger = logging.getLogger("ast_verifier")
 
+class VerificationCircuitBreaker:
+    """Circuit breaker for verification calls, keyed by file path.
+
+    After 3 consecutive failures the circuit opens and a cached
+    "circuit open" result is returned.  After 30 seconds the circuit
+    moves to half-open, allowing one more attempt.  A success resets
+    the counter.
+    """
+
+    FAILURE_THRESHOLD = 3
+    HALF_OPEN_SECONDS = 30
+
+    def __init__(self) -> None:
+        self._state: dict[str, dict] = {}
+
+    def _get_entry(self, filepath: str) -> dict:
+        return self._state.setdefault(filepath, {
+            "failures": 0,
+            "opened_at": 0.0,
+            "half_open_allowed": True,
+        })
+
+    def is_open(self, filepath: str) -> bool:
+        entry = self._get_entry(filepath)
+        if entry["failures"] < self.FAILURE_THRESHOLD:
+            return False
+        elapsed = time.monotonic() - entry["opened_at"]
+        if elapsed >= self.HALF_OPEN_SECONDS:
+            return False
+        return True
+
+    def record_success(self, filepath: str) -> None:
+        self._state.pop(filepath, None)
+
+    def record_failure(self, filepath: str) -> None:
+        entry = self._get_entry(filepath)
+        entry["failures"] += 1
+        if entry["failures"] >= self.FAILURE_THRESHOLD:
+            entry["opened_at"] = time.monotonic()
+            entry["half_open_allowed"] = True
+
+    def can_attempt(self, filepath: str) -> bool:
+        entry = self._get_entry(filepath)
+        if entry["failures"] < self.FAILURE_THRESHOLD:
+            return True
+        elapsed = time.monotonic() - entry["opened_at"]
+        if elapsed >= self.HALF_OPEN_SECONDS and entry["half_open_allowed"]:
+            entry["half_open_allowed"] = False
+            return True
+        return False
+
+    def reset(self, filepath: str) -> None:
+        self._state.pop(filepath, None)
+
+
+verification_circuit_breaker = VerificationCircuitBreaker()
+
 MAX_FILE_SIZE = 1_000_000
+
+VERIFICATION_CIRCUIT_BREAKER: dict[str, dict] = {}
 
 
 class ComplexityVisitor(ast.NodeVisitor):
