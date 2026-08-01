@@ -50,7 +50,7 @@ do a reivew and mermaid on coder and red team audit- their back and off interact
 from how it > starts - loop - exit  
 check context management and artefect management
 save new file here
-/home/yapilwsl/arthityap/baziforecaster/admin/orchestrator/infra
+/home/yapilwsl/arthityap/baziforecaster/WIP/orchestrator/infra
 
 now deep dive infra
 do a reivew and mermaid on retires and backoffs in the long running harness
@@ -58,6 +58,6 @@ from how it > starts - loop - exit
 model retries and tool retries  
 check context management and artefect management, tool use
 save new file here
-/home/yapilwsl/arthityap/baziforecaster/admin/orchestrator/infra
+/home/yapilwsl/arthityap/baziforecaster/WIP/orchestrator/infra
 
 NO FALLBACK SHIT REMEMEBERYEES

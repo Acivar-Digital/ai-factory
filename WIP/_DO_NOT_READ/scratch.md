@@ -7,7 +7,7 @@
 
 # Focus Area
 
-- `/home/yapilwsl/arthityap/baziforecaster/admin/orchestrator`
+- `/home/yapilwsl/arthityap/baziforecaster/WIP/orchestrator`
 
 # Non-Negotiable Rules
 
@@ -39,7 +39,7 @@ Can you check the logs why the last process failed?
 
 # Focus Area
 
-- `/home/yapilwsl/arthityap/baziforecaster/admin/orchestrator`
+- `/home/yapilwsl/arthityap/baziforecaster/WIP/orchestrator`
 
 # Non-Negotiable Rules
 
