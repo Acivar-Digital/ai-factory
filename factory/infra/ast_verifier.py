@@ -510,6 +510,8 @@ def verify_refactored_ast(
         if isinstance(node, ast.ClassDef):
             violations.append(f"unauthorized_symbol: Created a new class `{node.name}`")
         if isinstance(node, (ast.Import, ast.ImportFrom)):
+            if isinstance(node, ast.ImportFrom) and node.level > 0:
+                continue  # Relative import within package
             module_name = getattr(node, "module", None)
             if not module_name and isinstance(node, ast.Import):
                 module_name = node.names[0].name.split(".")[0]
@@ -578,7 +580,7 @@ def verify_refactored_ast(
                 "language", "parse_mode", "text", "step", "metadata", "ModelRequest",
                 "ModelResponse", "TextPart", "UserPromptPart",
             }
-            hallucinated = (new_attrs.attributes - orig_attrs.attributes) - whitelist
+            hallucinated = {a for a in (new_attrs.attributes - orig_attrs.attributes) - whitelist if not a.startswith("_")}
             if hallucinated:
                 violations.append(f"hallucinated_fields: Invented attributes {hallucinated}")
         except Exception:

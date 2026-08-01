@@ -200,7 +200,9 @@ def write_file(relative_path: str, content: str) -> str:
         _auto_remember(f'[write_file] {staged}\n' + ''.join(diff))
     else:
         _auto_remember(f'[write_file] {staged} (no changes)')
-    return result
+    from factory.infra.tools_shell import verify_edit
+    ast_diag = verify_edit(staged, None)
+    return f"{result}\n[AST Verification]: {ast_diag}"
 
 def _check_edit_result(tool_name: str, out: str) -> str:
     try:
