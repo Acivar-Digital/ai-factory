@@ -1,0 +1,7 @@
+{
+  "phase": null,
+  "role": "coder",
+  "error": "UsageLimitExceeded: request_limit of 150. Consider raising the limit, or see the docs on usage limits for budget-aware patterns: https://ai.pydantic.dev/agent/#usage-limits",
+  "request_limit": 150,
+  "messages": []
+}
