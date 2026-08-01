@@ -111,21 +111,21 @@ def test_read_prompt_missing_prompt_file_returns_default() -> None:
 def test_read_prompt_start_phase(tmp_path: Path) -> None:
     p = _write_prompt(
         tmp_path,
-        "---\nResume: false\nbd: t5\nstart_phase: planner\n---\nbody\n",
+        "---\nResume: false\nbd: t5\nstart_phase: intern\n---\nbody\n",
     )
     _, _, _, start_phase, stop_phase = read_prompt(p)
-    assert start_phase == "planner"
+    assert start_phase == "intern"
     assert stop_phase is None
 
 
 def test_read_prompt_stop_phase(tmp_path: Path) -> None:
     p = _write_prompt(
         tmp_path,
-        "---\nResume: false\nbd: t6\nstop_phase: supervisor_plan\n---\nbody\n",
+        "---\nResume: false\nbd: t6\nstop_phase: senior\n---\nbody\n",
     )
     _, _, _, start_phase, stop_phase = read_prompt(p)
     assert start_phase is None
-    assert stop_phase == "supervisor_plan"
+    assert stop_phase == "senior"
 
 
 def test_read_prompt_both_phases(tmp_path: Path) -> None:
@@ -134,14 +134,14 @@ def test_read_prompt_both_phases(tmp_path: Path) -> None:
         "---\n"
         "Resume: false\n"
         "bd: t7\n"
-        "start_phase: planner\n"
-        "stop_phase: supervisor_plan\n"
+        "start_phase: intern\n"
+        "stop_phase: senior\n"
         "---\n"
         "body\n",
     )
     _, _, _, start_phase, stop_phase = read_prompt(p)
-    assert start_phase == "planner"
-    assert stop_phase == "supervisor_plan"
+    assert start_phase == "intern"
+    assert stop_phase == "senior"
 
 
 def test_read_prompt_invalid_start_phase_fails(tmp_path: Path) -> None:
@@ -172,15 +172,15 @@ def test_inject_repo_map_empty_scope_falls_back(tmp_path: Path) -> None:
 def test_inject_repo_map_file_entry_lists_symbols_and_kg(tmp_path: Path) -> None:
     # Use a real, stable repo file so the shadow tools return content.
     out = inject_repo_map(["factory/infra/ledger.py"])
-    assert "FILE: factory/infra/ledger.py" in out
+    assert "FILE (edit staged copy): factory/temp/factory/infra/ledger.py" in out
     assert "KG (knowledge graph):" in out
     # No ERROR on a reachable file's symbols.
-    assert "ERROR:" not in out.split("KG", 1)[0] or "FILE:" in out
+    assert "ERROR:" not in out.split("KG", 1)[0] or "FILE" in out
 
 
 def test_inject_repo_map_folder_entry_is_labelled(tmp_path: Path) -> None:
     out = inject_repo_map(["src2/core/schemas/"])
-    assert "FOLDER (in scope): src2/core/schemas/" in out
+    assert "FOLDER (in scope, edit staged copy): factory/temp/src2/core/schemas/" in out
     assert "STRUCTURE" in out
 
 
@@ -188,8 +188,8 @@ def test_inject_repo_map_mixed_scope(tmp_path: Path) -> None:
     out = inject_repo_map(
         ["src2/core/schemas/unified.py", "src2/engine/"]
     )
-    assert "FILE: src2/core/schemas/unified.py" in out
-    assert "FOLDER (in scope): src2/engine/" in out
+    assert "FILE (edit staged copy): factory/temp/src2/core/schemas/unified.py" in out
+    assert "FOLDER (in scope, edit staged copy): factory/temp/src2/engine/" in out
 
 
 def test_inject_repo_map_strips_json_envelope() -> None:
@@ -335,7 +335,7 @@ def test_load_skill_injects_scope_into_planner_and_supervisor(monkeypatch) -> No
     # helper path directly via the public injection rule replicated here.
     from factory.infra.tools import wrap_injected_context
 
-    for role in ("planner", "supervisor_plan"):
+    for role in ("intern", "engineer"):
         base = "TASK SPEC BODY"
         injected = base + "\n\n" + wrap_injected_context(
             runtime_mod.SCOPE_CONTEXT, label="codebase_reference_context"

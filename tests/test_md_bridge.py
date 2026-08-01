@@ -27,40 +27,40 @@ def test_cold_spawn_returns_none(tmp_path, monkeypatch):
     """No twin yet -> bridge returns None (no HALT, fresh agent)."""
     art = tmp_path / "artefacts"
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
-    assert build_md_bridge("planner") is None
-    assert build_md_bridge("coder", agent_id="coder3") is None
+    assert build_md_bridge("engineer") is None
+    assert build_md_bridge("intern", agent_id="intern3") is None
 
 
 def test_role_md_bridge_injects_exact_twin(tmp_path, monkeypatch):
     """A non-coder role's `.md` twin is wrapped as a single ModelRequest."""
     art = tmp_path / "artefacts"
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
-    _write_md(art, "planner", "planner", "# Planner journal\n- did X\n- did Y")
+    _write_md(art, "engineer", "engineer", "# Engineer journal\n- did X\n- did Y")
 
-    bridge = build_md_bridge("planner")
+    bridge = build_md_bridge("engineer")
     assert bridge is not None
     assert len(bridge) == 1
     assert isinstance(bridge[0], ModelRequest)
     part = bridge[0].parts[0]
     assert isinstance(part, UserPromptPart)
-    assert "Planner journal" in part.content
+    assert "Engineer journal" in part.content
     # The MD_LEDGER sentinel marks the journal injection channel.
     assert "<!-- MD_LEDGER -->" in part.content
 
 
 def test_coder_agent_isolation(tmp_path, monkeypatch):
-    """coder + agent_id resolves the isolated coderN.md; no sibling leakage."""
+    """intern + agent_id resolves the isolated internN.md; no sibling leakage."""
     art = tmp_path / "artefacts"
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
-    _write_md(art, "coder", "coder3", "coder3 private work")
-    # A DIFFERENT coder's twin must NOT be picked up for agent_id coder3.
-    _write_md(art, "coder", "coder7", "coder7 private work - MUST NOT LEAK")
+    _write_md(art, "intern", "intern3", "intern3 private work")
+    # A DIFFERENT intern's twin must NOT be picked up for agent_id intern3.
+    _write_md(art, "intern", "intern7", "intern7 private work - MUST NOT LEAK")
 
-    bridge = build_md_bridge("coder", agent_id="coder3")
+    bridge = build_md_bridge("intern", agent_id="intern3")
     assert bridge is not None
     content = bridge[0].parts[0].content
-    assert "coder3 private work" in content
-    assert "coder7" not in content
+    assert "intern3 private work" in content
+    assert "intern7" not in content
 
 
 def test_unknown_role_returns_none(tmp_path, monkeypatch):
@@ -83,4 +83,4 @@ def test_import_error_loudly_raised(tmp_path, monkeypatch):
     monkeypatch.setitem(sys.modules, "factory.infra.artefacts", mock_artefacts)
 
     with pytest.raises(ImportError):
-        build_md_bridge("planner")
+        build_md_bridge("engineer")

@@ -1,7 +1,4 @@
-import json
 import subprocess
-import os
-import textwrap
 from pathlib import Path
 
 def test_replace_function_preserves_formatting():

@@ -178,7 +178,6 @@ def test_draft_plan_validation_hardening():
 @pytest.mark.asyncio
 async def test_structured_output_recovery_hardening(monkeypatch):
     from factory.common import ROLE_OUTPUT_TYPE
-    from factory.infra import runner
     from pydantic_ai.exceptions import UnexpectedModelBehavior
 
     # Mock _run_agent_retry to raise UnexpectedModelBehavior
@@ -193,14 +192,15 @@ async def test_structured_output_recovery_hardening(monkeypatch):
     # Mock extract_tool_call_payload to return None
     monkeypatch.setattr("factory.infra.agent.extract_tool_call_payload", lambda *args, **kwargs: None)
 
-    # Ensure planner is registered as structured output in ROLE_OUTPUT_TYPE
-    assert ROLE_OUTPUT_TYPE["planner"] != "str"
+    # Ensure engineer is registered as structured output in ROLE_OUTPUT_TYPE
+    assert ROLE_OUTPUT_TYPE["engineer"] != "str"
 
     # Now run load_skill and assert it raises RuntimeError with the HALT message
+    from factory.infra import agent
     with pytest.raises(RuntimeError) as excinfo:
-        await runner.load_skill("planner", "some brief", bd="test-bd")
+        await agent.load_skill("engineer", "some brief", bd="test-bd")
 
-    assert "[HALT] role 'planner' emitted no final_result call" in str(excinfo.value)
+    assert "[HALT] role 'engineer' emitted no final_result call" in str(excinfo.value)
 
 
 def test_dereference_schema():

@@ -1,7 +1,6 @@
-import pytest
 import re
 from unittest.mock import patch, MagicMock
-from factory.tools.investigate import extract_pattern_context, estimate_tokens, main
+from factory.tools.investigate import extract_pattern_context, main
 
 def test_extract_pattern_context_overlap():
     lines = [f"line {i}" for i in range(100)]
@@ -52,7 +51,7 @@ def test_truncation_logic(tmp_path):
     with patch("factory.tools.investigate.REPO_ROOT", tmp_path), \
          patch("sys.argv", ["investigate.py", "--filename", str(test_file), "--query", "test"]), \
          patch("factory.tools.investigate.Agent") as MockAgent, \
-         patch("factory.tools.investigate.CONTROL_SHEET") as MockControl:
+         patch("factory.tools.investigate.CONTROL_SHEET"):
         
         mock_agent_instance = MagicMock()
         mock_agent_instance.run_sync.return_value = MagicMock(output="test")
