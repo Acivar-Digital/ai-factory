@@ -14,15 +14,11 @@ import yaml
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from factory.common import ROLE_OUTPUT_TYPE, OUTPUT_TYPE_REGISTRY
-from factory.common.operator import log_operator
 from factory.infra._runtime import (
     RAW_OUTPUTS, PHASE_SUMMARIES, _PHASE_ORDER,
 )
 from factory.infra.agent import (
     load_skill, _load_role_messages, _recover_role_output, _coder_agent_id,
-)
-from factory.infra.context import (
-    stage_workspace_from_draft,
 )
 from factory.infra.control import (
     REPO_ROOT, MAX_AGENTS,
@@ -48,7 +44,7 @@ from factory.infra.state import save_state, record_phase
 from factory.infra.tools import wrap_injected_context
 from factory.infra.tools_shell import verify_edit
 from factory.infra.validation import (
-    EXCHANGE_ROLES, REVIEW_PASS_FIELD, MAX_RETRIES, PLAN_INVARIANT_RETRIES,
+    EXCHANGE_ROLES, MAX_RETRIES, PLAN_INVARIANT_RETRIES,
     check_plan_invariants, _downstream_closure,
 )
 
@@ -335,41 +331,6 @@ async def record_coder(
     return out
 
 
-def passed(reviewer: str, out: str) -> bool:
-    """Read the reviewer's pass/fail from its JSON output."""
-    try:
-        obj = json.loads(out)
-    except Exception as e:
-        log_operator(
-            f"reviewer '{reviewer}' output was not valid JSON; treating as FAIL. "
-            f"error={e!r}",
-            level="WARNING",
-        )
-        return False
-    if reviewer in ("intern", "engineer", "senior"):
-        field = REVIEW_PASS_FIELD.get(reviewer)
-        return bool(obj.get(field, False)) if field else False
-    if reviewer in ("supervisor_plan", "supervisor_review", "red_team"):
-        evals = obj.get("evaluations")
-        if not evals:
-            return False
-        for ev in evals:
-            app = ev.get("approved")
-            if isinstance(app, str):
-                app_lower = app.lower()
-                if app_lower.startswith("no") or app_lower.startswith("block"):
-                    return False
-            elif isinstance(app, bool):
-                if not app:
-                    return False
-            else:
-                if not app:
-                    return False
-        return True
-    field = REVIEW_PASS_FIELD.get(reviewer)
-    return bool(obj.get(field, False)) if field else False
-
-
 def _run_verify_edit(author: str, bd: str) -> str | None:
     """Run verify_edit on the author's output files after a tier edit."""
     try:
@@ -382,9 +343,8 @@ def _run_verify_edit(author: str, bd: str) -> str | None:
         return f"[verify_edit] {author}: error — {e}"
 
 
-async def run_gated(
-    author: str,
-    reviewer: str,
+async def run_tier(
+    tier: str,
     task: str,
     bd: str,
     history: list[tuple[str, str]],
@@ -392,49 +352,65 @@ async def run_gated(
     pass_counter: dict[str, int],
     prior: list[ExchangeTurn],
     state_dict: dict[str, Any],
-    hard: bool = False,
     record_exchange: bool = False,
-) -> bool:
-    """Author produces work; reviewer gates. Up to MAX_RETRIES."""
+    is_final: bool = False,
+) -> str:
+    """Run a single pipeline tier (intern → engineer → senior).
+
+    Strict linear flow: do_role → _run_verify_edit → diagnostic injection
+    on failure → retry up to MAX_RETRIES. No backward bouncing.
+
+    If verification fails, structured diagnostic feedback is prepended to
+    the next attempt's input prompt (same-tier retry) or carried forward
+    to the next tier via state_dict["brief"].
+
+    Returns the role output string.
+    """
+    brief = state_dict["brief"]
+    run_brief = brief
+
     for attempt in range(1, MAX_RETRIES + 1):
-        print(f"\n=== [conductor -> {author}] (attempt {attempt}) ===", flush=True)
-        author_out = await do_role(author, task, bd, history, exchange, pass_counter, prior, state_dict)
-        if record_exchange and author in EXCHANGE_ROLES:
-            append_exchange_turn(exchange, pass_counter, author, author_out, bd)
+        print(f"\n=== [conductor -> {tier}] (attempt {attempt}) ===", flush=True)
+        state_dict["brief"] = run_brief
+        out = await do_role(tier, task, bd, history, exchange, pass_counter, prior, state_dict)
+        if record_exchange and tier in EXCHANGE_ROLES:
+            append_exchange_turn(exchange, pass_counter, tier, out, bd)
 
-        if author == "planner" and reviewer == "supervisor_plan":
-            draft_json = RAW_OUTPUTS.get("planner")
-            if draft_json:
-                try:
-                    draft = clean_role_output(draft_json, DraftPlan)
-                    if draft:
-                        stage_workspace_from_draft(draft, bd)
-                except Exception as e:
-                    print(f"[WARN] Pre-stage workspace failed: {e}", flush=True)
+        _verify_result = _run_verify_edit(tier, bd)
+        if _verify_result is not None:
+            print(f"[verify_edit] {tier}: {_verify_result}", flush=True)
 
-        if author in ("intern", "engineer", "senior", "coder"):
-            _verify_edit_result = _run_verify_edit(author, bd)
-            if _verify_edit_result is not None:
-                print(f"[verify_edit] {author}: {_verify_edit_result}", flush=True)
-
-        print(f"=== [conductor -> {reviewer}] (attempt {attempt}) ===", flush=True)
-        reviewer_out = await do_role(reviewer, task, bd, history, exchange, pass_counter, prior, state_dict)
-        if record_exchange and reviewer in EXCHANGE_ROLES:
-            append_exchange_turn(exchange, pass_counter, reviewer, reviewer_out, bd)
-
-        if attempt == MAX_RETRIES:
-            if hard and not passed(reviewer, reviewer_out):
-                raise RuntimeError(
-                    f"[gate] HARD FAIL: {reviewer} still failing after "
-                    f"{MAX_RETRIES} attempts — aborting (no forced pass)."
+        if _verify_result is not None and "FAIL" in _verify_result:
+            diagnostic = (
+                f"\n\n[DIAGNOSTIC FEEDBACK — {tier} attempt {attempt}]\n"
+                f"Verification failed: {_verify_result}\n"
+                f"Please address the following issues in your next attempt:\n"
+                f"1. Fix any AST violations reported above.\n"
+                f"2. Fix any complexity (CC) errors reported above.\n"
+                f"3. Fix any ruff linting failures reported above.\n"
+                f"4. Ensure the output passes all verification gates.\n"
+            )
+            run_brief = brief + "\n\n" + diagnostic
+            if attempt == MAX_RETRIES:
+                if tier == "senior" and is_final:
+                    raise RuntimeError(
+                        "[gate] Senior tier failed verification after 3 attempts - HALT"
+                    )
+                print(
+                    f"[gate] {tier} attempt {attempt}: VERIFICATION FAIL -> "
+                    f"advancing to next tier with diagnostics",
+                    flush=True,
                 )
-            print(f"[gate] {reviewer} attempt {attempt}: FORCED PASS -> proceed")
-            return True
-        if passed(reviewer, reviewer_out):
-            print(f"[gate] {reviewer} attempt {attempt}: PASS -> proceed")
-            return True
-        print(f"[gate] {reviewer} attempt {attempt}: FAIL -> {author} revises")
-    return False
+            continue
+
+        print(f"[gate] {tier} attempt {attempt}: PASS -> proceed", flush=True)
+        return out
+
+    if tier == "senior" and is_final:
+        raise RuntimeError(
+            "[gate] Senior tier failed verification after 3 attempts - HALT"
+        )
+    return out
 
 
 def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool = False) -> ExecutablePlan:
