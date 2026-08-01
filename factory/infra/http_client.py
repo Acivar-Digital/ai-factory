@@ -108,7 +108,7 @@ def create_resilient_http_client(
     inner = httpx.AsyncHTTPTransport(
         verify=False,  # all providers are local self-signed proxies
         limits=ORCH_HTTP_LIMITS,
-        http2=True,
+        http2=False,
     )
     transport = AsyncTenacityTransport(
         _build_retry_config(),
