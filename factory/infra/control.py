@@ -521,8 +521,8 @@ def load_control_sheet() -> ControlSheet:
             "codebase_model": gemini_3_5_flash_extra_low,
             "healer_model" : gemini_3_5_flash_extra_low,
             "intern_model" : ling_flash,
-            "engineer_model" : gemini_3_6_flash_high,
-            "senior_model" : gemini_3_1_pro_high,
+            "engineer_model" : ling_flash,
+            "senior_model" : ling_flash,
               
               
 
