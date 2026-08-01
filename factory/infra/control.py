@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 from pathlib import Path
 
 import httpx
@@ -12,7 +13,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from factory.infra.http_client import create_resilient_http_client
+from factory.infra.http_client import get_orch_http_client
 
 
 # =====================================================================
@@ -209,27 +210,47 @@ async def _orch_log_response(response: httpx.Response) -> None:
             f.write(f"[http-log error] {exc!r}\n")
 
 
-ORCH_HTTP_CLIENT = create_resilient_http_client(
-    event_hooks={"request": [_orch_log_request], "response": [_orch_log_response]},
-)
+_PROVIDERS_CACHE: dict[str, OpenAIProvider] | None = None
+_PROVIDERS_LOCK = threading.Lock()
 
-PROVIDERS: dict[str, OpenAIProvider] = {
-    "mcpmart": OpenAIProvider(
-        base_url=settings.mcpmart_base_url,
-        api_key=settings.mcpmart_api_key,
-        http_client=ORCH_HTTP_CLIENT,
-    ),
-    "antigravity_manager": OpenAIProvider(
-        base_url=settings.antigravity_manager_url,
-        api_key=settings.antigravity_manager_key,
-        http_client=ORCH_HTTP_CLIENT,
-    ),
-    "literouter": OpenAIProvider(
-        base_url=settings.literouter_url,
-        api_key=settings.literouter_auth_key,
-        http_client=ORCH_HTTP_CLIENT,
-    ),
-}
+
+def _make_providers() -> dict[str, OpenAIProvider]:
+    return {
+        "mcpmart": OpenAIProvider(
+            base_url=settings.mcpmart_base_url,
+            api_key=settings.mcpmart_api_key,
+        ),
+        "antigravity_manager": OpenAIProvider(
+            base_url=settings.antigravity_manager_url,
+            api_key=settings.antigravity_manager_key,
+        ),
+        "literouter": OpenAIProvider(
+            base_url=settings.literouter_url,
+            api_key=settings.literouter_auth_key,
+        ),
+    }
+
+
+def _get_providers() -> dict[str, OpenAIProvider]:
+    global _PROVIDERS_CACHE
+    if _PROVIDERS_CACHE is None:
+        with _PROVIDERS_LOCK:
+            if _PROVIDERS_CACHE is None:
+                _PROVIDERS_CACHE = _make_providers()
+    return _PROVIDERS_CACHE
+
+
+class _LazyProviders(dict[str, OpenAIProvider]):
+    """Lazy provider dict that creates providers on first access."""
+
+    def __missing__(self, key: str) -> OpenAIProvider:
+        providers = _get_providers()
+        value = providers[key]
+        self[key] = value
+        return value
+
+
+PROVIDERS = _LazyProviders()
 
 # =====================================================================
 # 2b. STARTUP GATEWAY REACHABILITY PROBE
@@ -249,12 +270,15 @@ GATEWAY_PROBE = GatewayProbeURLs(
 
 async def verify_gateways_reachable() -> None:
     unreachable: list[str] = []
-    async with create_resilient_http_client() as client:
+    client = get_orch_http_client()
+    try:
         for name, url in GATEWAY_PROBE.model_dump().items():
             try:
                 await client.get(url)
             except (httpx.ConnectError, httpx.TimeoutException):
                 unreachable.append(name)
+    finally:
+        await client.aclose()
     if unreachable:
         raise RuntimeError(
             "Orchestrator model gateways unreachable: "
