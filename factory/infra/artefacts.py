@@ -407,12 +407,12 @@ def _history_filename(role: str, agent_id: str | None) -> str:
     folder = ROLE_FOLDER.get(role)
     if not folder:
         return f"{role}.jsonl"
-    if role == "coder":
+    if role in ("coder", "intern"):
         if not agent_id:
             raise ValueError(
-                "[HALT] _history_filename called for role 'coder' with "
-                "agent_id=None — a shared coder.jsonl would recreate the legacy "
-                "context-bloat store. Every coder spawn must pass agent_id."
+                f"[HALT] _history_filename called for role {role!r} with "
+                "agent_id=None — a shared jsonl would recreate the legacy "
+                "context-bloat store. Every spawn must pass agent_id."
             )
         return f"{agent_id}.jsonl"
     return f"{folder}.jsonl"

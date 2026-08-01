@@ -10,7 +10,9 @@ jittered exponential backoff and NO context loss.
 
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -124,3 +126,30 @@ def create_resilient_http_client(
         timeout=ORCH_HTTP_TIMEOUT,
         event_hooks=merged_hooks,
     )
+
+
+_orch_http_client: httpx.AsyncClient | None = None
+_orch_http_client_lock = threading.Lock()
+_orch_http_client_loop: int | None = None
+
+
+def get_orch_http_client() -> httpx.AsyncClient:
+    """Return a loop-aware singleton `httpx.AsyncClient` for the orchestrator.
+
+    The client is lazily created on first access (so it binds to the running
+    event loop if one exists) and re-created if the event loop changes
+    (e.g. after a fork or when switching threads).  Thread-safe via a mutex.
+    """
+    global _orch_http_client, _orch_http_client_loop
+    try:
+        current_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        current_loop = None
+    current_loop_id = id(current_loop) if current_loop is not None else None
+    with _orch_http_client_lock:
+        if _orch_http_client is None or _orch_http_client_loop != current_loop_id:
+            if _orch_http_client is not None:
+                _orch_http_client.aclose()
+            _orch_http_client = create_resilient_http_client()
+            _orch_http_client_loop = current_loop_id
+    return _orch_http_client

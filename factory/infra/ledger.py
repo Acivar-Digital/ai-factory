@@ -8,7 +8,9 @@ filesystem / CLI is routed through the `factory/tools/*.py` wrappers via
 
 import json
 import logging
+import os
 import re
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -29,9 +31,14 @@ _logger = logging.getLogger("orchestrator.ledger")
 
 def _is_dir(rel: str) -> bool:
     """Best-effort check whether a scope entry is a directory (truthful hint)."""
-    p = REPO_ROOT / rel
+    if rel.endswith("/") or rel.endswith("\\"):
+        return True
+    cleaned = rel.rstrip("/\\")
+    if not cleaned:
+        return True
+    target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
     try:
-        return p.is_dir()
+        return (target_root / cleaned).is_dir() or (REPO_ROOT / cleaned).is_dir()
     except OSError:
         return False
 
@@ -203,11 +210,11 @@ def inject_repo_map(target_files: list[str]) -> str:
             # get_repo_structure emits the whole repo tree once (see STRUCTURE
             # above); folders are recorded as in-scope scopes so the planner
             # knows where to focus. (No per-folder subtree CLI exists yet.)
-            lines.append(f"FOLDER (in scope): {rel}")
+            lines.append(f"FOLDER (in scope, edit staged copy): factory/temp/{rel}")
             lines.append("-" * 40)
             continue
 
-        lines.append(f"FILE: {rel}")
+        lines.append(f"FILE (edit staged copy): factory/temp/{rel}")
         # Option B (Fail Loudly): real CLI crashes propagate; do NOT swallow.
         symbols = _unwrap_tool_output(_run_tool("get_file_symbols", [rel]))
         lines.append(symbols)

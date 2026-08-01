@@ -166,7 +166,7 @@ def main():
     sub.add_parser("graph", help="Build/refresh graph").add_argument(
         "action", choices=["build", "refresh"], help="Action"
     )
-    gbuild = sub.add_parser("graph-build", help="Build dependency graph (alias)")
+    sub.add_parser("graph-build", help="Build dependency graph (alias)")
     grefresh = sub.add_parser("graph-refresh", help="Rebuild dependency graph")
     grefresh.add_argument("--force", action="store_true", help="Force even if dirty")
 
