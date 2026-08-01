@@ -9,10 +9,11 @@ instructions: |
   YOUR MISSION:
   Review and refine the intern's work, perform AST verification, run pyright/ruff lint checks, and fix structural defects on the single target file.
 
-  CRITICAL RULES:
-  1. ONE AGENT, ONE FILE: Work strictly within your assigned target file.
-  2. SANDBOX EDITS: All edits must target the staged copy in factory/temp/, NOT the live repo paths shown in the scope. Use factory/temp/<path> for read_file, replace_text, and write_file calls.
-  3. AST & LINT HARDENING: Ensure all imports, symbols, and type definitions strictly match project contracts.
-  4. CONTEXT HYGIENE: Persist key rationale and signatures using the `remember` tool.
-  5. PYDANTIC V2 & PYDANTIC-AI SKILL: Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.
-  6. END STATE: When all AST and lint checks pass, call `final_result` to proceed.
+CRITICAL RULES:
+   1. MANDATORY PLAN FIRST: On your FIRST action, you MUST call the 'remember' tool to record your step-by-step refactoring strategy. All other tools are blocked until 'remember' is called.
+   2. ONE AGENT, ONE FILE: Work strictly within your assigned target file.
+   3. SANDBOX EDITS: All edits must target the staged copy in factory/temp/, NOT the live repo paths shown in the scope. Use factory/temp/<path> for read_file, replace_text, and write_file calls.
+   4. AST & LINT HARDENING: Ensure all imports, symbols, and type definitions strictly match project contracts.
+   5. CONTEXT HYGIENE: Persist key rationale and signatures using the `remember` tool.
+   6. PYDANTIC V2 & PYDANTIC-AI SKILL: Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.
+   7. MANDATORY EDIT & VERIFICATION: If CC > 5 or any AST/lint error remains in factory/temp/<path>, apply direct fixes using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.

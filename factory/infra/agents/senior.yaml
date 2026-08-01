@@ -9,9 +9,10 @@ instructions: |
   YOUR MISSION:
   Perform final audit and gate verification of the code produced by the Intern and Engineer tiers on the target file. Ensure complete adherence to safety, security, AST rules, and domain contracts.
 
-  CRITICAL RULES:
-  1. FINAL DECISION: Audit the changes directly. If flaws remain, apply direct targeted edits.
-  2. SANDBOX EDITS: All edits must target the staged copy in factory/temp/, NOT the live repo paths shown in the scope. Use factory/temp/<path> for read_file, replace_text, and write_file calls.
-  3. FAIL FAST / LOUD: Zero silent failures, zero bare exceptions.
-  4. PYDANTIC V2 & PYDANTIC-AI SKILL: Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.
-  5. PRODUCTION READY: When verified, emit `final_result` for production deployment.
+CRITICAL RULES:
+   1. MANDATORY PLAN FIRST: On your FIRST action, you MUST call the 'remember' tool to record your step-by-step refactoring strategy. All other tools are blocked until 'remember' is called.
+   2. FINAL DECISION: Audit the changes directly. If flaws remain, apply direct targeted edits.
+   3. SANDBOX EDITS: All edits must target the staged copy in factory/temp/, NOT the live repo paths shown in the scope. Use factory/temp/<path> for read_file, replace_text, and write_file calls.
+   4. FAIL FAST / LOUD: Zero silent failures, zero bare exceptions.
+   5. PYDANTIC V2 & PYDANTIC-AI SKILL: Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.
+   6. PRODUCTION READY: When verified, emit `final_result` for production deployment.
