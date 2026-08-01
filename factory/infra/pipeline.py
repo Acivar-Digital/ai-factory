@@ -26,6 +26,9 @@ from factory.infra.control import (
 from factory.infra.execution import (
     run_execute_phase,
 )
+from factory.infra.virtual_ast_buffer import (
+    extract_function_node_source,
+)
 from factory.infra.exchange import (
     update_status_board, save_exchange,
     format_exchange, append_exchange_turn, _model_to_md, _render_verdict_block,
@@ -482,6 +485,59 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
     return None
 
 
+def _build_isolated_ast_block() -> str:
+    """Extract isolated AST node source for each target function and format as a block."""
+    prompt_file = REPO_ROOT / "factory" / "prompt" / "user_prompt.md"
+    if not prompt_file.exists():
+        prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
+    scope: list[str] = []
+    target_functions: list[str] = []
+    if prompt_file.exists():
+        try:
+            text = prompt_file.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            if lines and lines[0].strip() == "---":
+                end_idx = None
+                for i in range(1, len(lines)):
+                    if lines[i].strip() == "---":
+                        end_idx = i
+                        break
+                if end_idx is not None:
+                    fm_text = "\n".join(lines[1:end_idx])
+                    front = yaml.safe_load(fm_text) or {}
+                    if isinstance(front, dict):
+                        raw_scope = front.get("scope", []) or []
+                        if isinstance(raw_scope, str):
+                            raw_scope = [raw_scope]
+                        if isinstance(raw_scope, list):
+                            scope = [str(s) for s in raw_scope]
+                        target_functions = front.get("target_functions", []) or []
+                        if not isinstance(target_functions, list):
+                            target_functions = []
+                        target_functions = [str(f) for f in target_functions]
+        except Exception:
+            scope = []
+            target_functions = []
+    if not scope:
+        temp_dir = REPO_ROOT / "factory" / "temp"
+        if temp_dir.exists():
+            scope = [str(p.relative_to(temp_dir)) for p in temp_dir.rglob("*") if p.is_file() and p.suffix == ".py"]
+    staged_paths = [f"factory/temp/{s}" for s in scope]
+    lines: list[str] = []
+    for staged_path in staged_paths:
+        for fn_name in target_functions:
+            try:
+                fn_source = extract_function_node_source(staged_path, fn_name)
+            except Exception:
+                continue
+            lines.append("### Isolated Target Function AST Nodes")
+            lines.append(f"**File**: `{staged_path}` — **Function**: `{fn_name}`")
+            lines.append("```python")
+            lines.append(fn_source)
+            lines.append("```")
+    return "\n".join(lines)
+
+
 async def run_tier(
     tier: str,
     task: str,
@@ -507,6 +563,11 @@ async def run_tier(
     """
     brief = state_dict["brief"]
     run_brief = brief
+
+    ast_block = _build_isolated_ast_block()
+    if ast_block:
+        state_dict["brief"] = brief + "\n\n" + ast_block
+        run_brief = state_dict["brief"]
 
     for attempt in range(1, MAX_RETRIES + 1):
         print(f"\n=== [conductor -> {tier}] (attempt {attempt}) ===", flush=True)
