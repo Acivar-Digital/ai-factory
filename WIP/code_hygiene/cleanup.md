@@ -60,7 +60,7 @@ For Async and Schema hazards, we stage files in `admin/studio/upload/`, write a 
 
 _If the agent loses context or the session resets, paste the following message to restore execution:_
 
-> Hey my trustworthy assistant, this is what we are doing: We are executing the codebase hygiene cleanup plan documented in [cleanup.md](file:///home/yapilwsl/arthityap/baziforecaster/admin/code_hygiene/cleanup.md). Do NOT run any scanner tools (e.g. `run_all.py`). We are currently executing:
+> Hey my trustworthy assistant, this is what we are doing: We are executing the codebase hygiene cleanup plan documented in [cleanup.md](file:///home/yapilwsl/arthityap/baziforecaster/WIP/code_hygiene/cleanup.md). Do NOT run any scanner tools (e.g. `run_all.py`). We are currently executing:
 >
 > **Current Stage:** [Specify: e.g., Phase 1 - Env Drift Auto-Sync / Phase 2 - Tranche 1]
 >

@@ -87,7 +87,7 @@ To preserve execution state and prevent redundant LLM queries, bot-driven scanne
 When you modify or refactor engine logic, the cache still holds the old verdict. You must invalidate the cache for those files.
 
 To force the scanner to re-audit only the modified files:
-1. Open the respective JSON report in [reports/](file:///home/yapilwsl/arthityap/baziforecaster/admin/code_hygiene/reports/).
+1. Open the respective JSON report in [reports/](file:///home/yapilwsl/arthityap/baziforecaster/WIP/code_hygiene/reports/).
 2. Locate and delete the entries in `audit_results` whose `"file_path"` matches the modified files.
 3. Save the JSON file.
 4. Rerun the scanner. It will skip all other unchanged files but re-audit the modified ones.
@@ -99,7 +99,7 @@ To force the scanner to re-audit only the modified files:
 If a bot-driven scanner execution fails or is aborted (due to network timeout, API limits, or credentials):
 1. **Incremental Save Safety**: The script writes back to the JSON file **after every individual LLM response**. You will never lose progress.
 2. **Resuming**: Simply run the command again. It will automatically skip already audited functions and pick up exactly where it was interrupted.
-3. **Model Selection**: If the LLM throws a model error or API failure, verify the model settings in [admin/controls/controls.py](file:///home/yapilwsl/arthityap/baziforecaster/admin/controls/controls.py) and check that your API keys (e.g. `GEMINI_API_KEY`) are correctly exported in your shell environment.
+3. **Model Selection**: If the LLM throws a model error or API failure, verify the model settings in [admin/controls/controls.py](file:///home/yapilwsl/arthityap/baziforecaster/WIP/controls/controls.py) and check that your API keys (e.g. `GEMINI_API_KEY`) are correctly exported in your shell environment.
 
 ---
 
