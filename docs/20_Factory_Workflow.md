@@ -117,9 +117,12 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ## Changelog
 
-### 2026-08-02
+### 2026-08-02 (Pydantic-AI 2.0 & Harness Alignment Upgrade)
 - **Workflow Spec Initialized**: Created `docs/20_Factory_Workflow.md` incorporating the 5 strategic signposts.
-- **Pydantic AI 2.0 Integration**: Added `ModelRetry` tool-level retries inside `tools_file.py` and `tools_shell.py` for immediate AST self-correction.
+- **Pydantic-AI 2.0 Hooks Capability**: Integrated native `@hooks.on.before_model_request` lifecycle hook in `agent.py` for context scrubbing.
+- **Strongly-Typed Dependency Injection**: Added `TierState` dependency model (`deps_type=TierState`) in `control.py` and `agent.py`.
+- **Structured Output Handover Models**: Added Pydantic v2 handoff models (`InternResult`, `EngineerResult`, `SeniorVerdict`) in `control.py`.
+- **Audit-Only Tool Scoping**: Implemented Senior role tool filter in `tools_guard.py` restricting Senior tier to read/audit tools (`verify_edit`, `read_file`, `grep_codebase`) and blocking code modifications.
+- **Pydantic AI 2.0 ModelRetry**: Integrated native tool-level retries inside `tools_file.py` and `tools_shell.py` for instant AST self-correction.
 - **System Prompt Hardening**: Injected Pydantic v2 rules, flat guard clause constraints (CC <= 5), and underscore helper naming (`_is_promo_expired`) into `intern.yaml`, `engineer.yaml`, `senior.yaml`.
-- **Diagnostic Persistence**: Added per-file diagnostic tracking under `last_tier_diagnostic_<file_path>` in `pipeline.py`.
-- **AST Verifier Precision**: Whitelisted private attributes starting with `_` and relative imports (`node.level > 0`) in `ast_verifier.py`.
+- **Memory Isolation Discipline**: Recorded strict isolation boundary between local factory runtime traces (`state_dict`, `factory/orch/`) and global Orchestrator `bd remember` database.

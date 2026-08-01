@@ -12,6 +12,7 @@ from typing import Any
 import logfire
 
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import Hooks
 from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 
 from factory.common import (
@@ -22,7 +23,7 @@ from factory.infra._loopguard import run_with_loopguard, CONTEXT_COMPACT_CEILING
 from factory.infra.artefacts import persist_role
 from factory.infra.control import (
     DEFAULT_AGENT_SETTINGS, LOGS_DIR, ROLE_AGENT_SETTINGS,
-    RUNTIME_DIR, SKILL_MAP,
+    RUNTIME_DIR, SKILL_MAP, TierState,
 )
 from factory.infra._runtime import RAW_OUTPUTS, PHASE_SUMMARIES, SCOPE_CONTEXT
 from factory.infra.exchange import (
@@ -49,6 +50,29 @@ def _configure_logfire() -> None:
     # headers into local logfire logs. Headers are off by default; we only
     # instrument request/response bodies, never secrets.
     logfire.instrument_httpx()
+
+
+def _scrub_message_history(
+    ctx: Any, request_context: Any
+) -> Any:
+    """Context-scrubbing hook: strips sensitive fields from message history
+    before each model request (lifecycle interception via Hooks)."""
+    messages = getattr(request_context, "messages", None)
+    if messages is not None:
+        scrubbed = []
+        for msg in messages:
+            if hasattr(msg, "content") and isinstance(msg.content, str):
+                scrubbed.append(msg)
+            elif hasattr(msg, "parts"):
+                safe_parts = []
+                for part in msg.parts:
+                    if hasattr(part, "text") and isinstance(part.text, str):
+                        safe_parts.append(part)
+                    elif hasattr(part, "content") and isinstance(part.content, str):
+                        safe_parts.append(part)
+                scrubbed.append(msg)
+        request_context.messages = scrubbed
+    return request_context
 
 
 def build_role_agent(role: str) -> tuple[Agent, "object | None"]:
@@ -89,6 +113,11 @@ def build_role_agent(role: str) -> tuple[Agent, "object | None"]:
     tools = [_TOOL_BY_NAME[name] for name in allowed]
     budget = ROLE_TOOL_BUDGET.get(role, DEFAULT_TOOL_BUDGET)
     guard = guard_tools(tools, budget=budget) if tools else None
+
+    hooks = Hooks(
+        before_model_request=_scrub_message_history,
+    )
+
     return Agent(
         model,
         output_type=OUTPUT_TYPE_REGISTRY[ROLE_OUTPUT_TYPE[role]],
@@ -96,6 +125,8 @@ def build_role_agent(role: str) -> tuple[Agent, "object | None"]:
         instructions=instructions,
         retries=5,
         model_settings=ROLE_AGENT_SETTINGS.get(role, DEFAULT_AGENT_SETTINGS),
+        deps_type=TierState,
+        capabilities=[hooks],
     ), guard
 
 

@@ -137,6 +137,10 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         return _GuardDict(tools, self)
 
     async def call_tool(self, name: str, tool_args: dict[str, Any], ctx: Any, tool: ToolsetTool[AgentDepsT]) -> Any:
+        from factory.infra.tools_memory import get_current_role
+        role = get_current_role()
+        if role == 'senior' and name in _SENIOR_BLOCKED:
+            return _SENIOR_GUARD_MSG
         if name in _MODIFY_TOOLS and not self._has_planned:
             rel_path = tool_args.get('relative_path') or tool_args.get('path') or 'unknown'
             _auto_remember(f"[auto-plan] Executing {name} on {rel_path}")
@@ -323,6 +327,9 @@ def log_response_raw(phase: str, role: str, ident: str, res: Any) -> None:
 
 READ_ONLY_TOOLS = [remember, batch_read]
 _DISCOVERY_TOOLS = {'investigate', 'search', 'list_files', 'get_file_symbols', 'get_repo_structure', 'query_knowledge_graph', 'find_related_code', 'get_code_hierarchy', 'grep_codebase'}
+_SENIOR_ALLOWED = _DISCOVERY_TOOLS | {'read_file', 'verify_edit', 'remember', 'final_result'}
+_SENIOR_BLOCKED = {'replace_function', 'replace_text', 'write_file', 'delete_file', 'rename_file'}
+_SENIOR_GUARD_MSG = 'SYSTEM ERROR: Senior Architect tier is an AUDIT-ONLY role. Code edits must be applied by Intern/Engineer tiers. Use verify_edit to audit files and emit final_result.'
 READ_FILE_TOOLS = READ_ONLY_TOOLS + [read_file]
 _TOOL_BY_NAME = {}
 MODIFY_TOOLS = [write_file, replace_text, replace_function, add_constant, add_import, delete_file, rename_file, move_symbol, verify_edit]

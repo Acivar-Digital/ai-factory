@@ -563,6 +563,40 @@ COMPACTION_CONFIG = CompactionConfig()
 
 
 # =====================================================================
+# 8. TIER HANDOVER MODELS (Pydantic v2 structured output)
+# =====================================================================
+class InternResult(BaseModel):
+    modified_files: list[str] = []
+    refactored_functions: list[str] = []
+    remaining_violations: list[str] = []
+    notes: str = ""
+
+
+class EngineerResult(BaseModel):
+    modified_files: list[str] = []
+    refactored_functions: list[str] = []
+    verification_passed: bool = False
+    remaining_violations: list[str] = []
+    notes: str = ""
+
+
+class SeniorVerdict(BaseModel):
+    passed: bool = False
+    approved_files: list[str] = []
+    architectural_quality_score: int = 5
+    comments: str = ""
+
+
+class TierState(BaseModel):
+    task: str
+    scope: list[str] = []
+    target_functions: list[str] = []
+    current_role: str
+    staged_paths: list[str] = []
+    last_diagnostics: dict[str, str] = {}
+
+
+# =====================================================================
 # 6. ORCHESTRATOR CONTROL KNOBS
 # =====================================================================
 MAX_AGENTS = 20
