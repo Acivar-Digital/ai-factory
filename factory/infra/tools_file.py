@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from factory.common import _run_tool
+from factory.infra.context import stage_path
 from factory.infra.control import REPO_ROOT
 from factory.infra.tools_const import (
     _BATCH_READ_DEFAULT_HEAD,
@@ -168,7 +169,8 @@ def _src_write_guard(tool_name: str, *paths: str) -> str | None:
     for p in paths:
         if not p or not p.strip():
             continue
-        norm_val = os.path.normpath(p)
+        staged = stage_path(p)
+        norm_val = os.path.normpath(staged)
         if _src_ban_denied(norm_val):
             msg = '[OPERATOR][SECURITY] src/ write denied'
             print(msg, flush=True)
@@ -183,19 +185,20 @@ def write_file(relative_path: str, content: str) -> str:
     If the CLI reports success but the file is absent, we raise — the model must
     never be told a write happened when nothing landed on disk.
     """
-    _src_write_guard('write_file', relative_path)
-    target = (REPO_ROOT / relative_path).resolve()
+    staged = stage_path(relative_path)
+    _src_write_guard('write_file', staged)
+    target = (REPO_ROOT / staged).resolve()
     old_lines = target.read_text().splitlines(keepends=True) if target.exists() else []
-    result = _run_tool('write_file', [relative_path, content])
+    result = _run_tool('write_file', [staged, content])
     if not target.exists():
-        raise RuntimeError(f'[HALT] write_file reported success but file is ABSENT on disk: {relative_path}')
+        raise RuntimeError(f'[HALT] write_file reported success but file is ABSENT on disk: {staged}')
     new_lines = content.splitlines(keepends=True)
     if old_lines != new_lines:
         import difflib
-        diff = list(difflib.unified_diff(old_lines, new_lines, fromfile=relative_path, tofile=relative_path, n=3))
-        _auto_remember(f'[write_file] {relative_path}\n' + ''.join(diff))
+        diff = list(difflib.unified_diff(old_lines, new_lines, fromfile=staged, tofile=staged, n=3))
+        _auto_remember(f'[write_file] {staged}\n' + ''.join(diff))
     else:
-        _auto_remember(f'[write_file] {relative_path} (no changes)')
+        _auto_remember(f'[write_file] {staged} (no changes)')
     return result
 
 def _check_edit_result(tool_name: str, out: str) -> str:
@@ -216,18 +219,21 @@ def _check_edit_result(tool_name: str, out: str) -> str:
 
 def delete_file(relative_path: str) -> str:
     """Delete a file/dir from the repo and clean its vector index. Returns JSON."""
-    _g = _src_write_guard('delete_file', relative_path)
+    staged = stage_path(relative_path)
+    _g = _src_write_guard('delete_file', staged)
     if _g:
         return _g
-    result = _check_edit_result('delete_file', _run_tool('delete_file', [relative_path]))
-    _auto_remember(f'[delete_file] {relative_path}')
+    result = _check_edit_result('delete_file', _run_tool('delete_file', [staged]))
+    _auto_remember(f'[delete_file] {staged}')
     return result
 
 def rename_file(source_relative_path: str, destination_relative_path: str) -> str:
     """Rename/move a file and update the vector index. Returns JSON result."""
-    _g = _src_write_guard('rename_file', source_relative_path, destination_relative_path)
+    staged_src = stage_path(source_relative_path)
+    staged_dst = stage_path(destination_relative_path)
+    _g = _src_write_guard('rename_file', staged_src, staged_dst)
     if _g:
         return _g
-    result = _run_tool('rename_file', [source_relative_path, destination_relative_path])
-    _auto_remember(f'[rename_file] {source_relative_path} → {destination_relative_path}')
+    result = _run_tool('rename_file', [staged_src, staged_dst])
+    _auto_remember(f'[rename_file] {staged_src} → {staged_dst}')
     return result
