@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import random
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -161,7 +162,7 @@ def _report_run_failure(phase: str, exc: Exception, attempt: int, reason: str) -
     )
 
 
-MAX_RETRIES = 3
+MAX_RETRIES = 7
 
 
 async def _run_agent_retry(agent: Agent, brief: str, *, loopguard: bool = False, phase: str = "", role: str = "", bd_id: str = "", message_history: list | None = None, agent_id: str | None = None) -> Any:
@@ -183,13 +184,12 @@ async def _run_agent_retry(agent: Agent, brief: str, *, loopguard: bool = False,
             if attempt >= MAX_RETRIES:
                 _report_run_failure(phase, exc, attempt, "transient provider failure after retries exhausted")
                 raise SystemExit(1)
-            delay = 5 * attempt
+            backoff = min(64.0, (2.0 ** attempt) + random.uniform(0.5, 1.5))
             log_operator(
-                f"[WARN] [{phase}] transient model error ({exc}); "
-                f"retrying in {delay}s... (attempt {attempt}/{MAX_RETRIES})",
+                f"ModelAPIError on attempt {attempt}/7: {exc}. Retrying in {backoff:.1f}s...",
                 level="WARN",
             )
-            await asyncio.sleep(delay)
+            await asyncio.sleep(backoff)
         except UnexpectedModelBehavior:
             raise
         except Exception as exc:

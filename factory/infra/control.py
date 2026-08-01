@@ -596,6 +596,32 @@ class TierState(BaseModel):
     last_diagnostics: dict[str, str] = {}
 
 
+class TodoItem(BaseModel):
+    file_path: str
+    function_name: str
+    target_cc: int = 5
+    current_cc: int = 0
+    passed: bool = False
+
+
+class TodoList(BaseModel):
+    items: list[TodoItem] = []
+
+    def render_markdown(self) -> str:
+        lines = ["### 📋 Active Refactoring Checklist"]
+        for item in self.items:
+            box = "[x]" if item.passed else "[ ]"
+            status = (
+                f"CC={item.current_cc} (PASSED)"
+                if item.passed
+                else f"Target CC <= {item.target_cc} (Current CC={item.current_cc})"
+            )
+            lines.append(
+                f"- {box} `{item.file_path} :: {item.function_name}` ({status})"
+            )
+        return "\n".join(lines)
+
+
 # =====================================================================
 # 6. ORCHESTRATOR CONTROL KNOBS
 # =====================================================================

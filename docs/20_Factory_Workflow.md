@@ -126,3 +126,8 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 - **Pydantic AI 2.0 ModelRetry**: Integrated native tool-level retries inside `tools_file.py` and `tools_shell.py` for instant AST self-correction.
 - **System Prompt Hardening**: Injected Pydantic v2 rules, flat guard clause constraints (CC <= 5), and underscore helper naming (`_is_promo_expired`) into `intern.yaml`, `engineer.yaml`, `senior.yaml`.
 - **Memory Isolation Discipline**: Recorded strict isolation boundary between local factory runtime traces (`state_dict`, `factory/orch/`) and global Orchestrator `bd remember` database.
+
+### 2026-08-02 (Harness Resilience & TODO Checklist Upgrade)
+- **Harness-Generated TODO Checklist**: Implemented `TodoItem` and `TodoList` Pydantic v2 models in `control.py` and `build_todo_checklist()` in `pipeline.py`. Live AST checklist (`[ ]` vs `[x]`) reinjects into prompt context per turn.
+- **API Transport Resilience**: Expanded `ModelAPIError` retry budget in `agent.py` from 3 to 7 attempts with exponential backoff (`2s -> 4s -> 8s -> 16s -> 32s -> 64s`) + jitter to withstand OpenRouter 429 rate limit bursts and 502/503 micro-outages.
+- **Compound Condition Rule**: Injected explicit Compound Condition Rule into `intern.yaml` and `engineer.yaml` forcing decomposition of `if A and B:` into flat single-condition guard clauses to prevent AST CC inflation.
