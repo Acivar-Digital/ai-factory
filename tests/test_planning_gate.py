@@ -1,18 +1,14 @@
 """Regression tests for the Mandatory Planning Hard Gate (docs/FIX.md).
 
-Every agent is strictly forbidden from executing modification tools
-(replace_function, replace_text, write_file, add_constant, add_import,
-move_symbol, delete_file, rename_file) until it has called `remember`
-to record its step-by-step plan. Read-only discovery tools (read_file,
-batch_read, grep_codebase, search, investigate, list_files, get_repo_structure,
-investigate) and terminal tools (remember, final_result, keep_memory) are
-allowed before planning. GuardToolset.call_tool enforces this:
+Modification tools (replace_function, replace_text, write_file, add_constant,
+add_import, move_symbol, delete_file, rename_file) auto-record a plan note
+and set _has_planned = True when called before explicit planning, so that
+small/fast models (e.g. ling_flash) can proceed directly with code edits
+without getting trapped in a 3-strike planning gate halt.
 
-  * Modification tools return a nudge string (block) before planning.
-  * After 3 blocked attempts, RuntimeError is raised (fail loudly).
-  * `remember` sets _has_planned = True, unblocking all tools.
-
-If a future change removes or weakens this gate, these tests fail loudly.
+Read-only discovery tools and terminal tools (remember, final_result,
+keep_memory) remain allowed before planning. The `remember` tool still
+sets _has_planned = True explicitly.
 """
 from __future__ import annotations
 
@@ -30,7 +26,7 @@ class _FakeTool:
 
 
 class _FakeWrapped:
-    """Records executed calls so tests can prove a tool did/didn't execute."""
+    """Records executed calls so tests can prove a tool did/did not execute."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict]] = []
@@ -54,20 +50,25 @@ def _make_guard(budget: int = 100) -> GuardToolset:
         "batch_read": _FakeTool(),
         "read_file": _FakeTool(),
         "write_file": _FakeTool(),
+        "replace_text": _FakeTool(),
+        "replace_function": _FakeTool(),
+        "add_constant": _FakeTool(),
+        "add_import": _FakeTool(),
+        "move_symbol": _FakeTool(),
+        "delete_file": _FakeTool(),
+        "rename_file": _FakeTool(),
     }  # type: ignore[index]
     return gt
 
 
-async def test_non_exempt_tool_blocked_before_planning() -> None:
+async def test_modify_tool_auto_plans_before_planning() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
         "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
     )
-    assert "SYSTEM ERROR" in res
-    assert "remember" in res
-    assert gt._plan_nudges == 1
-    assert gt._has_planned is False
-    assert len(gt.wrapped.calls) == 0  # tool NOT executed
+    assert "SYSTEM ERROR" not in res
+    assert gt._has_planned is True
+    assert ("write_file", {"relative_path": "x.py", "content": "..."}) in gt.wrapped.calls  # tool WAS executed
 
 
 async def test_read_file_allowed_before_planning() -> None:
@@ -114,33 +115,20 @@ async def test_non_exempt_tool_allowed_after_planning() -> None:
     assert ("batch_read", {"paths": ["a.py"]}) in gt.wrapped.calls  # tool WAS executed
 
 
-async def test_three_strikes_raises_runtime_error() -> None:
+async def test_three_strikes_no_longer_halts() -> None:
     gt = _make_guard()
-    for i in range(2):
+    for i in range(3):
         res = await gt.call_tool(
             "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
         )
-        assert "SYSTEM ERROR" in res
-        assert gt._plan_nudges == i + 1
-    try:
-        await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
-        assert False, "Expected RuntimeError after 3 strikes"
-    except RuntimeError as exc:
-        assert "HALT" in str(exc)
-        assert "3 times" in str(exc)
+        assert "SYSTEM ERROR" not in res
+        assert gt._has_planned is True
 
 
-async def test_plan_nudges_resets_after_remember() -> None:
+async def test_plan_nudges_not_incremented_for_modify_tools() -> None:
     gt = _make_guard()
     await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
-    assert gt._plan_nudges == 1
-    await gt.call_tool("remember", {"note": "my plan"}, None, _FakeTool())
-    assert gt._has_planned is True
-    res = await gt.call_tool(
-        "batch_read", {"paths": ["a.py"]}, None, _FakeTool()
-    )
-    assert "SYSTEM ERROR" not in res
-    assert ("batch_read", {"paths": ["a.py"]}) in gt.wrapped.calls
+    assert gt._plan_nudges == 0
 
 
 async def test_final_result_exempt_does_not_increment_nudges() -> None:
@@ -157,32 +145,23 @@ async def test_keep_memory_exempt_does_not_increment_nudges() -> None:
     assert gt._has_planned is False
 
 
-async def test_write_file_blocked_before_planning() -> None:
+async def test_write_file_auto_plans_and_executes() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
         "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
     )
-    assert "SYSTEM ERROR" in res
-    assert len(gt.wrapped.calls) == 0
+    assert "SYSTEM ERROR" not in res
+    assert len(gt.wrapped.calls) == 1
 
 
-async def test_replace_text_blocked_before_planning() -> None:
+async def test_replace_text_auto_plans_and_executes() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
         "replace_text", {"relative_path": "x.py", "old": "a", "new": "b"},
         None, _FakeTool(),
     )
-    assert "SYSTEM ERROR" in res
-    assert len(gt.wrapped.calls) == 0
-
-
-async def test_nudge_message_mentions_remember() -> None:
-    gt = _make_guard()
-    res = await gt.call_tool(
-        "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
-    )
-    assert "remember" in res.lower()
-    assert "step-by-step" in res.lower()
+    assert "SYSTEM ERROR" not in res
+    assert len(gt.wrapped.calls) == 1
 
 
 async def test_has_planned_and_plan_nudges_initialized_in_post_init() -> None:
@@ -194,16 +173,15 @@ async def test_has_planned_and_plan_nudges_initialized_in_post_init() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(test_non_exempt_tool_blocked_before_planning())
+    asyncio.run(test_modify_tool_auto_plans_before_planning())
     asyncio.run(test_remember_sets_has_planned())
     asyncio.run(test_exempt_tools_not_blocked_before_planning())
     asyncio.run(test_non_exempt_tool_allowed_after_planning())
-    asyncio.run(test_three_strikes_raises_runtime_error())
-    asyncio.run(test_plan_nudges_resets_after_remember())
+    asyncio.run(test_three_strikes_no_longer_halts())
+    asyncio.run(test_plan_nudges_not_incremented_for_modify_tools())
     asyncio.run(test_final_result_exempt_does_not_increment_nudges())
     asyncio.run(test_keep_memory_exempt_does_not_increment_nudges())
-    asyncio.run(test_write_file_blocked_before_planning())
-    asyncio.run(test_replace_text_blocked_before_planning())
-    asyncio.run(test_nudge_message_mentions_remember())
+    asyncio.run(test_write_file_auto_plans_and_executes())
+    asyncio.run(test_replace_text_auto_plans_and_executes())
     asyncio.run(test_has_planned_and_plan_nudges_initialized_in_post_init())
     print("OK")
