@@ -107,7 +107,8 @@ def _edit_mode_for(real_repo_path: str) -> str:
     "write your FULL proposed replacement" instruction that caused the
     eviction-driven `blocked` failure).
     """
-    live = REPO_ROOT / real_repo_path
+    target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
+    live = target_root / real_repo_path
     if not live.exists() or live.stat().st_size == 0:
         return "FULL WRITE"
     return "SURGICAL"
@@ -130,9 +131,12 @@ def _stage_copies(file_paths: list[str], staged: list[str]) -> list[tuple[str, s
         mode = _edit_mode_for(real)
         modes.append((real, mode))
         try:
+            target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
             wt_src = TEMP_DIR / "working_tree" / real
             if wt_src.exists():
                 src = wt_src
+            elif (target_root / real).exists():
+                src = target_root / real
             else:
                 src = REPO_ROOT / real
             dst = Path(mirror)
