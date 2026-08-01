@@ -52,18 +52,26 @@ class VirtualASTBuffer:
         target: ast.FunctionDef | ast.AsyncFunctionDef | None = None
         parent: ast.Module | ast.ClassDef | None = None
 
-        # Search top-level functions first
+        # Search top-level functions first, then recurse into classes
+        def _search_class(cls_node: ast.ClassDef) -> None:
+            nonlocal target, parent
+            for sub in cls_node.body:
+                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)) and sub.name == function_name:
+                    target = sub
+                    parent = cls_node
+                    return
+                if isinstance(sub, ast.ClassDef):
+                    _search_class(sub)
+                    if target:
+                        return
+
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
                 target = node
                 parent = tree
                 break
             if isinstance(node, ast.ClassDef):
-                for sub in node.body:
-                    if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)) and sub.name == function_name:
-                        target = sub
-                        parent = node
-                        break
+                _search_class(node)
                 if target:
                     break
 

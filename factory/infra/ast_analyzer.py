@@ -8,6 +8,8 @@ and other control-flow anti-patterns before the coder touches a file.
 import ast
 from typing import Any
 
+MAX_FILE_SIZE = 1_000_000
+
 
 class ComplexityVisitor(ast.NodeVisitor):
     def __init__(self) -> None:
@@ -56,17 +58,26 @@ class ComplexityVisitor(ast.NodeVisitor):
             self.complexity += len(gen.ifs)
         self.generic_visit(node)
 
-    def visit_ListComp(self, node: ast.ListComp) -> None:
+    def _visit_comprehension_like(self, node: Any) -> None:
         self._count_comprehension_ifs(node)
 
-    def visit_SetComp(self, node: ast.SetComp) -> None:
+    visit_ListComp = _visit_comprehension_like
+    visit_SetComp = _visit_comprehension_like
+    visit_DictComp = _visit_comprehension_like
+    visit_GeneratorExp = _visit_comprehension_like
+
+    def _visit_async_generator_exp(self, node: Any) -> None:
         self._count_comprehension_ifs(node)
 
-    def visit_DictComp(self, node: ast.DictComp) -> None:
-        self._count_comprehension_ifs(node)
+    def _visit_except_group(self, node: Any) -> None:
+        self.complexity += 1
+        self.generic_visit(node)
 
-    def visit_GeneratorExp(self, node: ast.GeneratorExp) -> None:
-        self._count_comprehension_ifs(node)
+    if hasattr(ast, 'AsyncGeneratorExp'):
+        visit_AsyncGeneratorExp = _visit_async_generator_exp
+
+    if hasattr(ast, 'ExceptGroup'):
+        visit_ExceptGroup = _visit_except_group
 
 
 class FunctionCandidateScanner(ast.NodeVisitor):
@@ -79,6 +90,12 @@ class FunctionCandidateScanner(ast.NodeVisitor):
     """
 
     CONTROL_NODES = (ast.If, ast.Try, ast.For, ast.While, ast.With)
+
+    if hasattr(ast, 'AsyncGeneratorExp'):
+        CONTROL_NODES = CONTROL_NODES + (ast.AsyncGeneratorExp,)
+
+    if hasattr(ast, 'ExceptGroup'):
+        CONTROL_NODES = CONTROL_NODES + (ast.ExceptGroup,)
 
     def __init__(self, filename: str = "", code_lines: list[str] | None = None, full_file_source: str = "") -> None:
         self.filename = filename
@@ -189,6 +206,9 @@ def scan_file_for_anti_patterns(source: str, file_path: str = "") -> list[dict[s
 
     Returns a list of candidate dicts sorted by priority (1=highest).
     """
+    if len(source.encode("utf-8")) > MAX_FILE_SIZE:
+        return []
+
     try:
         tree = ast.parse(source)
     except SyntaxError:

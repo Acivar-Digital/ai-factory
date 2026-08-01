@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +52,7 @@ from factory.infra.validation import (
 )
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
+MAX_FILE_SIZE = 1_000_000
 
 
 def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, str | None]:
@@ -954,3 +956,29 @@ async def run_ops_phase(
     history.append(("ops", result.model_dump_json()))
     update_status_board(history, "ops", bd)
     return result
+
+
+def save_checkpoint(filepath: Path, entry: dict[str, Any]) -> None:
+    """Atomically append a checkpoint entry to a JSONL file."""
+    line = json.dumps(entry, ensure_ascii=False) + "\n"
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=filepath.parent, suffix=".tmp")
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+            f.write(line)
+        os.replace(tmp_path, filepath)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise
+
+
+def _preflight_check(filepath: Path) -> str | None:
+    """Check file size before parsing. Returns a warning string if the file
+    exceeds the size limit, or None if the file is OK to parse."""
+    size = filepath.stat().st_size
+    if size > MAX_FILE_SIZE:
+        return (
+            f"File exceeds size limit ({size} bytes > {MAX_FILE_SIZE} bytes). "
+            "Skipping pre-flight check."
+        )
+    return None
