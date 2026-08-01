@@ -637,7 +637,7 @@ SKILL_MAP = load_skill_map()
 SKILL_ROLES: list[str] = list(SKILL_MAP.roles.keys())
 
 
-DEFAULT_AGENT_SETTINGS = ModelSettings(parallel_tool_calls=False, max_tokens=1024)
+DEFAULT_AGENT_SETTINGS = ModelSettings(parallel_tool_calls=False)
 
 ROLE_AGENT_SETTINGS: dict[str, ModelSettings] = {
     role: DEFAULT_AGENT_SETTINGS for role in SKILL_ROLES
