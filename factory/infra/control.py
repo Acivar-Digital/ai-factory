@@ -574,6 +574,7 @@ def load_skill_map() -> SkillMap:
                     "never edit src/ or src2/; only write under factory/",
                     "read_file allowed for targeted reads; grep forbidden — use batch_read.",
                     "Run batch_read BEFORE any edit.",
+                    "Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.",
                 ],
             ),
             "engineer": SkillEntry(
@@ -585,6 +586,7 @@ def load_skill_map() -> SkillMap:
                     "never edit src/ or src2/; only write under factory/",
                     "read_file allowed for targeted reads; grep forbidden — use batch_read.",
                     "Run batch_read BEFORE any edit.",
+                    "Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.",
                     "Verify all AST and lint checks pass before emitting final_result.",
                 ],
             ),
@@ -597,6 +599,7 @@ def load_skill_map() -> SkillMap:
                     "never edit src/ or src2/; only write under factory/",
                     "read_file allowed for targeted reads; grep forbidden — use batch_read.",
                     "Run batch_read BEFORE any edit.",
+                    "Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.",
                     "Perform final audit and gate verification. Emit final_result for production deployment.",
                 ],
             ),
