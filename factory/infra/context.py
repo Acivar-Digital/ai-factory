@@ -153,19 +153,30 @@ def _stage_copies(file_paths: list[str], staged: list[str]) -> list[tuple[str, s
 def stage_path(real_repo_path: str) -> str:
     """Map a repo-relative OR absolute staging path to its temp/ mirror (single seam).
 
-    Fix B: collapse BOTH absolute (``/abs/.../factory/temp/src2/x.py``)
-    and relative (``temp/src2/x.py`` / ``factory/temp/src2/x.py``) temp prefixes
-    down to ``TEMP_DIR/src2/x.py`` so every harness gate routes through one normalization
-    seam. This is now load-bearing — the Staging Diff Gate and Load-Schema Gate both depend
-    on it, so a broken join can never again self-compare a file against itself.
+    When ``real_repo_path`` is absolute, the target repo root
+    (``TARGET_REPO`` env var, falling back to ``REPO_ROOT``) is checked
+    as a prefix.  If it matches, the prefix is stripped to produce the
+    repo-relative path.  Any ``temp`` segment in the remaining path is
+    collapsed (parts after ``temp`` are kept).  The result is always
+    joined with ``TEMP_DIR`` so the return value lives inside
+    ``factory/temp/``.
     """
+    target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
     p = Path(real_repo_path)
     if p.is_absolute():
         try:
-            i = p.parts.index("temp")
-            p = Path(*p.parts[i + 1:])
+            rel = p.relative_to(target_root)
+            p = rel
         except ValueError:
             pass
+        s = str(p)
+        if "temp" in s.split(os.sep):
+            parts = s.split(os.sep)
+            try:
+                i = parts.index("temp")
+                p = Path(*parts[i + 1:])
+            except ValueError:
+                pass
     else:
         s = str(p)
         for prefix in ("factory/temp/", "temp/"):
