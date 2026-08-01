@@ -1,1 +1,0 @@
-[tool-call] final_result({"evaluations":[{"comments":"The coder output failed schema validation at the Runtime Load Gate with the error 'failed schema validation'. The PR is blocked. Please ensure the code generated strictly adheres to schema rules, validates against the Pydantic models, and parses correctly.","approved":"No","item_id":"coder01"}]})
