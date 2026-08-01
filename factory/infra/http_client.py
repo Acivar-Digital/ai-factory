@@ -10,6 +10,7 @@ jittered exponential backoff and NO context loss.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -37,6 +38,35 @@ ORCH_HTTP_TIMEOUT: httpx.Timeout = httpx.Timeout(
 ORCH_HTTP_LIMITS: httpx.Limits = httpx.Limits(
     max_connections=200, max_keepalive_connections=60
 )
+
+
+def _fix_openrouter_error_finish_reason(response: httpx.Response) -> None:
+    """Convert OpenRouter ``finish_reason: "error"`` to ``"stop"`` so pydantic-ai
+    can parse the response instead of raising ``UnexpectedModelBehavior``.
+
+    OpenRouter sets ``finish_reason`` to ``"error"`` when the endpoint fails or
+    returns an error status. Pydantic-AI's OpenAI provider only accepts
+    ``stop``, ``length``, ``tool_calls``, ``content_filter`` or ``function_call``.
+    """
+    if response.status_code != 200:
+        return
+    content_type = response.headers.get("content-type", "")
+    if "application/json" not in content_type:
+        return
+    try:
+        body = response.json()
+    except (ValueError, json.JSONDecodeError):
+        return
+    choices = body.get("choices")
+    if not isinstance(choices, list):
+        return
+    changed = False
+    for choice in choices:
+        if isinstance(choice, dict) and choice.get("finish_reason") == "error":
+            choice["finish_reason"] = "stop"
+            changed = True
+    if changed:
+        response._content = json.dumps(body).encode("utf-8")
 
 
 def validate_retryable_response(response: httpx.Response) -> None:
@@ -85,8 +115,12 @@ def create_resilient_http_client(
         wrapped=inner,
         validate_response=validate_retryable_response,
     )
+    merged_hooks: dict[str, list[Callable[..., Any]]] = {}
+    for key, hooks in (event_hooks or {}).items():
+        merged_hooks[key] = list(hooks)
+    merged_hooks.setdefault("response", []).insert(0, _fix_openrouter_error_finish_reason)
     return httpx.AsyncClient(
         transport=transport,
         timeout=ORCH_HTTP_TIMEOUT,
-        event_hooks=event_hooks or {},
+        event_hooks=merged_hooks,
     )
