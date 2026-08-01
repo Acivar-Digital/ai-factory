@@ -67,14 +67,12 @@ STATUS="$PKG_DIR/STATUS.md"
 if command -v tmux >/dev/null 2>&1 && [ -z "${TMUX:-}" ]; then
     tmux has-session -t "$SESSION" 2>/dev/null && tmux kill-session -t "$SESSION"
     echo "[TMUX] creating session '$SESSION'..."
-    tmux new-session -d -s "$SESSION" -n runner "cd '$SCRIPT_DIR' && ./run.sh; read"
-    tmux set-option -t "$SESSION" status-left "#[bg=green,fg=black] AI-FACTORY #[default]"
-    tmux split-window -h -t "$SESSION" "watch -n 3 cat '$STATUS' 2>/dev/null || echo waiting..."
-    tmux split-window -v -t "$SESSION:0.1" "watch -n 3 find '$PKG_DIR/temp' -type f 2>/dev/null | head -30 || echo waiting..."
-    tmux select-layout -t "$SESSION" tiled
-    echo "[TMUX] attached. Detach with Ctrl+B D | Kill with: tmux kill-session -t $SESSION"
-    tmux attach-session -t "$SESSION"
-    exit 0
+tmux new-session -d -s "$SESSION" -n runner "cd '$SCRIPT_DIR' && ./run.sh; read"
+tmux split-window -h -t "$SESSION" "watch -n 3 cat '$STATUS' 2>/dev/null || echo waiting..."
+tmux select-layout -t "$SESSION" tiled
+echo "[TMUX] attached. Detach with Ctrl+B D | Kill with: tmux kill-session -t $SESSION"
+tmux attach-session -t "$SESSION"
+exit 0
 fi
 
 echo "[WIPE] clearing logs..."
