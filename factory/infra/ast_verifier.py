@@ -21,6 +21,8 @@ from factory.infra.control import REPO_ROOT
 
 logger = logging.getLogger("ast_verifier")
 
+MAX_FILE_SIZE = 1_000_000
+
 
 class ComplexityVisitor(ast.NodeVisitor):
     def __init__(self) -> None:
@@ -69,17 +71,26 @@ class ComplexityVisitor(ast.NodeVisitor):
             self.complexity += len(gen.ifs)
         self.generic_visit(node)
 
-    def visit_ListComp(self, node: ast.ListComp) -> None:
+    def _visit_comprehension_like(self, node: Any) -> None:
         self._count_comprehension_ifs(node)
 
-    def visit_SetComp(self, node: ast.SetComp) -> None:
+    visit_ListComp = _visit_comprehension_like
+    visit_SetComp = _visit_comprehension_like
+    visit_DictComp = _visit_comprehension_like
+    visit_GeneratorExp = _visit_comprehension_like
+
+    def _visit_async_generator_exp(self, node: Any) -> None:
         self._count_comprehension_ifs(node)
 
-    def visit_DictComp(self, node: ast.DictComp) -> None:
-        self._count_comprehension_ifs(node)
+    def _visit_except_group(self, node: Any) -> None:
+        self.complexity += 1
+        self.generic_visit(node)
 
-    def visit_GeneratorExp(self, node: ast.GeneratorExp) -> None:
-        self._count_comprehension_ifs(node)
+    if hasattr(ast, 'AsyncGeneratorExp'):
+        visit_AsyncGeneratorExp = _visit_async_generator_exp
+
+    if hasattr(ast, 'ExceptGroup'):
+        visit_ExceptGroup = _visit_except_group
 
 
 STANDARD_BUILTINS_AND_TYPING: set[str] = {
@@ -254,6 +265,16 @@ class SymbolScopeVisitor(ast.NodeVisitor):
             self.visit(node.value)
         self.visit(node.target)
 
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
+        self.visit(node.value)
+        if isinstance(node.target, ast.Name):
+            self.scope_stack[-1].add(node.target.id)
+        self.generic_visit(node)
+
+    def visit_Starred(self, node: ast.Starred) -> None:
+        self.visit(node.value)
+        self.generic_visit(node)
+
     def visit_Name(self, node: ast.Name) -> None:
         if isinstance(node.ctx, ast.Load):
             name = node.id
@@ -411,6 +432,9 @@ def verify_refactored_ast(
 
     Returns (passed: bool, cc: int, max_depth: int, message: str).
     """
+    if len(code.encode("utf-8")) > MAX_FILE_SIZE:
+        return False, 999, 999, f"Code exceeds size limit ({len(code)} bytes)"
+
     violations: list[str] = []
     candidate_cc = 0
     candidate_max_depth = 0
@@ -697,6 +721,12 @@ def _extract_function_signature(fn_node: ast.FunctionDef | ast.AsyncFunctionDef)
 
 class _FunctionCandidateScanner(ast.NodeVisitor):
     CONTROL_NODES = (ast.If, ast.Try, ast.For, ast.While, ast.With)
+
+    if hasattr(ast, 'AsyncGeneratorExp'):
+        CONTROL_NODES = CONTROL_NODES + (ast.AsyncGeneratorExp,)
+
+    if hasattr(ast, 'ExceptGroup'):
+        CONTROL_NODES = CONTROL_NODES + (ast.ExceptGroup,)
 
     def __init__(self, filename: str, code_lines: list[str], full_file_source: str = "") -> None:
         self.filename = filename
