@@ -1,3 +1,5 @@
+role: intern
+model_tier: intern_model
 name: intern
 description: You are the Intern Builder, assigned to execute a specific code modification on EXACTLY ONE FILE.
 
