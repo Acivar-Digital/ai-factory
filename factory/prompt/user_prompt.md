@@ -7,6 +7,12 @@ lint_command: uv run ruff check
 start_phase: intern
 stop_phase: senior
 target_repo: /home/yapilwsl/arthityap/baziforecaster
+target_functions:
+  - _format_advisory_value
+  - _get_fallback_narrative
+  - _synthesize_and_save_daily_forecast
+  - _extract_trigger_labels
+  - validate_promo_code
 scope:
   - src2/interfaces/telegram/chronomancer/agents.py
   - src2/interfaces/telegram/chronomancer/forecast_store.py

@@ -334,14 +334,15 @@ async def record_coder(
 def _run_verify_edit(author: str, bd: str) -> str | None:
     """Run verify_edit on the author's scoped staged files after a tier edit.
 
-    Reads scope paths from the user_prompt.md frontmatter, maps each to its
-    staged copy under factory/temp/, and verifies every function in each file
-    has CC <= 5 and a clean AST.
+    Reads scope and target_functions from the user_prompt.md frontmatter,
+    maps each to its staged copy under factory/temp/, and verifies every
+    function in each file has CC <= 5 and a clean AST.
 
     Returns a structured error string on failure, or None on success.
     """
     prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
     scope: list[str] = []
+    target_functions: list[str] = []
     if prompt_file.exists():
         try:
             text = prompt_file.read_text(encoding="utf-8")
@@ -361,8 +362,13 @@ def _run_verify_edit(author: str, bd: str) -> str | None:
                             raw_scope = [raw_scope]
                         if isinstance(raw_scope, list):
                             scope = [str(s) for s in raw_scope]
+                        target_functions = front.get("target_functions", []) or []
+                        if not isinstance(target_functions, list):
+                            target_functions = []
+                        target_functions = [str(f) for f in target_functions]
         except Exception:
             scope = []
+            target_functions = []
 
     if not scope:
         temp_dir = REPO_ROOT / "factory" / "temp"
@@ -373,30 +379,46 @@ def _run_verify_edit(author: str, bd: str) -> str | None:
 
     for staged_file_path in staged_paths:
         try:
-            result = verify_edit(staged_file_path, None)
-            parsed = json.loads(result) if result else {}
-            if parsed.get("ok") is False:
-                failed = [f for f in parsed.get("functions", []) if not f.get("passed", True)]
-                if failed:
-                    details = "; ".join(
-                        f"fn '{f.get('function', '?')}' (CC={f.get('cc', 0)}): {f.get('message', '')}"
-                        for f in failed
-                    )
-                else:
-                    details = parsed.get("error", "unknown error")
-                return (
-                    f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                    f"{details}"
-                )
-            functions = parsed.get("functions", [])
-            for fn in functions:
-                cc = fn.get("cc", 0)
-                if cc > 5:
+            if target_functions:
+                for fn_name in target_functions:
+                    result = verify_edit(staged_file_path, fn_name)
+                    parsed = json.loads(result) if result else {}
+                    if parsed.get("ok") is False:
+                        return (
+                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                            f"function '{fn_name}': {parsed.get('message', parsed.get('error', 'unknown error'))}"
+                        )
+                    cc = parsed.get("cc", 0)
+                    if cc > 5:
+                        return (
+                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                            f"function '{fn_name}' has CC={cc} (target CC <= 5)"
+                        )
+            else:
+                result = verify_edit(staged_file_path, None)
+                parsed = json.loads(result) if result else {}
+                if parsed.get("ok") is False:
+                    failed = [f for f in parsed.get("functions", []) if not f.get("passed", True)]
+                    if failed:
+                        details = "; ".join(
+                            f"fn '{f.get('function', '?')}' (CC={f.get('cc', 0)}): {f.get('message', '')}"
+                            for f in failed
+                        )
+                    else:
+                        details = parsed.get("error", "unknown error")
                     return (
                         f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                        f"function '{fn.get('function', '?')}' has CC={cc} "
-                        f"(target CC <= 5)"
+                        f"{details}"
                     )
+                functions = parsed.get("functions", [])
+                for fn in functions:
+                    cc = fn.get("cc", 0)
+                    if cc > 5:
+                        return (
+                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                            f"function '{fn.get('function', '?')}' has CC={cc} "
+                            f"(target CC <= 5)"
+                        )
         except Exception as e:
             return f"[verify_edit] {author}: error — {staged_file_path} — {e}"
 
