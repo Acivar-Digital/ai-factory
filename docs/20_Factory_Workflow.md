@@ -114,3 +114,12 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 - **Failure artifacts**: `factory/orch/logs/runtime/fail_<tier>_<tier>.json` — structured failure diagnostics when a tier is blocked or trips the circuit breaker.
 - **Main failure log**: `factory/orch/logs/runtime/fail_main.log` — uncaught exception tracebacks for pipeline-level failures.
+
+## Changelog
+
+### 2026-08-02
+- **Workflow Spec Initialized**: Created `docs/20_Factory_Workflow.md` incorporating the 5 strategic signposts.
+- **Pydantic AI 2.0 Integration**: Added `ModelRetry` tool-level retries inside `tools_file.py` and `tools_shell.py` for immediate AST self-correction.
+- **System Prompt Hardening**: Injected Pydantic v2 rules, flat guard clause constraints (CC <= 5), and underscore helper naming (`_is_promo_expired`) into `intern.yaml`, `engineer.yaml`, `senior.yaml`.
+- **Diagnostic Persistence**: Added per-file diagnostic tracking under `last_tier_diagnostic_<file_path>` in `pipeline.py`.
+- **AST Verifier Precision**: Whitelisted private attributes starting with `_` and relative imports (`node.level > 0`) in `ast_verifier.py`.
