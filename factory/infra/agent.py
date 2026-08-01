@@ -293,7 +293,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # Bind the active role (+ agent id for coder isolation) so the `remember`
     # tool writes to THIS agent's folder (per-coderN isolated memory, a101k).
     set_current_role(role)
-    agent_id = _coder_agent_id(task_id) if role == "intern" else None
+    agent_id = (_coder_agent_id(task_id) or "intern01") if role == "intern" else None
     set_current_agent(agent_id)
 
     # Each agent receives ITS OWN history. We reconstruct the per-turn continuity
