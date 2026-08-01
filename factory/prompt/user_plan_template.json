@@ -1,0 +1,10 @@
+[
+  {
+    "file": "path/to/first_file.py",
+    "prompt": "Specific instructions for what to change in this file only. e.g., 'Refactor function X to use Y'."
+  },
+  {
+    "file": "path/to/second_file.py",
+    "prompt": "Specific instructions for this second file. e.g., 'Add a unit test for X'."
+  }
+]

@@ -1,0 +1,41 @@
+# Simplification Plan: AI-Factory Redesign (The Two-Coder Parallel Engine)
+
+**Tracking & Alignment Identifiers for Builder:**
+- **Beads Issue:** `factory-pn3i`
+- **Memory Key:** `architecture-simplification-intern-boss` (Use `bd memories` to retrieve)
+
+---
+
+## 1. Branch Restructuring
+- The legacy orchestrator branch has been moved to `full_suite`.
+- This simplified architecture will be built on the new `main` branch.
+
+## 2. The Human-Driven DAG
+- The AI `planner` agent is entirely deleted.
+- The human user assumes the role of the planner. The human will write a JSON file (e.g., `user_plan.json`) that maps exactly **one file to exactly one prompt**.
+  - Example: `[{"file": "src/main.py", "prompt": "Add retry loop"}]`
+
+## 3. Parallel Pipeline (One Intern, One Boss, One File)
+- The orchestrator (`runner.py` / `pipeline.py`) reads the human's JSON file.
+- For every file in the JSON, it spawns an isolated, parallel, two-step pipeline.
+- The `red-team`, `ops`, and `loop_back` rejection mechanisms are completely removed.
+
+### Phase 1: The Intern (Builder)
+- **Role**: Makes edits to their specific file based on the prompt.
+- **Prompt**: Receives the exact `prompt` string from the JSON for their assigned file.
+
+### Phase 2: The Boss (Reviewer)
+- **Role**: Reviews the Intern's work, makes direct edits to fix any mistakes, and terminates that specific pipeline (no returning work to the intern).
+- **Prompt Formulation**: Receives the Intern's original prompt, appended with exactly: *"go fix your shitting intern's job"*.
+- **Adversarial Handoff**: The Boss receives NO diffs (remove the `diff_vs_orig` injection) and no pre-computed file lists. They start completely blind and must inspect the target file directly to verify and fix the code.
+
+## 4. Tool Adjustments (Grep Quotas)
+- **Grep Limits**: `batch_read` is completely deprecated. Both the Intern and the Boss are granted a quota of 50 `grep` calls per run to explore the codebase freely. Update `tools_guard.py` to reflect this new limit.
+
+## 5. Context Hygiene (Zero-Copy Reading)
+- **History Scrubbing**: When an agent uses a read tool (like `read_file.py`), the full file content is returned so the model can read it for that specific turn. 
+- **The Catch**: The orchestrator immediately intercepts the conversation history (look in `factory/infra/artefacts.py` or `_loopguard.py`) and scrubs the raw text out of the Pydantic-AI `ModelMessages` array, replacing it with a tiny stub: *"You read [file]"*.
+- **Trust-based Memory**: To survive context scrubbing, agents must explicitly use the `remember` tool to extract and persist any logic, signatures, or variables they need for subsequent turns. Context dilution is thus eliminated.
+
+## 6. Implementation Philosophy (Negative LOC)
+This is a deletion-heavy PR. Strip out the complex AI orchestration (DAG generation, multi-stage gating, loop backs) and replace it with a highly disciplined, human-directed parallel execution loop. It relies on strict mapping (`asyncio.gather`) rather than autonomous AI routing.

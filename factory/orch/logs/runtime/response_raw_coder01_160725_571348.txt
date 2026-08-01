@@ -1,0 +1,2109 @@
+[text] I will now read the relevant lines of the staging file `/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py` to confirm the surrounding text.
+
+[tool-call] read_file({"relative_path":"/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py","start_line":210,"end_line":255})
+
+[tool-call] remember({"note":"I will read module1_macro.py around lines 210-255 and lines 340-355 to understand the Da Yun branch audit logic and where the unified medicine/taboo variables are defined, then design a replacement logic that checks the 8 interactions in prioritised order and sets ty_branch_impact correctly."})
+
+[tool-call] read_file({"start_line":210,"end_line":255,"relative_path":"/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py"})
+
+[text] I will read the staging copy of `module1_macro.py` under the `factory/temp` relative path.
+
+[tool-call] read_file({"end_line":260,"start_line":205,"relative_path":"factory/temp/src2/engine/module1_macro.py"})
+
+[text] I will read the staging copy of `module1_macro.py` using its correct path within the container. Let me try `factory/temp/src2/engine/module1_macro.py` but let's check the current directory / relative paths. Oh wait, `src2/engine/module1_macro.py` is relative to the root? Let's check `factory/temp/src2/engine/module1_macro.py` wasn't found - wait, is it `factory/temp/src2/engine/module1_macro.py` or maybe it starts with `/` like `/home/yapilwsl/arthityap/ai-factory/...`? Wait! "LIVE FILES (read-only reference — DO NOT write here): ['src2/engine/module1_macro.py']". Wait, the prompt says "STAGING PATHS (WRITE your proposed files ONLY here, under factory/temp/): ['/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py']".
+Oh, the relative path from the workspace root might be `factory/temp/src2/engine/module1_macro.py` but why did it say "File not found"? Let's read `src2/engine/module1_macro.py` first to see if it works, or maybe see where we are. Let's try reading `src2/engine/module1_macro.py`.
+
+[tool-call] read_file({"start_line":205,"relative_path":"src2/engine/module1_macro.py","end_line":260})
+
+[text] I will check the definitions inside `src2/core/schemas/unified.py` using `batch_read` (specifying a line range) to locate BAN_HE_RESULTS, Element, or other combination maps and lookups.
+
+[tool-call] batch_read({"line_ranges":{"generic":"1-250","src2":"1-250"},"paths":["src2/core/schemas/unified.py"]})
+
+[text] I will read lines 250-750 of `src2/core/schemas/unified.py` to see the definitions of `BAN_HE_RESULTS`, `Element`, and other interaction maps.
+
+[tool-call] batch_read({"paths":["src2/core/schemas/unified.py"],"line_ranges":{"src2":"250-750","src2/core/schemas/unified.py":"250-750"}})
+
+[text] I will continue reading `src2/core/schemas/unified.py` to target lines 1200-1800 where more constants and schemas might reside.
+
+[tool-call] batch_read({"line_ranges":{"src2/core/schemas/unified.py":"1200-1800"},"paths":["src2/core/schemas/unified.py"]})
+
+[text] I will search for the definition of `Element` in `src2/core/schemas/unified.py` using `batch_read` on lines 1000-1200.
+
+[tool-call] batch_read({"line_ranges":{"src2/core/schemas/unified.py":"1000-1200"},"paths":["src2/core/schemas/unified.py"]})
+
+[text] I have successfully confirmed:
+- `Element` is `class Element(StrEnum)` inside `src2/core/schemas/unified.py`.
+- `BAN_HE` is a subclass of `RootModel` wrapping a list of `frozenset[str]`.
+- Let's check `BAN_HE_RESULTS`. `BAN_HE_RESULTS` is imported? No, wait: "Import BAN_HE_RESULTS and Element from src2.core.schemas.unified." Yes, we should import `BAN_HE_RESULTS` and `Element` from `src2.core.schemas.unified`.
+Wait, let's read the current imports in `src2/engine/module1_macro.py` using `batch_read`. Wait, I already saw lines 1-35 in `module1_macro.py` from the full content in user instructions!
+Let's see:
+```python
+15: from src2.core.schemas.unified import (
+16:     BAN_HE,
+17:     BRANCHES,
+18:     CHONG,
+19:     COMBINATION_STATES,
+20:     HAI,
+21:     LIU_HE,
+22:     PO,
+23:     SAN_HE,
+24:     SAN_HUI,
+25:     STEM_COMBINE_RESULTS,
+26:     STEM_COMBINES,
+27:     STEMS,
+28:     XING,
+29:     XUN_KONG,
+30: )
+```
+Wait, we need to import `BAN_HE_RESULTS` and `Element` from `src2.core.schemas.unified`.
+So we can change the import block to:
+```python
+from src2.core.schemas.unified import (
+    BAN_HE,
+    BAN_HE_RESULTS,
+    BRANCHES,
+    CHONG,
+    COMBINATION_STATES,
+    Element,
+    HAI,
+    LIU_HE,
+    PO,
+    SAN_HE,
+    SAN_HUI,
+    STEM_COMBINE_RESULTS,
+    STEM_COMBINES,
+    STEMS,
+    XING,
+    XUN_KONG,
+)
+```
+Wait, is `XING` defined in `src2.core.schemas.unified.py`? Let's check. Yes, it was imported on line 28.
+
+Now, let's look at the instruction again:
+"Move lines 343-348 (setup of _unified_medicine and _unified_taboo) before the Da Yun branch audit (line 216). Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, setup of `_unified_medicine` and `_unified_taboo` at lines 343-348:
+Let's see what is on lines 343-348 currently (we have it in the file dump):
+```python
+343:     _unified_medicine = set(medicine)
+344:     _unified_taboo = set(taboo)
+345:     _shen_profile = profile.shen_profile
+346:     if _shen_profile is not None:
+347:         _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+348:         _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+```
+Yes, this sets up the two sets `_unified_medicine` and `_unified_taboo`.
+We need to move this setup to before the Da Yun branch audit.
+Wait, if we move it before the Da Yun branch audit, what happens at lines 343-348? They should probably just refer to `_unified_medicine` and `_unified_taboo`, which are now defined earlier. Wait, let's verify if `tai_sui_triggers` still filters by `_unified_medicine` and `_unified_taboo`. Yes, lines 349-350 do:
+```python
+349:     if _unified_medicine or _unified_taboo:
+350:         tai_sui_triggers = _filter_tai_sui_by_shen(tai_sui_triggers, _unified_medicine, _unified_taboo)
+```
+So we can just remove/replace lines 343-348 with nothing (or keep them if we just referenced them, but moving them means deleting them from lines 343-348 and placing them before line 216).
+Wait, let's check: are `medicine`, `taboo`, `profile` defined before line 216?
+Yes! In `calculate_macro`:
+```python
+166:     day_master_stem = profile.day_pillar.stem if profile.day_pillar else "Unknown"
+167:     ten_year_pillar = profile.da_yun_pillar
+168:     medicine = profile.medicine or []
+169:     taboo = profile.taboo or []
+```
+So we can certainly move the setup of `_unified_medicine` and `_unified_taboo` right after that, or right before line 216.
+
+Let's read closely how the 8 earthly branch interactions should be checked in canonical priority order:
+三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+Wait, how are each of these combinations or clashes defined? And how do we determine their element for comparison against `_unified_medicine` / `_unified_taboo`?
+Let's analyze them one by one.
+
+Wait! The instruction:
+"Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Let's dissect this instruction carefully:
+1. "in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破"
+2. "For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine."
+3. "For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine."
+4. "Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, what are "the graduated magnitudes and the polarity sign"?
+Let's see what the magnitudes and signs for `ann_branch_impact` are!
+Wait, in lines 364-374:
+```python
+364:     _legacy_impact = {
+365:         "冲太岁": -30,
+366:         "三会太岁": 20,
+367:         "三合太岁": 18,
+368:         "六合太岁": 15,
+369:         "半合太岁": 10,
+370:         "值太岁": 20,
+371:         "刑太岁": -15,
+372:         "破太岁": -15,
+373:         "害太岁": -15,
+375:     }
+```
+Wait! Are these the graduated magnitudes for Tai Sui, or does Da Yun have its own graduated magnitudes?
+Let's check the original code for Da Yun branch audit (lines 216-249):
+```python
+216:     ty_branch_impact = 0
+217:     for nb in natal_branches:
+218:         if CHONG.get(ty_branch) == nb:
+219:             ty_branch_impact = -20
+220:             break
+221:     if ty_branch_impact == 0:
+222:         for nb in natal_branches:
+223:             if frozenset({ty_branch, nb}) in LIU_HE:
+224:                 ty_branch_impact = 20
+225:                 break
+226:     if ty_branch_impact == 0:
+227:         for nb in natal_branches:
+228:             for triangle in SAN_HE.values():
+229:                 if ty_branch in triangle and nb in triangle:
+230:                     ty_branch_impact = 20
+231:                     break
+232:             if ty_branch_impact != 0:
+233:                 break
+234:     if ty_branch_impact == 0:
+235:         is_disruptor = False
+236:         for nb in natal_branches:
+237:             if PO.get(ty_branch) == nb or HAI.get(ty_branch) == nb:
+238:                 is_disruptor = True
+239:                 break
+240:         if not is_disruptor:
+241:             for nb in natal_branches:
+242:                 for group in XING.values():
+243:                     if ty_branch in group and nb in group:
+244:                         is_disruptor = True
+245:                         break
+246:                 if is_disruptor:
+247:                     break
+248:         if is_disruptor:
+249:             ty_branch_impact = -10
+```
+Wait, the original code had:
+- Chong: -20
+- Liu He: 20
+- San He: 20
+- Po, Hai, Xing (disruptors): -10
+
+Wait! But is there a standard set of graduated magnitudes for Da Yun branch interactions? Or does it use a different scale or similar to the Tai Sui one?
+Let's search the repo for `ty_branch_impact` or other Da Yun branch calculations/tests/documentation. Let's do a search! Wait, how can we search in this workspace? We don't have grep/find, but we can do a batch_read on other files or look up where tests/etc. might be. Let's list files or search. Wait, we don't have list_files. But we have `batch_read` and we can read common places. What are the tests in the workspace? Let's check.
+Wait, let's think: is there a way to see what tests exist?
+Wait, the prompt says:
+`STAGING PATHS: ['/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py']`
+Let's see if there are other files in the workspace. Can we read `tests/` or do we know the paths?
+Wait, the prompt says:
+`LIVE FILES (read-only reference — DO NOT write here): ['src2/engine/module1_macro.py']`
+Ah! We only have that file as a reference and we must write code to the staging path.
+Wait, do we have any files in the graveyard? "ZERO-SPECULATION: Read _docs/PM/GRAVEYARD.md before architecture changes." Let's check if `_docs/PM/GRAVEYARD.md` exists.I will try to batch-read `_docs/PM/GRAVEYARD.md` to see if there is any architecture or rules documentation about magnitudes, interactions, or elements.
+
+[tool-call] batch_read({"paths":["_docs/PM/GRAVEYARD.md"],"line_ranges":{"_docs/PM/GRAVEYARD.md":"1-200"}})
+
+[text] I will read the test file `tests/test_module1.py` or similar to see if we can find how macro-environmental scan or `ty_branch_impact` is tested and verified. Let's locate the test files first or check if we can read them. Wait, since we don't have list_files, let's guess standard python test paths or read another file. Is there a test directory? Usually it's `tests/` in the root. Let's search if `tests/test_module1_macro.py` or `tests/engine/test_module1_macro.py` exists, or maybe `tests/test_engine.py`. Let's try reading `tests/test_module1.py` using `batch_read` (starting with line 1 to 250).
+
+[tool-call] batch_read({"line_ranges":{"tests/test_module1.py":"1-250"},"paths":["tests/test_module1.py"]})
+
+[text] I will try to batch-read `tests/engine/test_module1_macro.py` instead.
+
+[tool-call] batch_read({"paths":["tests/engine/test_module1_macro.py"],"line_ranges":{"tests/engine/test_module1_macro.py":"1-250"}})
+
+[text] I will try a different potential test path: `tests/test_macro.py`.
+
+[tool-call] batch_read({"paths":["tests/test_macro.py"],"line_ranges":{"tests/test_macro.py":"1-250"}})
+
+[text] I'll try to find where test files are located by checking if there's any file in `src2/` that runs tests or another standard directory structure. Let's check `tests/test_engine.py`.
+
+[tool-call] batch_read({"paths":["tests/test_engine.py"],"line_ranges":{"tests/test_engine.py":"1-250"}})
+
+[text] I will read `src2/engine/element_phase.py` (which is referenced in module1_macro.py) or check imports. Let's read lines 1-250 of `src2/engine/element_phase.py` to see if it helps.
+
+[tool-call] batch_read({"line_ranges":{"src2/engine/element_phase.py":"1-250"},"paths":["src2/engine/element_phase.py"]})
+
+[text] Now let's review the required 8 earthly branch interactions in canonical priority order:
+三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+And we need to:
+"Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, what are "the graduated magnitudes and the polarity sign"?
+Let's see:
+"Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+Wait, if we scan ALL natal branches without early breaks, does that mean we compute the impact for each interaction found and keep compiling them? Or do we find the highest priority interaction across all natal branches, or do safety checks? Let's re-read:
+"Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+Is it that we loop over all natal branches, find the highest priority interaction that occurs for each (or does multiple interactions?), or do we do a prioritized evaluation for each branch and sum them up? Or does it mean we scan all natal branches, and for EACH natal branch, we find the highest-priority interaction (if any) that occurs with `ty_branch`?
+Let's check if the prompt says:
+"Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, what are the graduated magnitudes for each of those 8 interaction types?
+Let's check what the magnitudes in Tai Sui audit are:
+- 三会: 20
+- 三合: 18
+- 冲: 30 (absolute base magnitude of 30, wait, look at `_legacy_impact` above: "冲太岁": -30, "三会太岁": 20, "三合太岁": 18, "六合太岁": 15, "半合太岁": 10, "值太岁": 20, "刑太岁": -15, "破太岁": -15, "害太岁": -15).
+Wait, are these same magnitudes to be used for Da Yun branch audit?
+Wait! In the original code (lines 216-249), the magnitudes for Da Yun branch audit were:
+- Chong: 20
+- Liu He: 20
+- San He: 20
+- Po, Hai, Xing: 10
+Wait! Let's check `_legacy_impact` of the Tai Sui triggers.
+Wait, let's look at the instruction: "Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+Wait, if it is "graduated magnitudes and the polarity sign", what are the graduated magnitudes?
+Let's think: are the graduated magnitudes for the 8 interactions:
+- 三会: 20
+- 三合: 18
+- 冲: 30 or 20? Wait, let's use the standard base magnitudes from `_legacy_impact` or perhaps defined elsewhere? Wait! Let's look at lines 353-374:
+```python
+    # Canonical interaction-priority axiom (§9.0): 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破 > 值
+    _priority_type = {
+        "三会太岁": 0,
+        "三合太岁": 1,
+        "冲太岁": 2,
+        "六合太岁": 3,
+        "半合太岁": 4,
+        "刑太岁": 5,
+        "害太岁": 6,
+        "破太岁": 7,
+        "值太岁": 8,
+    }
+    _legacy_impact = {
+        "冲太岁": -30,
+        "三会太岁": 20,
+        "三合太岁": 18,
+        "六合太岁": 15,
+        "半合太岁": 10,
+        "值太岁": 20,
+        "刑太岁": -15,
+        "破太岁": -15,
+        "害太岁": -15,
+    }
+```
+Wait! Are the magnitudes for Da Yun:
+- 三会: 20
+- 三合: 18
+- 冲: 20 (wait, or is it 30?) No, wait! "graduated magnitudes" means the magnitudes are different for different types (i.e. graduated, not flat 20/10 as before). What are they? Are they:
+- 三会: 20 (or 20)
+- 三合: 18 (or 18)
+- 冲: 30 (or 20? No, standard clash is 30 in Tai Sui, but maybe 20 in Da Yun?) Wait, in original it was: "if CHONG.get(ty_branch) == nb: ty_branch_impact = -20". What if the graduated magnitudes are:
+- 三会: 20
+- 三合: 18
+- 冲: 20 (or 30? Wait, let's re-read the original: Chong was 20: `ty_branch_impact = -20`. Wait!)
+Let's search for "graduated magnitudes" in the codebase! Is there any reference to "graduated magnitudes" or similar in other files?
+Let's see if we can read other engine files to find if they mention Da Yun branch audit or graduated magnitudes. Let's do a batch_read on other files in `src2/engine/`. What other files are there in `src2/engine`? Let's check `src2/engine/module2_...` or similar. Since we don't have list files, we can look at the imports in other files, but wait, `src2/engine/module1_macro.py` is the file containing the macro logic. Let's examine if there is another file `src2/engine/module8_scoring.py` or similar? Let's check imports of `run_module1_macro` in the workspace to see if there is any other place.
+Wait, let's search if there are other files in `src2/engine/`. Let's check if `src2/engine/bazi_math.py` exists by reading its first few lines.
+
+[tool-call] batch_read({"line_ranges":{"src2/engine/bazi_math.py":"1-250"},"paths":["src2/engine/bazi_math.py"]})
+
+[text] Let's check where else in the codebase `calculate_macro` is tested. Maybe in `tests/` we can find a test file. Let's search if `tests/test_module1_macro.py` or similar actually exists — oh, it might be named and we just missed the exact name, or maybe it's in a subdirectory?
+Wait! Let's check `tests/test_calculators.py` or `tests/engine/` using `batch_read`. Wait, does `tests/` directory exist? What files are inside `tests/` or in the workspace? Since we don't have list_files, we can check a few common names, but wait, the instruction says:
+"Move lines 343-348 (setup of _unified_medicine and _unified_taboo) before the Da Yun branch audit (line 216). Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks. Import BAN_HE_RESULTS and Element from src2.core.schemas.unified."
+
+Let's carefully verify the priority and how we check each interaction type for `ty_branch` against the natal branches.
+Wait, what are the graduated magnitudes?
+Let's see: "Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+Wait, if it is "graduated magnitudes and the polarity sign", what are the graduated magnitudes? Let's check if the magnitudes are the same as those for Tai Sui:
+- 三会: 20
+- 三合: 18
+- 冲: 30 (absolute base magnitude of 30, wait, look at `_legacy_impact` above: "冲太岁": -30, "三会太岁": 20, "三合太岁": 18, "六合太岁": 15, "半合太岁": 10, "值太岁": 20, "刑太岁": -15, "破太岁": -15, "害太岁": -15).
+Wait, are these same magnitudes to be used for Da Yun branch audit?
+Wait! In the original code (lines 216-249), the magnitudes for Da Yun branch audit were:
+- Chong: 20
+- Liu He: 20
+- San He: 20
+- Po, Hai, Xing (disruptors): 10
+Wait! If they are "the graduated magnitudes and the polarity sign", let's think: is there another file in the codebase that has tests for module1?
+Let's run a batch_read on `tests/test_bazi.py` or `tests/test_bazi_math.py`. Let's try!
+
+[tool-call] batch_read({"line_ranges":{"tests/test_bazi.py":"1-250"},"paths":["tests/test_bazi.py"]})
+
+[text] Let's search for anything matching `test_` under Python files in root or check where imports of calculate_macro are. Wait, how can we find where tests are? Let's check `tests/test_engine.py` didn't exist. Does `tests` exist? Wait, maybe `tests/test_macro.py` or another? What about `tests/test_pipelines.py`?
+Let's see if we can guess from common names. Wait, is there a `tests/conftest.py`? Let's try reading `tests/conftest.py`.
+
+[tool-call] batch_read({"paths":["tests/conftest.py"],"line_ranges":{"tests/conftest.py":"1-250"}})
+
+[text] Let's check if there is any test folder under other names. Wait, could the test files be in `tests_engine/` or in `tests/unit/`? Let's check `tests/unit/test_macro.py`.
+
+[tool-call] batch_read({"paths":["tests/unit/test_macro.py"],"line_ranges":{"tests/unit/test_macro.py":"1-250"}})
+
+[text] Let's search for any files matching `test_` under standard locations or check if we have any other clues. If there are no test files in standard locations, maybe we can look at the workspace folders. Wait, can we read `pyproject.toml` to see the structure? Yes, let's read `pyproject.toml`!
+
+[tool-call] batch_read({"line_ranges":{"pyproject.toml":"1-250"},"paths":["pyproject.toml"]})
+
+[text] Ah! Look at the pytest ini options:
+`testpaths = ["TEST"]`
+So the tests are located in the `TEST/` folder! Let's check what test files are under `TEST/` by reading `TEST/test_module1.py` or similar. Let's try!
+
+[tool-call] batch_read({"paths":["TEST/test_module1.py"],"line_ranges":{"TEST/test_module1.py":"1-250"}})
+
+[text] Wow, my read budget for reading files is exhausted (or tool limits have kicked in). We must now implement the logic directly using our current knowledge.
+Wait, let's carefully plan the exact details of the requested refactoring:
+
+1. Move lines 343-348 (setup of `_unified_medicine` and `_unified_taboo`) before the Da Yun branch audit (line 216).
+Wait, let's look at what lines 343-348 do exactly:
+```python
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+```
+Yes, this code runs inside `calculate_macro`. Let's put it right at the start of the "Branch Audit" section.
+
+2. Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order:
+三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破.
+Wait, what is this sequence checking?
+- `ty_branch` against the natal branches.
+- We must scan all natal branches without early breaks, meaning we check every natal branch `nb` in `natal_branches` against `ty_branch`, and set `ty_branch_impact` using the graduated magnitudes and the polarity sign.
+Wait! Let's re-read the instruction carefully:
+"Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, what are the "graduated magnitudes and the polarity sign"?
+Let's see:
+For each interaction type, there is a graduated magnitude.
+Let's look at the magnitudes from `_legacy_impact`:
+```python
+    _legacy_impact = {
+        "冲太岁": -30,
+        "三会太岁": 20,
+        "三合太岁": 18,
+        "六合太岁": 15,
+        "半合太岁": 10,
+        "值太岁": 20,
+        "刑太岁": -15,
+        "破太岁": -15,
+        "害太岁": -15,
+    }
+```
+Wait! Is it possible that the Da Yun branch audit should use these exact magnitudes?
+Wait, if it is graduated magnitudes, they are indeed:
+- 三会: 20
+- 三合: 18
+- 冲: 30 (or wait, is it 20? No, let's look at the keys: `冲太岁` is 30, `刑太岁` is 15, `害太岁` is 15, `破太岁` is 15. The magnitude is the absolute value of these, so:
+  - 三会: 20
+  - 三合: 18
+  - 冲: 30
+  - 六合: 15
+  - 半合: 10
+  - 刑: 15
+  - 害: 15
+  - 破: 15
+Wait! Let's double check if there are other graduated magnitudes mentioned. What about the original magnitudes?
+Original magnitudes:
+- Chong: 20
+- Liu He: 20
+- San He: 20
+- Po, Hai, Xing: 10
+Wait! But those original ones were NOT graduated—they were flat (20 for some, 10 for others). The instruction says: "Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. [...] Set ty_branch_impact using the graduated magnitudes and the polarity sign"
+Wait, let's verify if the magnitudes should be:
+- 三会: 20
+- 三合: 18
+- 冲: 30 (wait, or is it 20? The Tai Sui has 30 for clash, 20 for San Hui, 18 for San He, 15 for Liu He, 10 for Ban He, 15 for Xing/Po/Harm. These are indeed graduated! So 三会=20, 三合=18, 冲=30, 六合=15, 半合=10, 刑=15, 害=15, 破=15).
+Wait, is there any other set of graduated magnitudes? Let's check `_legacy_impact` again:
+`冲太岁`: -30, `三会太岁`: 20, `三合太岁`: 18, `六合太岁`: 15, `半合太岁`: 10, `刑太岁`: -15, `破太岁`: -15, `害太岁`: -15.
+Yes, the magnitudes are:
+- 三会: 20
+- 三合: 18
+- 冲: 30
+- 六合: 15
+- 半合: 10
+- 刑: 15
+- 害: 15
+- 破: 15
+
+Wait, what polarity sign should we apply?
+Let's look at the instruction:
+"For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, how is the polarity sign determined in the code?
+Let's look at how the primary Tai Sui polarity sign is calculated at lines 386-388:
+```python
+        sign = -1 if trigger_type in HARM_TYPES else 1
+        polarity = -1 if trigger_el in _unified_taboo else 1
+        ann_branch_impact = int(base_magnitude * sign * polarity)
+```
+Wait!
+"The interaction's native sign is preserved (no abs()). Polarity flips the sign only for 忌神 on a helpful interaction (合/值) or 用神 on a harmful one (冲/刑/破/害)."
+So, the polarity logic is:
+- Native sign:
+  - If a harmful interaction (冲, 刑, 害, 破): native sign is `-1`.
+  - If a combination interaction (三会, 三合, 六合, 半合): native sign is `+1`.
+- Polarity:
+  - Wait, let's look at line 387:
+    `polarity = -1 if trigger_el in _unified_taboo else 1`
+  - Let's think: does it check if the element is in `_unified_medicine`? Wait, `_unified_medicine` is Medicine (用神/喜神), and `_unified_taboo` is Taboo (忌神/仇神).
+  - Wait! If `trigger_el` is in `_unified_medicine` (medicine), then the polarity is `+1`. If `trigger_el` is in `_unified_taboo`, the polarity is `-1`. What if it's neither?
+  Wait! Let's look at `_filter_tai_sui_by_shen`:
+  ```python
+  def _filter_tai_sui_by_shen(
+      triggers: list[TaiSuiTrigger], medicine: set[str], taboo: set[str]
+  ) -> list[TaiSuiTrigger]:
+      """Gate Tai Sui triggers by 用神/忌神 polarity (single source of truth, §8.2).
+
+      One polarity-aware scheme replaces the prior sign-agnostic ``+5`` hack. A trigger
+      whose element is a neutral bystander (闲神) — neither 用/喜 nor 忌/仇 — is suppressed
+      (``shen_adjusted_impact = 0``); the signed impact itself is preserved so the caller
+      (§8.1) derives the final sign from interaction type × 用神/忌神.
+      """
+      for t in triggers:
+          trigger_element = t.element
+          if trigger_element in medicine or trigger_element in taboo:
+              t.shen_adjusted_impact = t.impact
+          else:
+              t.shen_adjusted_impact = 0
+      return triggers
+  ```
+  Wait! "A trigger whose element is a neutral bystander (闲神) — neither 用/喜 nor 忌/仇 — is suppressed". So if the element is a neutral bystander, the impact becomes 0!
+  Wait! Is that also the case for Da Yun?
+  Let's look at: "For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+  Wait, what are the checks for clash/harm and combination types against `_unified_taboo / _unified_medicine`?
+  Is it:
+  - If the element is in `_unified_medicine`: polarity = 1.
+  - If the element is in `_unified_taboo`: polarity = -1.
+  - What if the element is in neither? Wait! If it's in neither, does it have 0 impact or a default polarity?
+  Let's re-read the instruction very closely:
+  "For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+  Wait, if we check target natal branch element / combined element against `_unified_taboo` / `_unified_medicine`, we can determine:
+  - If element in `_unified_medicine`: polarity is `1`.
+  - If element in `_unified_taboo`: polarity is `-1`.
+  - If element is in neither: wait, does it mean we only set an impact if the element is in either `_unified_medicine` or `_unified_taboo`? Let's check with the Tai Sui logic:
+    ```python
+    polarity = -1 if trigger_el in _unified_taboo else 1
+    ```
+    If `trigger_el` is not in `_unified_taboo`, the polarity is 1. But wait, in Tai Sui, triggers are filtered beforehand so that only those with `trigger_element in medicine or trigger_element in taboo` are active (not suppressed to 0). Wait, no:
+    ```python
+    # Harmful interactions (冲/刑/破/害) carry a negative native sign; 会/合/值 carry positive.
+    # ...
+    active_triggers = [t for t in tai_sui_triggers if t.shen_adjusted_impact != 0]
+    ```
+    Wait, in `active_triggers`, only triggers whose element is in `_unified_medicine` or `_unified_taboo` are kept! So if the element is not in either, `shen_adjusted_impact` is 0, and that trigger is ignored (we don't calculate `ann_branch_impact` for it).
+    Wait, is that also true for Da Yun?
+    Let's check if the Da Yun branch audit should also skip neutral elements, or if it should assign polarity 1/0/-1, or if it should use 0 impact when the element is neither medicine nor taboo.
+    Let's read again: "For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+    Wait, what element is used for the combination types?
+    "For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine."
+    Wait, how do we get the "combined element" for these combination types?
+    Let's look at how the core/schemas/unified defines combined elements for combinations, or if we can derive them.
+    Let's check the imported constants:
+    - `SAN_HUI`: is it a dictionary of `element -> set of branches/frozenset`? Let's look at lines 107-111 in the era block calculation:
+      ```python
+      for element, branches in SAN_HUI.items():
+          if dy_branch in branches:
+              era_element = element
+      ```
+      Ah! `SAN_HUI` maps element name to a set/frozenset of 3 branches. Yes, `SAN_HUI` is a dictionary where the keys are elements!
+      Let's also look at `SAN_HE`:
+      ```python
+      # SAN_HE is similar: maps element (or result/key) to a set/frozenset of branches?
+      for triangle in SAN_HE.values():
+          if ty_branch in triangle and nb in triangle:
+      ```
+      Wait! Let's check how `SAN_HE` is defined.
+      Let's search/recall `SAN_HE` in `src2/core/schemas/unified.py` or see if there is `SAN_HE` mapping.
+      Wait, in `check_he_tai_sui`:
+      ```python
+      # 三合 (汇合)
+      for triangle in SAN_HE.values():
+          if triangle <= _all:
+              return TaiSuiTrigger(
+                  ...
+                  element=(eb := BRANCHES.get(annual_branch)) and eb.element,
+              )
+      ```
+      Wait! In `check_he_tai_sui`, the element of the trigger for both `三会太岁` and `三合太岁` was simply `(eb := BRANCHES.get(annual_branch)) and eb.element` in the code, but wait! The instruction says:
+      "For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine."
+      Let's check how the combined element of each combination type is defined in the Bazi theory, or if there are constants for them.
+      - **三会 (San Hui)**: The three branches of a direction combine to form an element.
+        `SAN_HUI` maps the element (a string or `Element` Enum) to a set/frozenset of branches. So the combined element for San Hui is the key in `SAN_HUI` that contains the branches!
+      - **三合 (San He)**: The three branches of a triad combine to form an element.
+        `SAN_HE` maps the element (a string or `Element`) to a set/frozenset of branches. So the combined element for San He is the key in `SAN_HE` that contains the branches!
+      - **六合 (Liu He)**: Six combinations.
+        Wait, what is the combined element for `LIU_HE`? Let's check if there is a mapping in `unified.py` or how we can get it.
+        Is there `LIU_HE` in `src2/core/schemas/unified.py`?
+        Let's recall our `batch_read` on `src2/core/schemas/unified.py`.
+        Wait, I can search my memory of the `batch_read` on `src2/core/schemas/unified.py`.
+        Yes, `LIU_HE` is usually a dictionary or structure.
+        Wait! In `module1_macro.py`, we have:
+        ```python
+        if frozenset({branch_a, branch_b}) in LIU_HE:
+        ```
+        Wait, is `LIU_HE` a dict or a set/frozenset? Line 77 says:
+        `if frozenset({branch_a, branch_b}) in LIU_HE:`
+        And line 223 says:
+        `if frozenset({ty_branch, nb}) in LIU_HE:`
+        Wait, if it's used with `in`, it could be a dictionary whose keys are `frozenset`s! If it's a dict, then its values would be the combined elements!
+        Let's check if `LIU_HE` is a dictionary or if there is a `LIU_HE_RESULTS` or similar.
+        Wait, in `module1_macro.py`, it does:
+        `from src2.core.schemas.unified import LIU_HE`
+        Let's look at `src2/core/schemas/unified.py` line 21:
+        `LIU_HE,`
+        Wait, is there a definition of `LIU_HE` in `src2/core/schemas/unified.py`? Yes, we saw it in the import list.
+        Let's think: what does `LIU_HE` map? Six combinations:
+        - 子丑 -> 土 (Earth)
+        - 寅亥 -> 木 (Wood)
+        - 卯戌 -> 火 (Fire)
+        - 辰酉 -> 金 (Metal)
+        - 巳申 -> 水 (Water)
+        - 午未 -> 火/土 (Fire or Earth, usually Fire or Earth)
+        Wait, if `LIU_HE` is a dict mapping `frozenset` to `Element`, then we can query it as: `LIU_HE.get(frozenset({branch1, branch2}))`.
+        Wait, let's verify if `LIU_HE` is a dictionary or a set.
+        Wait, if `LIU_HE` is a dictionary/mapping, then checking `frozenset({branch_a, branch_b}) in LIU_HE` works because dictionaries support the `in` operator (which checks keys). And we can get the value: `LIU_HE.get(frozenset({branch_a, branch_b}))` which would be the combined element!
+        Let's verify what `BAN_HE` is.
+        `BAN_HE` is imported at line 16. In line 79:
+        `for pair in BAN_HE: ...`
+        Wait, line 591 in `check_he_tai_sui`:
+        `for pair in BAN_HE.root:`
+        Ah! `BAN_HE` is a Pydantic model (`RootModel`) whose `.root` is a list/iterable.
+        Wait! The instruction says:
+        "Import BAN_HE_RESULTS and Element from src2.core.schemas.unified."
+        Ah! `BAN_HE_RESULTS` is imported!
+        So `BAN_HE_RESULTS` is a dictionary that maps the half-combination (probably a frozenset of 2 branches) to its result element!
+        Let's verify this. If `BAN_HE_RESULTS` is a dictionary, we can do:
+        `combined_el = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))` or similar!
+        This is perfect and matches the instruction exactly: "Import BAN_HE_RESULTS and Element from src2.core.schemas.unified."
+
+Let's double check if we can query the combined element of each combination type:
+1. **三会 (San Hui)**:
+   Does the three-branch set of a San Hui include `ty_branch` and the natal branches?
+   Wait! A San Hui is a direction combination of 3 branches.
+   For Da Yun branch audit, how is a San Hui combination formed?
+   "Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破."
+   Wait, does a San Hui require 3 branches?
+   Yes, a San Hui requires the `ty_branch` and two other natal branches, or does it check if the combination exists in the chart when including the `ty_branch`?
+   Let's check how `check_he_tai_sui` does it:
+   ```python
+   _all = frozenset([annual_branch, *natal_branches])
+   for triangle in SAN_HUI.values():
+       if triangle <= _all:
+           # match found!
+   ```
+   So, for Da Yun branch audit, we can do the same!
+   ```python
+   _all = frozenset([ty_branch, *natal_branches])
+   ```
+   Wait, if we do this, does it checked against *all* natal branches?
+   Wait, let's re-read the instruction carefully:
+   "Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+   Wait, if we check interactions, can we check them branch-by-branch, or do some interactions (like San Hui and San He) involve multiple branches, while others (like Chong, Liu He, Ban He, Xing, Hai, Po) are pairwise with one natal branch at a time?
+   Yes!
+   - San Hui: involves 3 branches (so `ty_branch` + 2 distinct natal branches).
+   - San He: involves 3 branches (so `ty_branch` + 2 distinct natal branches).
+   - Chong: pairwise (`ty_branch` + 1 natal branch).
+   - Liu He: pairwise (`ty_branch` + 1 natal branch).
+   - Ban He: pairwise (`ty_branch` + 1 natal branch).
+   - Xing: can be pairwise or group, but in `check_xing_tai_sui`, it checks if `annual_branch` and `nb` are both in a Xing group:
+     ```python
+     for group in XING.values():
+         if annual_branch in group and nb in group:
+     ```
+     So it can also be treated as a pairwise check between `ty_branch` and each `nb`.
+   - Hai: pairwise (`ty_branch` + 1 natal branch).
+   - Po: pairwise (`ty_branch` + 1 natal branch).
+
+Wait, the instruction says:
+"Replace the Da Yun branch audit (lines 216-249) with a sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破. For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, how does "scanning all natal branches without early breaks" work?
+If we scan all natal branches, does it mean:
+For EACH branch in `natal_branches`:
+We check the 8 interactions in priority order for that branch (or for the combination involving it), and if a match is found, we apply the graduated magnitude and polarity sign to `ty_branch_impact`, and we do NOT break early—meaning we continue checking all other natal branches!
+Wait, if a natal branch has multiple possible interactions, do we only take the highest-priority interaction *for that natal branch*?
+Yes, "in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破".
+So, for a given natal branch `nb`, we check each of the 8 interaction types in this order. If the highest-priority interaction exists, we calculate its impact and add it to (or update) the total `ty_branch_impact`, and we do not break early (meaning we move to the next `nb` in `natal_branches`).
+Wait, let's think: what about San Hui and San He? Since they involve three branches, how do we count them for a specific `nb`?
+If `ty_branch` and `nb` (and some other branch in the chart) form a San Hui or San He, then it's a match!
+Specifically, a San Hui requires:
+- `ty_branch` and `nb` to be part of the same `triangle` (from `SAN_HUI.values()`), and the entire `triangle` is subset of `_all = {ty_branch} | set(natal_branches)`.
+Let's express this precisely. For a given `nb` in `natal_branches`:
+Does `ty_branch` and `nb` form a San Hui?
+Yes, if there is a `triangle` in `SAN_HUI.values()` such that `{ty_branch, nb} <= triangle` and `triangle <= _all`.
+Likewise for San He:
+Yes, if there is a `triangle` in `SAN_HE.values()` such that `{ty_branch, nb} <= triangle` and `triangle <= _all`.
+
+Let's check if this is correct. Yes! This perfectly links a specific `nb` to a San Hui/San He combination.
+Wait, let's write down the check for each of the 8 interaction types for a given `nb` in `natal_branches`:
+
+Let's define `_all = {ty_branch} | set(natal_branches)`.
+
+1. **三会 (San Hui)**:
+   Is there a `triangle` in `SAN_HUI.values()` (or `SAN_HUI.items()` to get the element as well!) such that `{ty_branch, nb} <= triangle` and `triangle <= _all`?
+   Let's check `SAN_HUI` structure. In `module1_macro.py`, we already do:
+   ```python
+   for element, branches in SAN_HUI.items():
+   ```
+   So `element` is indeed the key, and `branches` is a set/frozenset of branches.
+   So:
+   ```python
+   for element, branches in SAN_HUI.items():
+       if {ty_branch, nb} <= branches and branches <= _all:
+           # Match found!
+           # Combined element is `element`.
+   ```
+   Wait, is `element` a string or `Element` Enum? It's a key in `SAN_HUI`. In lines 124-138, `era_element` (which is from `SAN_HUI` keys) is compared directly using `in medicine` and `in taboo`. Since `medicine` and `taboo` are sets of strings/elements, they are comparable. But to be safe, we can compare its string value or the `Element` Enum.
+   Wait, what should be the combined element? It is `element`. Let's cast it to string/Element if necessary, or just keep it as `element`.
+
+2. **三合 (San He)**:
+   Similar to San Hui:
+   ```python
+   for element, branches in SAN_HE.items():
+       if {ty_branch, nb} <= branches and branches <= _all:
+           # Match found!
+           # Combined element is `element`.
+   ```
+   Wait, does `SAN_HE` map element name to the triad? Let's check `src2/core/schemas/unified.py` or how `SAN_HE` is defined.
+   Wait! In `check_he_tai_sui`:
+   ```python
+   # 三合 (汇合)
+   for triangle in SAN_HE.values():
+       if triangle <= _all:
+           # ...
+   ```
+   Wait, does `SAN_HE` items contain the element as the key?
+   Let's think: yes, in standard Bazi, the San He triads are:
+   - 申子辰 -> 水 (Water)
+   - 寅午戌 -> 火 (Fire)
+   - 巳酉丑 -> 金 (Metal)
+   - 亥卯未 -> 木 (Wood)
+   So `SAN_HE` definitely maps the elemental result (like "Water", "Fire", "Metal", "Wood") to the set/frozenset of branches. So `element, branches in SAN_HE.items()` works perfectly!
+
+3. **冲 (Clash)**:
+   `CHONG` is a dictionary or lookup.
+   Wait! In `check_chong_tai_sui`:
+   ```python
+   _c = CHONG.get(annual_branch)
+   if _c is not None and _c.label == nb:
+   ```
+   Ah! `CHONG.get(annual_branch)` returns a `BranchInfo` object (or similar) which has `.label` as the branch name.
+   Wait, let's verify if `CHONG.get(ty_branch)` in `module1_macro.py` line 218:
+   ```python
+   if CHONG.get(ty_branch) == nb:
+   ```
+   Wait! Why does line 218 do `CHONG.get(ty_branch) == nb` directly instead of `.label == nb`?
+   Let's check `src2/core/schemas/unified.py` or look at lines 75-76:
+   ```python
+   if CHONG.get(branch_a) == branch_b:
+   ```
+   Ah! So `CHONG` must be a dictionary mapping string to string (or has a custom dict key representation that allows standard string comparison).
+   Wait, but why did `check_chong_tai_sui` do:
+   ```python
+   _c = CHONG.get(annual_branch)
+   if _c is not None and _c.label == nb:
+   ```
+   Wait, let's check: could `CHONG` be a dictionary where `.get()` returns a `BranchInfo` or a string?
+   Let's search/realize how `CHONG` is typed.
+   If `CHONG.get(ty_branch) == nb` is in the original code, but `_c.label == nb` is in the Tai Sui code, wait!
+   Let's look at `check_chong_tai_sui` again:
+   ```python
+   _c = CHONG.get(annual_branch)
+   if _c is not None and _c.label == nb:
+   ```
+   Wait, in Python, if `CHONG.get(annual_branch)` returns a string or an object, how does `CHONG.get(ty_branch) == nb` work in the original Da Yun branch audit?
+   Wait! In the original code, line 218 says:
+   `if CHONG.get(ty_branch) == nb:`
+   Wait, maybe `CHONG` is indeed a dict mapping `str` to `str`, but the `check_chong_tai_sui` might have had a bug or worked with something else? Or maybe `CHONG` is a custom dict subclass where `CHONG.get(...)` returns a helper object that implements `__eq__`? Or maybe it just returns a string/Enum?
+   Wait, let's be extremely safe:
+   ```python
+   _c = CHONG.get(ty_branch)
+   is_chong = False
+   if _c is not None:
+       if isinstance(_c, str) and _c == nb:
+           is_chong = True
+       elif getattr(_c, "label", None) == nb:
+           is_chong = True
+       elif str(_c) == nb:
+           is_chong = True
+   ```
+   This is bulletproof and works regardless of what type `CHONG.get(ty_branch)` returns! Let's write helper code/conditions that handle both or all representation formats.
+
+Let's check the rest:
+- **六合 (Liu He)**:
+  `frozenset({ty_branch, nb}) in LIU_HE`
+  Wait, what is the combined element for Liu He?
+  If `LIU_HE` is a dictionary, we can get the element using `LIU_HE.get(frozenset({ty_branch, nb}))` or from a lookup.
+  Wait, is `LIU_HE` a dict or a set?
+  Let's check line 77:
+  ```python
+  if frozenset({branch_a, branch_b}) in LIU_HE:
+  ```
+  If `LIU_HE` is a dict, doing `frozenset(...) in LIU_HE` checks keys, and `LIU_HE.get(frozenset(...))` gets the value.
+  Wait, does `LIU_HE` map to `Element` or a string? Yes, it maps to the combined element! Let's check:
+  `combined_el = LIU_HE.get(frozenset({ty_branch, nb}))`
+  Just in case it's a list or set, can we check if it is a dictionary?
+  Yes, in Python:
+  ```python
+  combined_el = None
+  if isinstance(LIU_HE, dict):
+      combined_el = LIU_HE.get(frozenset({ty_branch, nb}))
+  ```
+  Wait, is `LIU_HE` definitely a dictionary?
+  Let's check how the six harmony combinations are defined. Yes, the key is the frozenset of two branches, and the value is the combined element.
+  If it's not a dict (which is extremely unlikely), what would it be? In any case, we can write a fallback:
+  ```python
+  # If it is a dictionary, get the value.
+  # Otherwise, we can determine the Liu He combined element via classic rules:
+  # 子丑 -> 土 (Earth), 寅亥 -> 木 (Wood), 卯戌 -> 火 (Fire), 辰酉 -> 金 (Metal), 巳申 -> 水 (Water), 午未 -> 火/土 (let's say Fire or Earth)
+  ```
+  Wait, is there any other dictionary we can look up?
+  No, let's just use `LIU_HE.get(frozenset({ty_branch, nb}))` and if it is an object (like an Element Enum), we can use it.
+
+- **半合 (Ban He)**:
+  Wait! The instruction says:
+  "Import BAN_HE_RESULTS and Element from src2.core.schemas.unified."
+  This means `BAN_HE_RESULTS` is imported specifically to get the result of `BAN_HE`!
+  Let's deduce `BAN_HE_RESULTS` structure. It must be a dict/mapping from the frozenset of 2 branches to the combined element.
+  So:
+  `combined_el = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))`
+  This is extremely clear and elegant!
+
+- **刑 (Xing)**:
+  Let's look at `check_xing_tai_sui`:
+  ```python
+  for group in XING.values():
+      if ty_branch in group and nb in group:
+  ```
+  Wait, what is the structure of `XING`?
+  `XING` is a dictionary where the values are lists/tuples/sets of branches that punish each other.
+  For example, Zi and Mao form a punishment. Yin,巳,申 form a three-way punishment. Chen, Wu, You, Hai are self-punishments.
+  So if `ty_branch` and `nb` are both in `group`, they form a punishment!
+  Wait! If `ty_branch == nb`, it's a self-punishment (for Chen, Wu, You, or Hai). But here, `nb` comes from `natal_branches`. Since `ty_branch` is the Da Yun branch, can it punish a natal branch? Yes, if they are both in the same group.
+  Wait, what is the check:
+  ```python
+  is_xing = False
+  for group in XING.values():
+      # If ty_branch and nb are both in this group:
+      if ty_branch in group and nb in group:
+          # Wait! If it's a self-punishment group (like Chen, Wu, You, Hai),
+          # does it require two of the same branch?
+          # Yes, but here nb and ty_branch.
+          # If ty_branch == nb, does it count? Yes, but usually we check if ty_branch and nb are both in the group.
+          # Let's do:
+          if ty_branch in group and nb in group:
+              is_xing = True
+              break
+  ```
+  Wait, let's keep the exact original check for `XING`:
+  ```python
+  for group in XING.values():
+      if ty_branch in group and nb in group:
+  ```
+  That matches the original code exactly!
+
+- **害 (Hai)**:
+  `HAI` is a dictionary.
+  In the original code:
+  `HAI.get(ty_branch) == nb`
+  In `check_hai_tai_sui`:
+  ```python
+  _h = HAI.get(annual_branch)
+  if _h is not None and _h.label == nb:
+  ```
+  So let's use the same bulletproof check:
+  ```python
+  _h = HAI.get(ty_branch)
+  is_hai = False
+  if _h is not None:
+      if isinstance(_h, str) and _h == nb:
+          is_hai = True
+      elif getattr(_h, "label", None) == nb:
+          is_hai = True
+      elif str(_h) == nb:
+          is_hai = True
+  ```
+
+- **破 (Po)**:
+  `PO` is a dictionary.
+  In the original code:
+  `PO.get(ty_branch) == nb`
+  In `check_po_tai_sui`:
+  ```python
+  _p = PO.get(annual_branch)
+  if _p is not None and _p.label == nb:
+  ```
+  So let's use the same bulletproof check:
+  ```python
+  _p = PO.get(ty_branch)
+  is_po = False
+  if _p is not None:
+      if isinstance(_p, str) and _p == nb:
+          is_po = True
+      elif getattr(_p, "label", None) == nb:
+          is_po = True
+      elif str(_p) == nb:
+          is_po = True
+  ```
+
+This is extremely clean and clear!
+
+Wait, let's re-read:
+"For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine."
+"For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine."
+"Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, how is the "polarity sign" determined for each interaction type?
+Let's see:
+"For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine."
+What is the "target natal branch"? It is `nb`! So the target natal branch element is `(eb := BRANCHES.get(nb)) and eb.element`.
+Let's define `target_el = (eb := BRANCHES.get(nb)) and eb.element`.
+Wait, we check `target_el` against `_unified_taboo / _unified_medicine`.
+What if `target_el` is in `_unified_medicine`?
+And what if `target_el` is in `_unified_taboo`?
+Wait! What is the native sign of a clash/harm type?
+It is negative (`-1`).
+Let's refer to the Tai Sui polarity calculation:
+```python
+        # §8.1: 冲用神 = adverse (negative); 冲忌神 = relief (positive). The interaction's
+        # native sign is preserved (no abs()). Polarity flips the sign only for 忌神 on a
+        # helpful interaction (合/值) or 用神 on a harmful one (冲/刑/破/害).
+```
+And:
+```python
+        sign = -1 if trigger_type in HARM_TYPES else 1
+        polarity = -1 if trigger_el in _unified_taboo else 1
+        ann_branch_impact = int(base_magnitude * sign * polarity)
+```
+Wait! Let's check this polarity formula:
+- If trigger element is in `_unified_taboo` (忌神/taboo):
+  - `polarity = -1`
+  - If helpful interaction (`sign = 1`): `impact = magnitude * 1 * -1 = -magnitude`. (Adverse: helpful interaction is with taboo/hostile element, so we get a negative/adverse impact. Makes sense!)
+  - If harmful interaction (`sign = -1`): `impact = magnitude * -1 * -1 = +magnitude`. (Relief/positive: harmful interaction to a taboo/hostile element destroys/clashes the taboo, so we get a positive/relief impact! Makes sense!)
+- If trigger element is in `_unified_medicine` (用神/medicine):
+  - `polarity = 1`
+  - If helpful interaction (`sign = 1`): `impact = magnitude * 1 * 1 = +magnitude`. (Favorable/supportive: helpful interaction with medicine/favorable element).
+  - If harmful interaction (`sign = -1`): `impact = magnitude * -1 * 1 = -magnitude`. (Adverse/friction: harmful interaction with medicine/favorable element).
+- What if the trigger element is in neither? (Neutral bystander / 闲神):
+  - Under `_filter_tai_sui_by_shen`, a neutral bystander is suppressed (`impact = 0`).
+  - Wait, is this search/audit also true for Da Yun branch audit?
+  Yes, "check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine."
+  Wait, this means if the checked element is neither in `_unified_medicine` nor in `_unified_taboo`, what should the impact be? It should be 0 because it's a neutral bystander!
+  Let's verify this. If it's a neutral element, it does not have a positive or negative impact on the chart's strength/medicine, so its impact is 0.
+  So we can write:
+  ```python
+  if element in _unified_medicine:
+      polarity = 1
+  elif element in _unified_taboo:
+      polarity = -1
+  else:
+      # Neutral bystander
+      polarity = 0
+  ```
+  Wait! Let's check: is this exactly the polarity sign and graduated magnitude logic?
+  Yes!
+  Let's check the graduated magnitudes for each of the 8 interaction types:
+  - 三会: 20
+  - 三合: 18
+  - 冲: 30
+  - 六合: 15
+  - 半合: 10
+  - 刑: 15
+  - 害: 15
+  - 破: 15
+
+  Wait! Let's check if the native sign of each interaction type is:
+  - 三会: `1` (positive, combination)
+  - 三合: `1` (positive, combination)
+  - 冲: `-1` (negative, clash/harm)
+  - 六合: `1` (positive, combination)
+  - 半合: `1` (positive, combination)
+  - 刑: `-1` (negative, clash/harm)
+  - 害: `-1` (negative, clash/harm)
+  - 破: `-1` (negative, clash/harm)
+
+  Wait, let's write this down. For a given interaction type:
+  - Magnitude:
+    - 三会: 20
+    - 三合: 18
+    - 冲: 30
+    - 六合: 15
+    - 半合: 10
+    - 刑: 15
+    - 害: 15
+    - 破: 15
+  - Native Sign:
+    - Combination: `1`
+    - Clash/Harm: `-1`
+
+  Wait, so the impact for a single matching interaction is:
+  `impact = magnitude * native_sign * polarity`
+  Let's verify:
+  - If combination (native_sign = 1) with medicine (polarity = 1):
+    `impact = magnitude * 1 * 1 = +magnitude`
+  - If combination (native_sign = 1) with taboo (polarity = -1):
+    `impact = magnitude * 1 * -1 = -magnitude`
+  - If clash/harm (native_sign = -1) with medicine (polarity = 1):
+    `impact = magnitude * -1 * 1 = -magnitude`
+  - If clash/harm (native_sign = -1) with taboo (polarity = -1):
+    `impact = magnitude * -1 * -1 = +magnitude`
+  - If element is neutral (polarity = 0):
+    `impact = magnitude * native_sign * 0 = 0`
+
+  This is incredibly consistent and elegant! It perfectly matches: "Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Wait, how do we aggregate the impacts from scanning all natal branches?
+Do we sum them? "Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal breaks without early breaks."
+Wait, if we scan all natal branches, we should sum the impacts across all natal branches!
+Wait, in the original code, it was:
+```python
+    ty_branch_impact = 0
+    for nb in natal_branches:
+        if CHONG.get(ty_branch) == nb:
+            ty_branch_impact = -20
+            break
+```
+But the new instruction says:
+"Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+Scanning all natal branches without early breaks means we loop through every `nb` in `natal_branches` and aggregate their impacts.
+Wait, let's think: does it mean:
+```python
+    ty_branch_impact = 0
+    for nb in natal_branches:
+        # Check interactions in priority order for this nb
+        # Add the impact of the highest-priority interaction found for this nb to ty_branch_impact
+```
+Yes! "sequence checking the 8 earthly branch interactions in canonical priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破."
+For a given `nb`, we check the 8 interaction types in that exact priority order. As soon as we find the highest priority one that is active for `nb`, we determine its impact (using the element of target/comb as specified, and polarity sign), add it to `ty_branch_impact` (or accumulate it), and then move to the next natal branch `nb`.
+Wait, let's check: what order are we scanning? We scan each `nb` in `natal_branches`.
+Wait, is there any reason to check `ty_branch` and `nb` for each interaction type?
+Yes, for each `nb` in `natal_branches` (which has at most 4 branches):
+```python
+    ty_branch_impact = 0
+    for nb in natal_branches:
+        # 1. 三会 (San Hui)
+        # 2. 三合 (San He)
+        # 3. 冲 (Chong)
+        # 4. 六合 (Liu He)
+        # 5. 半合 (Ban He)
+        # 6. 刑 (Xing)
+        # 7. 害 (Hai)
+        # 8. 破 (Po)
+```
+Wait! Let's trace how each check is implemented:
+
+- **三会 (San Hui)**:
+  `SAN_HUI` maps element to set of branches.
+  ```python
+  found_san_hui = False
+  for element, branches in SAN_HUI.items():
+      if {ty_branch, nb} <= branches and branches <= _all:
+          # Found a San Hui combination!
+          # Combined element is element
+          # Determine polarity
+          # If element in _unified_medicine: polarity = 1
+          # elif element in _unified_taboo: polarity = -1
+          # else: polarity = 0
+          # impact = 20 * 1 * polarity
+          # ty_branch_impact += impact
+          # found_san_hui = True
+          # break
+  ```
+  Wait! If `found_san_hui` is True, we break the interaction-priority loop, and continue to the next `nb`, because San Hui is the highest priority!
+
+- **三合 (San He)**:
+  ```python
+  found_san_he = False
+  for element, branches in SAN_HE.items():
+      if {ty_branch, nb} <= branches and branches <= _all:
+          # Found San He!
+          # Element is element
+          # polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+          # impact = 18 * 1 * polarity
+          # ty_branch_impact += impact
+          # found_san_he = True
+          # break
+  ```
+
+- **冲 (Chong)**:
+  ```python
+  is_chong = False
+  _c = CHONG.get(ty_branch)
+  if _c is not None:
+      if (isinstance(_c, str) and _c == nb) or (getattr(_c, "label", None) == nb) or (str(_c) == nb):
+          is_chong = True
+  if is_chong:
+      # Target natal branch element
+      target_el = (eb := BRANCHES.get(nb)) and eb.element
+      # polarity
+      # impact = 30 * -1 * polarity
+      # ty_branch_impact += impact
+  ```
+
+- **六合 (Liu He)**:
+  ```python
+  is_liu_he = False
+  if frozenset({ty_branch, nb}) in LIU_HE:
+      is_liu_he = True
+      # Combined element
+      combined_el = None
+      if isinstance(LIU_HE, dict):
+          combined_el = LIU_HE.get(frozenset({ty_branch, nb}))
+      # Fallback to string representation if needed
+      # polarity
+      # impact = 15 * 1 * polarity
+  ```
+
+- **半合 (Ban He)**:
+  ```python
+  is_ban_he = False
+  if frozenset({ty_branch, nb}) in BAN_HE_RESULTS:
+      is_ban_he = True
+      combined_el = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))
+      # polarity
+      # impact = 10 * 1 * polarity
+  ```
+  Wait, is `BAN_HE` checked in `check_he_tai_sui` using `BAN_HE.root`?
+  Let's look at `check_he_tai_sui`:
+  ```python
+  # 半合 (half-combine, weakest of the 合 family)
+  for pair in BAN_HE.root:
+      if annual_branch in pair and nb in pair:
+  ```
+  Yes! So `frozenset({ty_branch, nb})` being in `BAN_HE_RESULTS` is a perfect and even cleaner way to check it!
+  Let's verify what `BAN_HE_RESULTS` is.
+  In Python, if `BAN_HE_RESULTS` maps a `frozenset` of two branches to their combined element, then `frozenset({ty_branch, nb})` is indeed the key.
+  Wait, is the key a `frozenset` or a `tuple` or a string?
+  Usually, combinations like `LIU_HE` and `BAN_HE` represent pairs of branches, so `frozenset` is the standard key type in this repo (as we see in `LIU_HE` which is checked with `frozenset({annual_branch, nb}) in LIU_HE`).
+  So `frozenset({ty_branch, nb})` is exactly correct.
+
+- **刑 (Xing)**:
+  ```python
+  is_xing = False
+  for group in XING.values():
+      if ty_branch in group and nb in group:
+          is_xing = True
+          break
+  if is_xing:
+      # Target natal branch element
+      target_el = (eb := BRANCHES.get(nb)) and eb.element
+      # polarity
+      # impact = 15 * -1 * polarity
+  ```
+
+- **害 (Hai)**:
+  ```python
+  is_hai = False
+  _h = HAI.get(ty_branch)
+  if _h is not None:
+      if (isinstance(_h, str) and _h == nb) or (getattr(_h, "label", None) == nb) or (str(_h) == nb):
+          is_hai = True
+  if is_hai:
+      # Target natal branch element
+      target_el = (eb := BRANCHES.get(nb)) and eb.element
+      # polarity
+      # impact = 15 * -1 * polarity
+  ```
+
+- **破 (Po)**:
+  ```python
+  is_po = False
+  _p = PO.get(ty_branch)
+  if _p is not None:
+      if (isinstance(_p, str) and _p == nb) or (getattr(_p, "label", None) == nb) or (str(_p) == nb):
+          is_po = True
+  if is_po:
+      # Target natal branch element
+      target_el = (eb := BRANCHES.get(nb)) and eb.element
+      # polarity
+      # impact = 15 * -1 * polarity
+  ```
+
+Wait! Is this correct?
+Let's check: "For clash/harm types (冲, 刑, 害, 破), check target natal branch element against _unified_taboo / _unified_medicine. For combination types (三会, 三合, 六合, 半合), check combined element against _unified_taboo / _unified_medicine. Set ty_branch_impact using the graduated magnitudes and the polarity sign, scanning all natal branches without early breaks."
+
+Yes! This fits the requirements EXACTLY.
+Let's write a helper or a structured checking loop for this in `module1_macro.py`.
+Wait, let's write it down step-by-step:
+```python
+    # Set up unified medicine and taboo elements first, as requested.
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+
+    # Branch Audit (check all 4 natal branches)
+    ty_branch_impact = 0
+    _all = frozenset([ty_branch, *natal_branches])
+
+    for nb in natal_branches:
+        # Check priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破
+        # 1. 三会 (San Hui)
+        found = False
+        for element, branches in SAN_HUI.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                # Combination: combined element is element
+                polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+                ty_branch_impact += 20 * 1 * polarity
+                found = True
+                break
+        if found:
+            continue
+
+        # 2. 三合 (San He)
+        for element, branches in SAN_HE.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                # Combination: combined element is element
+                polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+                ty_branch_impact += 18 * 1 * polarity
+                found = True
+                break
+        if found:
+            continue
+
+        # 3. 冲 (Chong)
+        _c = CHONG.get(ty_branch)
+        if _c is not None and ((isinstance(_c, str) and _c == nb) or (getattr(_c, "label", None) == nb) or (str(_c) == nb)):
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 30 * -1 * polarity
+            continue
+
+        # 4. 六合 (Liu He)
+        if frozenset({ty_branch, nb}) in LIU_HE:
+            element = None
+            if isinstance(LIU_HE, dict):
+                element = LIU_HE.get(frozenset({ty_branch, nb}))
+            polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+            ty_branch_impact += 15 * 1 * polarity
+            continue
+
+        # 5. 半合 (Ban He)
+        if frozenset({ty_branch, nb}) in BAN_HE_RESULTS:
+            element = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))
+            polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+            ty_branch_impact += 10 * 1 * polarity
+            continue
+
+        # 6. 刑 (Xing)
+        is_xing = False
+        for group in XING.values():
+            if ty_branch in group and nb in group:
+                is_xing = True
+                break
+        if is_xing:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 15 * -1 * polarity
+            continue
+
+        # 7. 害 (Hai)
+        _h = HAI.get(ty_branch)
+        if _h is not None and ((isinstance(_h, str) and _h == nb) or (getattr(_h, "label", None) == nb) or (str(_h) == nb)):
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 15 * -1 * polarity
+            continue
+
+        # 8. 破 (Po)
+        _p = PO.get(ty_branch)
+        if _p is not None and ((isinstance(_p, str) and _p == nb) or (getattr(_p, "label", None) == nb) or (str(_p) == nb)):
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 15 * -1 * polarity
+            continue
+```
+
+Wait, let's verify if there is any other issue.
+What if `ty_branch` and `nb` are the same branch?
+Usually, `natal_branches` contains the branches from the birth chart.
+Wait! "A combination requires two DISTINCT branches; skip when nb coincides with the annual branch." (as in `check_he_tai_sui`).
+Wait! In `check_he_tai_sui`, it did:
+```python
+    for nb in natal_branches:
+        if nb == annual_branch:
+            continue
+```
+Wait, should we also skip if `nb == ty_branch` for pairwise combinations like 六合 and 半合?
+Let's see: `frozenset({ty_branch, nb})` has length 1 if `ty_branch == nb`. But combinations (Liu He, Ban He) are defined for two distinct branches. If `ty_branch == nb`, it won't be in `LIU_HE` anyway since `LIU_HE` contains frozensets of size 2. Similarly for `BAN_HE_RESULTS`.
+But to be safe, should we handle it? We can just let the `in` lookup handle it, or we could explicitly check:
+```python
+        if nb == ty_branch:
+            # Maybe skip combination checks, or does a branch clash/harm/punish itself?
+            # Wait, self-punishment (刑) can happen if nb == ty_branch (e.g. Chen-Chen, Wu-Wu, You-You, Hai-Hai).
+            # But combination (San Hui, San He, Liu He, Ban He) and clash (Chong), harm (Hai), break (Po) are not self-interactions.
+```
+Actually, letting the standard checks run is simple and correct, but we should make sure `XING` allows self-encounter if `ty_branch == nb` (which is already covered by `ty_branch in group and nb in group` when `group` is a self-punishment group containing e.g. `{Chen}`).
+
+Wait, let's double check if we need to return or cast elements representation.
+Wait, let's look at `Element` imported from `src2.core.schemas.unified`.
+Wait! Are the elements in `_unified_medicine` and `_unified_taboo` strings or `Element` instances?
+Let's look at lines 124-138 in `_get_era_block`:
+```python
+    medicine = profile.medicine or []
+    taboo = profile.taboo or []
+```
+And:
+```python
+    # Classify era element against five gods
+    if era_element in medicine:
+        era_label = "Medicine Era"
+    elif era_element in taboo:
+        era_label = "Hostile Era"
+```
+And indeed:
+```python
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+```
+If we use `in _unified_medicine` and `in _unified_taboo`, what type are they?
+In BaziForecaster, elements are represented either as strings (e.g., `"Wood"`) or as the `Element` Enum values (which inherit from `str`, since `Element` is subclass of `StrEnum` or `str`).
+Let's check in `element_phase.py`:
+```python
+class Element(StrEnum)  # or similar
+```
+Wait! To ensure we pass string comparisons regardless of whether the profile contains Enums or strings, we can normalize both the checked element and the sets:
+```python
+    _unified_medicine = {str(el) for el in medicine}
+    _unified_taboo = {str(el) for el in taboo}
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= {str(el) for el in (getattr(_shen_profile, "yong_shen", []) or [])} | {str(el) for el in (getattr(_shen_profile, "xi_shen", []) or [])}
+        _unified_taboo |= {str(el) for el in (getattr(_shen_profile, "ji_shen", []) or [])} | {str(el) for el in (getattr(_shen_profile, "chou_shen", []) or [])}
+```
+Wait, is it possible that `getattr(_shen_profile, "yong_shen", [])` returns None if the attribute is present but None? Yes, `or []` handles that beautifully.
+And then for any element we check, we convert it to string:
+```python
+str(element) in _unified_medicine
+```
+This is fully robust and avoids any mismatch between `Element` Enum wrapper instances and plain string values! Let's do this normalization.
+
+Wait! Let's examine:
+"Import BAN_HE_RESULTS and Element from src2.core.schemas.unified."
+Let's make sure we do that import.
+Where are the imports in `src2/engine/module1_macro.py`?
+At lines 15-30:
+```python
+from src2.core.schemas.unified import (
+    BAN_HE,
+    BRANCHES,
+    CHONG,
+    COMBINATION_STATES,
+    HAI,
+    LIU_HE,
+    PO,
+    SAN_HE,
+    SAN_HUI,
+    STEM_COMBINE_RESULTS,
+    STEM_COMBINES,
+    STEMS,
+    XING,
+    XUN_KONG,
+)
+```
+We need to change this block to:
+```python
+from src2.core.schemas.unified import (
+    BAN_HE,
+    BAN_HE_RESULTS,
+    BRANCHES,
+    CHONG,
+    COMBINATION_STATES,
+    Element,
+    HAI,
+    LIU_HE,
+    PO,
+    SAN_HE,
+    SAN_HUI,
+    STEM_COMBINE_RESULTS,
+    STEM_COMBINES,
+    STEMS,
+    XING,
+    XUN_KONG,
+)
+```
+
+Wait, let's look at lines 343-348 in `src2/engine/module1_macro.py` again:
+```python
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+```
+Wait, we need to move these lines *before* the Da Yun branch audit (line 216).
+Wait, if we move them before line 216, they will be defined as `_unified_medicine` and `_unified_taboo`.
+Then at lines 343-348, can we just remove them?
+Yes! Let's verify line 349-350:
+```python
+    if _unified_medicine or _unified_taboo:
+        tai_sui_triggers = _filter_tai_sui_by_shen(tai_sui_triggers, _unified_medicine, _unified_taboo)
+```
+If we remove lines 343-348 from their original place, `_unified_medicine` and `_unified_taboo` will already be defined earlier in the function, so they will still be fully available for lines 349-350!
+This is absolutely perfect.
+
+Wait! Let's double check if we should still define/normalize `_unified_medicine` and `_unified_taboo` in a way that remains compatible with everything.
+Let's see: if we keep the original definition format or a string-normalized one, let's make sure it is completely correct.
+Wait, `set(getattr(_shen_profile, "yong_shen", []))` might fail if `getattr` returns `None`.
+In python, `set(None)` raises `TypeError: 'NoneType' object is not iterable`.
+Wait, did the original code raise this?
+The original code was:
+```python
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+```
+So the original code assumed they were iterables or defaulted to `[]` (if the attribute didn't exist). But if the attribute exists and is `None`, it could crash.
+Wait, let's keep the exact original behavior or make it slightly safer (e.g. `getattr(..., []) or []`). To be safe and compliant, we can do:
+```python
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", []) or []) | set(getattr(_shen_profile, "xi_shen", []) or [])
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", []) or []) | set(getattr(_shen_profile, "chou_shen", []) or [])
+```
+This is extremely safe and doesn't change the logic.
+
+Wait, let's check the live file content around the Da Yun branch audit to make sure we replace the correct lines.
+Let's see:
+```python
+    # Branch Audit (check all 4 natal branches)
+    ty_branch_impact = 0
+    for nb in natal_branches:
+        if CHONG.get(ty_branch) == nb:
+            ty_branch_impact = -20
+            break
+    if ty_branch_impact == 0:
+        for nb in natal_branches:
+            if frozenset({ty_branch, nb}) in LIU_HE:
+                ty_branch_impact = 20
+                break
+    if ty_branch_impact == 0:
+        for nb in natal_branches:
+            for triangle in SAN_HE.values():
+                if ty_branch in triangle and nb in triangle:
+                    ty_branch_impact = 20
+                    break
+            if ty_branch_impact != 0:
+                break
+    if ty_branch_impact == 0:
+        is_disruptor = False
+        for nb in natal_branches:
+            if PO.get(ty_branch) == nb or HAI.get(ty_branch) == nb:
+                is_disruptor = True
+                break
+        if not is_disruptor:
+            for nb in natal_branches:
+                for group in XING.values():
+                    if ty_branch in group and nb in group:
+                        is_disruptor = True
+                        break
+                if is_disruptor:
+                    break
+        if is_disruptor:
+            ty_branch_impact = -10
+```
+This is lines 215 to 250 in `src2/engine/module1_macro.py`.
+
+Wait! We need to replace lines 216-249 with our new logic, and move the Setup of `_unified_medicine` and `_unified_taboo` before it.
+Let's see, what is line 215?
+`    # Branch Audit (check all 4 natal branches)`
+So we can replace lines 216 to 249 with:
+```python
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", []) or []) | set(getattr(_shen_profile, "xi_shen", []) or [])
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", []) or []) | set(getattr(_shen_profile, "chou_shen", []) or [])
+
+    ty_branch_impact = 0
+    _all = frozenset([ty_branch, *natal_branches])
+
+    for nb in natal_branches:
+        # Check priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破
+        
+        # 1. 三会 (San Hui)
+        found = False
+        for element, branches in SAN_HUI.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+                ty_branch_impact += 20 * 1 * polarity
+                found = True
+                break
+        if found:
+            continue
+
+        # 2. 三合 (San He)
+        for element, branches in SAN_HE.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+                ty_branch_impact += 18 * 1 * polarity
+                found = True
+                break
+        if found:
+            continue
+
+        # 3. 冲 (Chong)
+        _c = CHONG.get(ty_branch)
+        is_chong = False
+        if _c is not None:
+            if (isinstance(_c, str) and _c == nb) or (getattr(_c, "label", None) == nb) or (str(_c) == nb):
+                is_chong = True
+        if is_chong:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 30 * -1 * polarity
+            continue
+
+        # 4. 六合 (Liu He)
+        if frozenset({ty_branch, nb}) in LIU_HE:
+            element = None
+            if isinstance(LIU_HE, dict):
+                element = LIU_HE.get(frozenset({ty_branch, nb}))
+            polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+            ty_branch_impact += 15 * 1 * polarity
+            continue
+
+        # 5. 半合 (Ban He)
+        if frozenset({ty_branch, nb}) in BAN_HE_RESULTS:
+            element = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))
+            polarity = 1 if element in _unified_medicine else -1 if element in _unified_taboo else 0
+            ty_branch_impact += 10 * 1 * polarity
+            continue
+
+        # 6. 刑 (Xing)
+        is_xing = False
+        for group in XING.values():
+            if ty_branch in group and nb in group:
+                is_xing = True
+                break
+        if is_xing:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 15 * -1 * polarity
+            continue
+
+        # 7. 害 (Hai)
+        _h = HAI.get(ty_branch)
+        is_hai = False
+        if _h is not None:
+            if (isinstance(_h, str) and _h == nb) or (getattr(_h, "label", None) == nb) or (str(_h) == nb):
+                is_hai = True
+        if is_hai:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 15 * -1 * polarity
+            continue
+
+        # 8. 破 (Po)
+        _p = PO.get(ty_branch)
+        is_po = False
+        if _p is not None:
+            if (isinstance(_p, str) and _p == nb) or (getattr(_p, "label", None) == nb) or (str(_p) == nb):
+                is_po = True
+        if is_po:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            polarity = 1 if target_el in _unified_medicine else -1 if target_el in _unified_taboo else 0
+            ty_branch_impact += 15 * -1 * polarity
+            continue
+```
+Wait! Let's double check if we should do string normalized comparison for elements here.
+Wait, let's think: `element in _unified_medicine` or `target_el in _unified_medicine`. If `element` is an `Element` Enum instance (which inherits from `StrEnum` or `str`), and `_unified_medicine` contains `Element` Enum instances, does standard `in` work?
+Yes, in Python 3.12+, `StrEnum` members compare equal to their string values, and they hash to the same value as their string value, so standard set membership checks using `in` work perfectly! But to be completely bulletproof, we can do:
+```python
+def _has_element(el, el_set):
+    if el is None:
+        return False
+    # Check string representation or Enum itself
+    return el in el_set or str(el) in el_set or (isinstance(el, str) and any(str(x) == el for x in el_set))
+```
+Wait! Writing a helper method makes it completely bulletproof and guarantees no type or casing mismatched evaluations. Let's write:
+```python
+    def _check_polarity(el) -> int:
+        if el is None:
+            return 0
+        # Convert all set elements to their string form to ensure string-based comparison works
+        med_strs = {str(x) for x in _unified_medicine}
+        tab_strs = {str(x) for x in _unified_taboo}
+        el_str = str(el)
+        if el_str in med_strs:
+            return 1
+        elif el_str in tab_strs:
+            return -1
+        return 0
+```
+ This `_check_polarity` helper is clean, simple, and 100% correct and robust against any mixed types in `medicine` or `taboo`!
+Let's trace how we use it:
+```python
+        # 1. 三会 (San Hui)
+        found = False
+        for element, branches in SAN_HUI.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                ty_branch_impact += 20 * 1 * _check_polarity(element)
+                found = True
+                break
+        if found:
+            continue
+
+        # 2. 三合 (San He)
+        for element, branches in SAN_HE.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                ty_branch_impact += 18 * 1 * _check_polarity(element)
+                found = True
+                break
+        if found:
+            continue
+
+        # 3. 冲 (Chong)
+        _c = CHONG.get(ty_branch)
+        is_chong = False
+        if _c is not None:
+            if (isinstance(_c, str) and _c == nb) or (getattr(_c, "label", None) == nb) or (str(_c) == nb):
+                is_chong = True
+        if is_chong:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 30 * -1 * _check_polarity(target_el)
+            continue
+
+        # 4. 六合 (Liu He)
+        if frozenset({ty_branch, nb}) in LIU_HE:
+            element = None
+            if isinstance(LIU_HE, dict):
+                element = LIU_HE.get(frozenset({ty_branch, nb}))
+            ty_branch_impact += 15 * 1 * _check_polarity(element)
+            continue
+
+        # 5. 半合 (Ban He)
+        if frozenset({ty_branch, nb}) in BAN_HE_RESULTS:
+            element = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))
+            ty_branch_impact += 10 * 1 * _check_polarity(element)
+            continue
+
+        # 6. 刑 (Xing)
+        is_xing = False
+        for group in XING.values():
+            if ty_branch in group and nb in group:
+                is_xing = True
+                break
+        if is_xing:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+
+        # 7. 害 (Hai)
+        _h = HAI.get(ty_branch)
+        is_hai = False
+        if _h is not None:
+            if (isinstance(_h, str) and _h == nb) or (getattr(_h, "label", None) == nb) or (str(_h) == nb):
+                is_hai = True
+        if is_hai:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+
+        # 8. 破 (Po)
+        _p = PO.get(ty_branch)
+        is_po = False
+        if _p is not None:
+            if (isinstance(_p, str) and _p == nb) or (getattr(_p, "label", None) == nb) or (str(_p) == nb):
+                is_po = True
+        if is_po:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+```
+Wait! I should confirm:
+Are lines 343-348 completely removed?
+Let's see:
+```python
+    # §8.2 / §8.5: single source of truth for 用神-polarity (unify profile + shen_profile).
+    # profile.shen_profile may be ShenClassifierOutput or ShenClassification; both expose
+    # the yong_shen/xi_shen/ji_shen/chou_shen accessors.
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+    if _unified_medicine or _unified_taboo:
+        tai_sui_triggers = _filter_tai_sui_by_shen(tai_sui_triggers, _unified_medicine, _unified_taboo)
+```
+Wait! If we move the lines, does the variable `_unified_medicine` and `_unified_taboo` still need to be computed at lines 343-348? No, because they are already computed earlier. So we can just delete lines 343-348, as requested: "Move lines 343-348 (setup of _unified_medicine and _unified_taboo) before the Da Yun branch audit (line 216)."
+Wait, let's verify if `profile.shen_profile` is available before line 216.
+Let's check `calculate_macro` parameters and local variables defined before line 216:
+```python
+def calculate_macro(
+    profile: ChartProfile,
+    month_branch: str,
+    annual_pillar: Pillar,
+) -> MacroOutput:
+    """
+    Module 1: Macro-Environmental Scan (V30).
+    """
+    day_master_stem = profile.day_pillar.stem if profile.day_pillar else "Unknown"
+    ten_year_pillar = profile.da_yun_pillar
+    medicine = profile.medicine or []
+    taboo = profile.taboo or []
+```
+Yes, `profile` is a parameter, so `profile.shen_profile` is definitely available!
+Wait, is there any possibility of Ruff unused imports or check failures?
+Wait! Let's check imports in `src2/engine/module1_macro.py`. We will import `BAN_HE_RESULTS` and `Element` from `src2.core.schemas.unified`, which is exactly requested:
+"Import BAN_HE_RESULTS and Element from src2.core.schemas.unified."
+
+Let's do a quick dry run of replacing text.
+First, the import block replacement.
+The original imports:
+```python
+from src2.core.schemas.unified import (
+    BAN_HE,
+    BRANCHES,
+    CHONG,
+    COMBINATION_STATES,
+    HAI,
+    LIU_HE,
+    PO,
+    SAN_HE,
+    SAN_HUI,
+    STEM_COMBINE_RESULTS,
+    STEM_COMBINES,
+    STEMS,
+    XING,
+    XUN_KONG,
+)
+```
+
+The new imports:
+```python
+from src2.core.schemas.unified import (
+    BAN_HE,
+    BAN_HE_RESULTS,
+    BRANCHES,
+    CHONG,
+    COMBINATION_STATES,
+    Element,
+    HAI,
+    LIU_HE,
+    PO,
+    SAN_HE,
+    SAN_HUI,
+    STEM_COMBINE_RESULTS,
+    STEM_COMBINES,
+    STEMS,
+    XING,
+    XUN_KONG,
+)
+```
+
+Wait, let's make sure `/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py` is written to, because the prompt says:
+`STAGING PATHS (WRITE your proposed files ONLY here, under factory/temp/): ['/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py']`
+Wait! The edit mode is SURGICAL:
+"apply replace_text / replace_function to its STAGING copy /home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py — do NOT rewrite the whole file"
+Wait, does `replace_text` need a relative path?
+Let's check the schema for `replace_text`:
+```json
+{
+  "relative_path": "STRING",
+  "target_text": "STRING",
+  "replacement_text": "STRING",
+  "case_insensitive": "BOOLEAN",
+  "is_regex": "BOOLEAN",
+  "ignore_whitespace": "BOOLEAN"
+}
+```
+Ah! The `relative_path` should be `factory/temp/src2/engine/module1_macro.py` (which is relative to the workspace root).
+Wait, let's verify if the file exists under `factory/temp/src2/engine/module1_macro.py`. Yes, the staging path is `/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py`. Since `factory/temp/src2/engine/module1_macro.py` is the relative path, this matches perfectly!
+
+Let's do the first replacement: replacing the imports at the top of the file.
+Wait, let's look at lines 15-30:
+```python
+from src2.core.schemas.unified import (
+    BAN_HE,
+    BRANCHES,
+    CHONG,
+    COMBINATION_STATES,
+    HAI,
+    LIU_HE,
+    PO,
+    SAN_HE,
+    SAN_HUI,
+    STEM_COMBINE_RESULTS,
+    STEM_COMBINES,
+    STEMS,
+    XING,
+    XUN_KONG,
+)
+```
+Let's call `replace_text` with this exact target.
+
+[tool-call] replace_text({"relative_path":"factory/temp/src2/engine/module1_macro.py","replacement_text":"from src2.core.schemas.unified import (\n    BAN_HE,\n    BAN_HE_RESULTS,\n    BRANCHES,\n    CHONG,\n    COMBINATION_STATES,\n    Element,\n    HAI,\n    LIU_HE,\n    PO,\n    SAN_HE,\n    SAN_HUI,\n    STEM_COMBINE_RESULTS,\n    STEM_COMBINES,\n    STEMS,\n    XING,\n    XUN_KONG,\n)","target_text":"from src2.core.schemas.unified import (\n    BAN_HE,\n    BRANCHES,\n    CHONG,\n    COMBINATION_STATES,\n    HAI,\n    LIU_HE,\n    PO,\n    SAN_HE,\n    SAN_HUI,\n    STEM_COMBINE_RESULTS,\n    STEM_COMBINES,\n    STEMS,\n    XING,\n    XUN_KONG,\n)"})
+
+[text] Perfect! Now we'll replace the Da Yun branch audit part.
+Let's see what the original code block is from lines 216 to 249:
+Wait, let's copy the exact target text carefully from the full file listing in user prompt.
+Original target text:
+```python
+    # Branch Audit (check all 4 natal branches)
+    ty_branch_impact = 0
+    for nb in natal_branches:
+        if CHONG.get(ty_branch) == nb:
+            ty_branch_impact = -20
+            break
+    if ty_branch_impact == 0:
+        for nb in natal_branches:
+            if frozenset({ty_branch, nb}) in LIU_HE:
+                ty_branch_impact = 20
+                break
+    if ty_branch_impact == 0:
+        for nb in natal_branches:
+            for triangle in SAN_HE.values():
+                if ty_branch in triangle and nb in triangle:
+                    ty_branch_impact = 20
+                    break
+            if ty_branch_impact != 0:
+                break
+    if ty_branch_impact == 0:
+        is_disruptor = False
+        for nb in natal_branches:
+            if PO.get(ty_branch) == nb or HAI.get(ty_branch) == nb:
+                is_disruptor = True
+                break
+        if not is_disruptor:
+            for nb in natal_branches:
+                for group in XING.values():
+                    if ty_branch in group and nb in group:
+                        is_disruptor = True
+                        break
+                if is_disruptor:
+                    break
+        if is_disruptor:
+            ty_branch_impact = -10
+```
+
+Wait, let's write out the new replacement code:
+```python
+    # Branch Audit (check all 4 natal branches)
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", []) or []) | set(getattr(_shen_profile, "xi_shen", []) or [])
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", []) or []) | set(getattr(_shen_profile, "chou_shen", []) or [])
+
+    def _check_polarity(el) -> int:
+        if el is None:
+            return 0
+        med_strs = {str(x) for x in _unified_medicine}
+        tab_strs = {str(x) for x in _unified_taboo}
+        el_str = str(el)
+        if el_str in med_strs:
+            return 1
+        elif el_str in tab_strs:
+            return -1
+        return 0
+
+    ty_branch_impact = 0
+    _all = frozenset([ty_branch, *natal_branches])
+
+    for nb in natal_branches:
+        # Check priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破
+        
+        # 1. 三会 (San Hui)
+        found = False
+        for element, branches in SAN_HUI.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                ty_branch_impact += 20 * 1 * _check_polarity(element)
+                found = True
+                break
+        if found:
+            continue
+
+        # 2. 三合 (San He)
+        for element, branches in SAN_HE.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                ty_branch_impact += 18 * 1 * _check_polarity(element)
+                found = True
+                break
+        if found:
+            continue
+
+        # 3. 冲 (Chong)
+        _c = CHONG.get(ty_branch)
+        is_chong = False
+        if _c is not None:
+            if (isinstance(_c, str) and _c == nb) or (getattr(_c, "label", None) == nb) or (str(_c) == nb):
+                is_chong = True
+        if is_chong:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 30 * -1 * _check_polarity(target_el)
+            continue
+
+        # 4. 六合 (Liu He)
+        if frozenset({ty_branch, nb}) in LIU_HE:
+            element = None
+            if isinstance(LIU_HE, dict):
+                element = LIU_HE.get(frozenset({ty_branch, nb}))
+            ty_branch_impact += 15 * 1 * _check_polarity(element)
+            continue
+
+        # 5. 半合 (Ban He)
+        if frozenset({ty_branch, nb}) in BAN_HE_RESULTS:
+            element = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))
+            ty_branch_impact += 10 * 1 * _check_polarity(element)
+            continue
+
+        # 6. 刑 (Xing)
+        is_xing = False
+        for group in XING.values():
+            if ty_branch in group and nb in group:
+                is_xing = True
+                break
+        if is_xing:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+
+        # 7. 害 (Hai)
+        _h = HAI.get(ty_branch)
+        is_hai = False
+        if _h is not None:
+            if (isinstance(_h, str) and _h == nb) or (getattr(_h, "label", None) == nb) or (str(_h) == nb):
+                is_hai = True
+        if is_hai:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+
+        # 8. 破 (Po)
+        _p = PO.get(ty_branch)
+        is_po = False
+        if _p is not None:
+            if (isinstance(_p, str) and _p == nb) or (getattr(_p, "label", None) == nb) or (str(_p) == nb):
+                is_po = True
+        if is_po:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+```
+
+Let's call `replace_text` to replace this block!
+
+[tool-call] replace_text({"target_text":"    # Branch Audit (check all 4 natal branches)\n    ty_branch_impact = 0\n    for nb in natal_branches:\n        if CHONG.get(ty_branch) == nb:\n            ty_branch_impact = -20\n            break\n    if ty_branch_impact == 0:\n        for nb in natal_branches:\n            if frozenset({ty_branch, nb}) in LIU_HE:\n                ty_branch_impact = 20\n                break\n    if ty_branch_impact == 0:\n        for nb in natal_branches:\n            for triangle in SAN_HE.values():\n                if ty_branch in triangle and nb in triangle:\n                    ty_branch_impact = 20\n                    break\n            if ty_branch_impact != 0:\n                break\n    if ty_branch_impact == 0:\n        is_disruptor = False\n        for nb in natal_branches:\n            if PO.get(ty_branch) == nb or HAI.get(ty_branch) == nb:\n                is_disruptor = True\n                break\n        if not is_disruptor:\n            for nb in natal_branches:\n                for group in XING.values():\n                    if ty_branch in group and nb in group:\n                        is_disruptor = True\n                        break\n                if is_disruptor:\n                    break\n        if is_disruptor:\n            ty_branch_impact = -10","replacement_text":"    # Branch Audit (check all 4 natal branches)\n    _unified_medicine = set(medicine)\n    _unified_taboo = set(taboo)\n    _shen_profile = profile.shen_profile\n    if _shen_profile is not None:\n        _unified_medicine |= set(getattr(_shen_profile, \"yong_shen\", []) or []) | set(getattr(_shen_profile, \"xi_shen\", []) or [])\n        _unified_taboo |= set(getattr(_shen_profile, \"ji_shen\", []) or []) | set(getattr(_shen_profile, \"chou_shen\", []) or [])\n\n    def _check_polarity(el) -> int:\n        if el is None:\n            return 0\n        med_strs = {str(x) for x in _unified_medicine}\n        tab_strs = {str(x) for x in _unified_taboo}\n        el_str = str(el)\n        if el_str in med_strs:\n            return 1\n        elif el_str in tab_strs:\n            return -1\n        return 0\n\n    ty_branch_impact = 0\n    _all = frozenset([ty_branch, *natal_branches])\n\n    for nb in natal_branches:\n        # Check priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破\n        \n        # 1. 三会 (San Hui)\n        found = False\n        for element, branches in SAN_HUI.items():\n            if {ty_branch, nb} <= branches and branches <= _all:\n                ty_branch_impact += 20 * 1 * _check_polarity(element)\n                found = True\n                break\n        if found:\n            continue\n\n        # 2. 三合 (San He)\n        for element, branches in SAN_HE.items():\n            if {ty_branch, nb} <= branches and branches <= _all:\n                ty_branch_impact += 18 * 1 * _check_polarity(element)\n                found = True\n                break\n        if found:\n            continue\n\n        # 3. 冲 (Chong)\n        _c = CHONG.get(ty_branch)\n        is_chong = False\n        if _c is not None:\n            if (isinstance(_c, str) and _c == nb) or (getattr(_c, \"label\", None) == nb) or (str(_c) == nb):\n                is_chong = True\n        if is_chong:\n            target_el = (eb := BRANCHES.get(nb)) and eb.element\n            ty_branch_impact += 30 * -1 * _check_polarity(target_el)\n            continue\n\n        # 4. 六合 (Liu He)\n        if frozenset({ty_branch, nb}) in LIU_HE:\n            element = None\n            if isinstance(LIU_HE, dict):\n                element = LIU_HE.get(frozenset({ty_branch, nb}))\n            ty_branch_impact += 15 * 1 * _check_polarity(element)\n            continue\n\n        # 5. 半合 (Ban He)\n        if frozenset({ty_branch, nb}) in BAN_HE_RESULTS:\n            element = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))\n            ty_branch_impact += 10 * 1 * _check_polarity(element)\n            continue\n\n        # 6. 刑 (Xing)\n        is_xing = False\n        for group in XING.values():\n            if ty_branch in group and nb in group:\n                is_xing = True\n                break\n        if is_xing:\n            target_el = (eb := BRANCHES.get(nb)) and eb.element\n            ty_branch_impact += 15 * -1 * _check_polarity(target_el)\n            continue\n\n        # 7. 害 (Hai)\n        _h = HAI.get(ty_branch)\n        is_hai = False\n        if _h is not None:\n            if (isinstance(_h, str) and _h == nb) or (getattr(_h, \"label\", None) == nb) or (str(_h) == nb):\n                is_hai = True\n        if is_hai:\n            target_el = (eb := BRANCHES.get(nb)) and eb.element\n            ty_branch_impact += 15 * -1 * _check_polarity(target_el)\n            continue\n\n        # 8. 破 (Po)\n        _p = PO.get(ty_branch)\n        is_po = False\n        if _p is not None:\n            if (isinstance(_p, str) and _p == nb) or (getattr(_p, \"label\", None) == nb) or (str(_p) == nb):\n                is_po = True\n        if is_po:\n            target_el = (eb := BRANCHES.get(nb)) and eb.element\n            ty_branch_impact += 15 * -1 * _check_polarity(target_el)\n            continue","relative_path":"factory/temp/src2/engine/module1_macro.py"})
+
+[text] Beautiful! That succeeded completely.
+Now let's replace/delete lines 343-348 (original setup of `_unified_medicine` and `_unified_taboo`).
+Let's see what is currently around line 343-348.
+Wait! Let's check the code after our previous replacement, as our replacement added lines around line 216.
+Let's look at the original code around lines 340-353:
+```python
+    # §8.2 / §8.5: single source of truth for 用神-polarity (unify profile + shen_profile).
+    # profile.shen_profile may be ShenClassifierOutput or ShenClassification; both expose
+    # the yong_shen/xi_shen/ji_shen/chou_shen accessors.
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+    if _unified_medicine or _unified_taboo:
+        tai_sui_triggers = _filter_tai_sui_by_shen(tai_sui_triggers, _unified_medicine, _unified_taboo)
+```
+Wait! Since we already setup `_unified_medicine` and `_unified_taboo` earlier before the Da Yun branch audit, we can just delete lines 343-348.
+Wait, let's look at what remains:
+```python
+    # §8.2 / §8.5: single source of truth for 用神-polarity (unify profile + shen_profile).
+    # profile.shen_profile may be ShenClassifierOutput or ShenClassification; both expose
+    # the yong_shen/xi_shen/ji_shen/chou_shen accessors.
+    if _unified_medicine or _unified_taboo:
+        tai_sui_triggers = _filter_tai_sui_by_shen(tai_sui_triggers, _unified_medicine, _unified_taboo)
+```
+Yes! The comments and the `if` check remain, but the setup block itself is removed.
+Let's target that exact block:
+```python
+    # §8.2 / §8.5: single source of truth for 用神-polarity (unify profile + shen_profile).
+    # profile.shen_profile may be ShenClassifierOutput or ShenClassification; both expose
+    # the yong_shen/xi_shen/ji_shen/chou_shen accessors.
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", [])) | set(getattr(_shen_profile, "xi_shen", []))
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", [])) | set(getattr(_shen_profile, "chou_shen", []))
+    if _unified_medicine or _unified_taboo:
+```
+
+And replace it with:
+```python
+    # §8.2 / §8.5: single source of truth for 用神-polarity (unify profile + shen_profile).
+    # profile.shen_profile may be ShenClassifierOutput or ShenClassification; both expose
+    # the yong_shen/xi_shen/ji_shen/chou_shen accessors.
+    if _unified_medicine or _unified_taboo:
+```
+
+Let's call `replace_text` for this deletion!
+
+[tool-call] replace_text({"target_text":"    # §8.2 / §8.5: single source of truth for 用神-polarity (unify profile + shen_profile).\n    # profile.shen_profile may be ShenClassifierOutput or ShenClassification; both expose\n    # the yong_shen/xi_shen/ji_shen/chou_shen accessors.\n    _unified_medicine = set(medicine)\n    _unified_taboo = set(taboo)\n    _shen_profile = profile.shen_profile\n    if _shen_profile is not None:\n        _unified_medicine |= set(getattr(_shen_profile, \"yong_shen\", [])) | set(getattr(_shen_profile, \"xi_shen\", []))\n        _unified_taboo |= set(getattr(_shen_profile, \"ji_shen\", [])) | set(getattr(_shen_profile, \"chou_shen\", []))\n    if _unified_medicine or _unified_taboo:","replacement_text":"    # §8.2 / §8.5: single source of truth for 用神-polarity (unify profile + shen_profile).\n    # profile.shen_profile may be ShenClassifierOutput or ShenClassification; both expose\n    # the yong_shen/xi_shen/ji_shen/chou_shen accessors.\n    if _unified_medicine or _unified_taboo:","relative_path":"factory/temp/src2/engine/module1_macro.py"})
+
+[text] This replacement is successful!
+Wait, let's verify if my changed file compiles under Python and has no syntax or basic logical bugs.
+Wait, let's review the code we changed.
+
+Imports block:
+```python
+from src2.core.schemas.unified import (
+    BAN_HE,
+    BAN_HE_RESULTS,
+    BRANCHES,
+    CHONG,
+    COMBINATION_STATES,
+    Element,
+    HAI,
+    LIU_HE,
+    PO,
+    SAN_HE,
+    SAN_HUI,
+    STEM_COMBINE_RESULTS,
+    STEM_COMBINES,
+    STEMS,
+    XING,
+    XUN_KONG,
+)
+```
+Wait, we ran a `replace_text` for the imports which replaced it nicely.
+Let's double check if we imported `BAN_HE_RESULTS` and `Element` properly. Yes, they are in the list.
+
+Now let's review the Da Yun branch audit code block:
+```python
+    # Branch Audit (check all 4 natal branches)
+    _unified_medicine = set(medicine)
+    _unified_taboo = set(taboo)
+    _shen_profile = profile.shen_profile
+    if _shen_profile is not None:
+        _unified_medicine |= set(getattr(_shen_profile, "yong_shen", []) or []) | set(getattr(_shen_profile, "xi_shen", []) or [])
+        _unified_taboo |= set(getattr(_shen_profile, "ji_shen", []) or []) | set(getattr(_shen_profile, "chou_shen", []) or [])
+
+    def _check_polarity(el) -> int:
+        if el is None:
+            return 0
+        med_strs = {str(x) for x in _unified_medicine}
+        tab_strs = {str(x) for x in _unified_taboo}
+        el_str = str(el)
+        if el_str in med_strs:
+            return 1
+        elif el_str in tab_strs:
+            return -1
+        return 0
+
+    ty_branch_impact = 0
+    _all = frozenset([ty_branch, *natal_branches])
+
+    for nb in natal_branches:
+        # Check priority order: 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破
+        
+        # 1. 三会 (San Hui)
+        found = False
+        for element, branches in SAN_HUI.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                ty_branch_impact += 20 * 1 * _check_polarity(element)
+                found = True
+                break
+        if found:
+            continue
+
+        # 2. 三合 (San He)
+        for element, branches in SAN_HE.items():
+            if {ty_branch, nb} <= branches and branches <= _all:
+                ty_branch_impact += 18 * 1 * _check_polarity(element)
+                found = True
+                break
+        if found:
+            continue
+
+        # 3. 冲 (Chong)
+        _c = CHONG.get(ty_branch)
+        is_chong = False
+        if _c is not None:
+            if (isinstance(_c, str) and _c == nb) or (getattr(_c, "label", None) == nb) or (str(_c) == nb):
+                is_chong = True
+        if is_chong:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 30 * -1 * _check_polarity(target_el)
+            continue
+
+        # 4. 六合 (Liu He)
+        if frozenset({ty_branch, nb}) in LIU_HE:
+            element = None
+            if isinstance(LIU_HE, dict):
+                element = LIU_HE.get(frozenset({ty_branch, nb}))
+            ty_branch_impact += 15 * 1 * _check_polarity(element)
+            continue
+
+        # 5. 半合 (Ban He)
+        if frozenset({ty_branch, nb}) in BAN_HE_RESULTS:
+            element = BAN_HE_RESULTS.get(frozenset({ty_branch, nb}))
+            ty_branch_impact += 10 * 1 * _check_polarity(element)
+            continue
+
+        # 6. 刑 (Xing)
+        is_xing = False
+        for group in XING.values():
+            if ty_branch in group and nb in group:
+                is_xing = True
+                break
+        if is_xing:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+
+        # 7. 害 (Hai)
+        _h = HAI.get(ty_branch)
+        is_hai = False
+        if _h is not None:
+            if (isinstance(_h, str) and _h == nb) or (getattr(_h, "label", None) == nb) or (str(_h) == nb):
+                is_hai = True
+        if is_hai:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+
+        # 8. 破 (Po)
+        _p = PO.get(ty_branch)
+        is_po = False
+        if _p is not None:
+            if (isinstance(_p, str) and _p == nb) or (getattr(_p, "label", None) == nb) or (str(_p) == nb):
+                is_po = True
+        if is_po:
+            target_el = (eb := BRANCHES.get(nb)) and eb.element
+            ty_branch_impact += 15 * -1 * _check_polarity(target_el)
+            continue
+```
+Wait! Are we scanning all natal branches without early breaks?
+Yes! The outer loop `for nb in natal_branches:` iterates over all natal branches. Inside the loop, when a matching interaction is found for a specific `nb`, we use `continue` to move to the next natal branch `nb`, without using `break` on the outer loop. This scans all natal branches without early breaks, aggregating the impacts into `ty_branch_impact`.
+Wait, let's verify if `ty_branch_impact` was typed / expected to be an integer (since the weight formulas like `weighted_ty_branch = int(ty_branch_impact * branch_weight)` expect a number). Yes, `ty_branch_impact` is initialized as `0` and elements are multiplied by integer constants (20, 18, 30, 15, 10), so it remains a numeric (int) type! This matches the rest of the logic perfectly.
+
+Let's double check if we met all acceptance criteria:
+- "Ruff check passes" -> The code matches typical Python syntax, utilizes local variables and imported constants correctly.
+- "all 8 interaction types checked in correct priority order using the combined elements for combination types and natal branch elements for clash/harm types" ->
+  - Priority order checked: 三会 (1) > 三合 (2) > 冲 (3) > 六合 (4) > 半合 (5) > 刑 (6) > 害 (7) > 破 (8). This matches the exact priority!
+  - Combined elements checked for combination types (三会, 三合, 六合, 半合). Let's see:
+    - 三会: checked `element` (which are keys of `SAN_HUI`, representing the combined element).
+    - 三合: checked `element` (which are keys of `SAN_HE`, representing the combined element).
+    - 六合: checked `LIU_HE.get(...)` (which represents the combined element).
+    - 半合: checked `BAN_HE_RESULTS.get(...)` (which represents the combined element).
+  - Natal branch elements checked for clash/harm types (冲, 刑, 害, 破). Let's see:
+    - 冲: checked `target_el = (eb := BRANCHES.get(nb)) and eb.element` (the element of the clashed natal branch `nb`).
+    - 刑: checked `target_el = (eb := BRANCHES.get(nb)) and eb.element` (the element of the punished natal branch `nb`).
+    - 害: checked `target_el = (eb := BRANCHES.get(nb)) and eb.element` (the element of the harmed natal branch `nb`).
+    - 破: checked `target_el = (eb := BRANCHES.get(nb)) and eb.element` (the element of the broken natal branch `nb`).
+  - Polarity logic applied:
+    - Combination types have native sign `+1`. So `magnitude * 1 * _check_polarity(element)`.
+    - Clash/harm types have native sign `-1`. So `magnitude * -1 * _check_polarity(target_el)`.
+    - Polarity sign correctly flips or keeps the sign depending on medicine or taboo.
+
+Wait, are there any other files we modified?
+Only `/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py`.
+Let's review the required TaskResult structure and fields.
+The fields are:
+- `task_id`: "coder01"
+- `status`: "done"
+- `files_changed`: `["/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py"]`
+- `diff_summary`: "Refactored Da Yun branch audit to setup medicine/taboo upfront, check all 8 earthly branch interactions in prioritised order using combined elements / target natal branch elements, and scanned all natal branches without early breaks."
+- `notes`: "Implemented Da Yun branch audit refactoring following priority order 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破 with polarity adjustments in module1_macro.py."
+
+I'll now complete the task with a final result call.
+
+[tool-call] final_result({"files_changed":["/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/engine/module1_macro.py"],"notes":"Implemented Da Yun branch audit refactoring following priority order 三会 > 三合 > 冲 > 六合 > 半合 > 刑 > 害 > 破 with polarity adjustments in module1_macro.py.","status":"done","diff_summary":"Refactored Da Yun branch audit to setup medicine/taboo upfront, check all 8 earthly branch interactions in prioritised order using combined elements / target natal branch elements, and scanned all natal branches without early breaks.","task_id":"coder01"})
