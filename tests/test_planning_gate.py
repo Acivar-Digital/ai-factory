@@ -1,10 +1,14 @@
 """Regression tests for the Mandatory Planning Hard Gate (docs/FIX.md).
 
-Every agent is strictly forbidden from executing any tool except `remember`,
-`final_result`, or `keep_memory` until it has called `remember` to record its
-step-by-step plan. GuardToolset.call_tool enforces this:
+Every agent is strictly forbidden from executing modification tools
+(replace_function, replace_text, write_file, add_constant, add_import,
+move_symbol, delete_file, rename_file) until it has called `remember`
+to record its step-by-step plan. Read-only discovery tools (read_file,
+batch_read, grep_codebase, search, investigate, list_files, get_repo_structure,
+investigate) and terminal tools (remember, final_result, keep_memory) are
+allowed before planning. GuardToolset.call_tool enforces this:
 
-  * Non-exempt tools return a nudge string (block) before planning.
+  * Modification tools return a nudge string (block) before planning.
   * After 3 blocked attempts, RuntimeError is raised (fail loudly).
   * `remember` sets _has_planned = True, unblocking all tools.
 
@@ -57,13 +61,31 @@ def _make_guard(budget: int = 100) -> GuardToolset:
 async def test_non_exempt_tool_blocked_before_planning() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
-        "batch_read", {"paths": ["a.py"]}, None, _FakeTool()
+        "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
     )
     assert "SYSTEM ERROR" in res
     assert "remember" in res
     assert gt._plan_nudges == 1
     assert gt._has_planned is False
     assert len(gt.wrapped.calls) == 0  # tool NOT executed
+
+
+async def test_read_file_allowed_before_planning() -> None:
+    gt = _make_guard()
+    res = await gt.call_tool(
+        "read_file", {"relative_path": "x.py"}, None, _FakeTool()
+    )
+    assert "SYSTEM ERROR" not in res
+    assert gt._plan_nudges == 0
+
+
+async def test_batch_read_allowed_before_planning() -> None:
+    gt = _make_guard()
+    res = await gt.call_tool(
+        "batch_read", {"paths": ["a.py"]}, None, _FakeTool()
+    )
+    assert "SYSTEM ERROR" not in res
+    assert gt._plan_nudges == 0
 
 
 async def test_remember_sets_has_planned() -> None:
@@ -96,12 +118,12 @@ async def test_three_strikes_raises_runtime_error() -> None:
     gt = _make_guard()
     for i in range(2):
         res = await gt.call_tool(
-            "batch_read", {"paths": ["a.py"]}, None, _FakeTool()
+            "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
         )
         assert "SYSTEM ERROR" in res
         assert gt._plan_nudges == i + 1
     try:
-        await gt.call_tool("batch_read", {"paths": ["a.py"]}, None, _FakeTool())
+        await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
         assert False, "Expected RuntimeError after 3 strikes"
     except RuntimeError as exc:
         assert "HALT" in str(exc)
@@ -110,7 +132,7 @@ async def test_three_strikes_raises_runtime_error() -> None:
 
 async def test_plan_nudges_resets_after_remember() -> None:
     gt = _make_guard()
-    await gt.call_tool("batch_read", {"paths": ["a.py"]}, None, _FakeTool())
+    await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
     assert gt._plan_nudges == 1
     await gt.call_tool("remember", {"note": "my plan"}, None, _FakeTool())
     assert gt._has_planned is True
@@ -144,15 +166,6 @@ async def test_write_file_blocked_before_planning() -> None:
     assert len(gt.wrapped.calls) == 0
 
 
-async def test_read_file_blocked_before_planning() -> None:
-    gt = _make_guard()
-    res = await gt.call_tool(
-        "read_file", {"relative_path": "x.py"}, None, _FakeTool()
-    )
-    assert "SYSTEM ERROR" in res
-    assert len(gt.wrapped.calls) == 0
-
-
 async def test_replace_text_blocked_before_planning() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
@@ -166,7 +179,7 @@ async def test_replace_text_blocked_before_planning() -> None:
 async def test_nudge_message_mentions_remember() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
-        "batch_read", {"paths": ["a.py"]}, None, _FakeTool()
+        "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
     )
     assert "remember" in res.lower()
     assert "step-by-step" in res.lower()
@@ -190,7 +203,6 @@ if __name__ == "__main__":
     asyncio.run(test_final_result_exempt_does_not_increment_nudges())
     asyncio.run(test_keep_memory_exempt_does_not_increment_nudges())
     asyncio.run(test_write_file_blocked_before_planning())
-    asyncio.run(test_read_file_blocked_before_planning())
     asyncio.run(test_replace_text_blocked_before_planning())
     asyncio.run(test_nudge_message_mentions_remember())
     asyncio.run(test_has_planned_and_plan_nudges_initialized_in_post_init())
