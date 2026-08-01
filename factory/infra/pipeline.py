@@ -332,15 +332,67 @@ async def record_coder(
 
 
 def _run_verify_edit(author: str, bd: str) -> str | None:
-    """Run verify_edit on the author's output files after a tier edit."""
-    try:
-        result = verify_edit("", None)
-        parsed = json.loads(result) if result else {}
-        if parsed.get("ok") is False:
-            return f"[verify_edit] {author}: FAIL — {parsed.get('error', 'unknown error')}"
-        return f"[verify_edit] {author}: PASS"
-    except Exception as e:
-        return f"[verify_edit] {author}: error — {e}"
+    """Run verify_edit on the author's scoped staged files after a tier edit.
+
+    Reads scope paths from the user_prompt.md frontmatter, maps each to its
+    staged copy under factory/temp/, and verifies every function in each file
+    has CC <= 5 and a clean AST.
+
+    Returns a structured error string on failure, or None on success.
+    """
+    prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
+    scope: list[str] = []
+    if prompt_file.exists():
+        try:
+            text = prompt_file.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            if lines and lines[0].strip() == "---":
+                end_idx = None
+                for i in range(1, len(lines)):
+                    if lines[i].strip() == "---":
+                        end_idx = i
+                        break
+                if end_idx is not None:
+                    fm_text = "\n".join(lines[1:end_idx])
+                    front = yaml.safe_load(fm_text) or {}
+                    if isinstance(front, dict):
+                        raw_scope = front.get("scope", []) or []
+                        if isinstance(raw_scope, str):
+                            raw_scope = [raw_scope]
+                        if isinstance(raw_scope, list):
+                            scope = [str(s) for s in raw_scope]
+        except Exception:
+            scope = []
+
+    if not scope:
+        temp_dir = REPO_ROOT / "factory" / "temp"
+        if temp_dir.exists():
+            scope = [str(p.relative_to(temp_dir)) for p in temp_dir.rglob("*") if p.is_file() and p.suffix == ".py"]
+
+    staged_paths = [f"factory/temp/{s}" for s in scope]
+
+    for staged_file_path in staged_paths:
+        try:
+            result = verify_edit(staged_file_path, None)
+            parsed = json.loads(result) if result else {}
+            if parsed.get("ok") is False:
+                return (
+                    f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                    f"{parsed.get('error', 'unknown error')}"
+                )
+            functions = parsed.get("functions", [])
+            for fn in functions:
+                cc = fn.get("cc", 0)
+                if cc > 5:
+                    return (
+                        f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                        f"function '{fn.get('function', '?')}' has CC={cc} "
+                        f"(target CC <= 5)"
+                    )
+        except Exception as e:
+            return f"[verify_edit] {author}: error — {staged_file_path} — {e}"
+
+    return None
 
 
 async def run_tier(
