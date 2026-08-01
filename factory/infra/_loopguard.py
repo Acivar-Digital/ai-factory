@@ -346,6 +346,7 @@ async def run_with_loopguard(
                 md_content = read_latest_md(role)
                 if not md_content:
                     raise RuntimeError(f"[HALT] MD transcript for role '{role}' was not generated or is empty!")
+            _scrub_old_read_returns(messages)
             return await original_request(messages, model_settings, *args, **kwargs)
 
         agent.model.request = types.MethodType(intercepted_request, agent.model)
