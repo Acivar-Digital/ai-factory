@@ -49,8 +49,13 @@ def resolve_secure_path(relative_path: str) -> Path:
     When TARGET_REPO env var is set, all paths resolve against the target repo.
     Factory files (.env, runner.py, etc.) become invisible — the agent has no
     business reading them. Falls back to PROJECT_ROOT for backward compat.
+    Paths starting with 'factory/temp/' or 'temp/' resolve against PROJECT_ROOT
+    so agents can read staged working copies.
     """
-    root = _resolve_target_root()
+    if relative_path.startswith("factory/temp/") or relative_path.startswith("temp/"):
+        root = PROJECT_ROOT.resolve()
+    else:
+        root = _resolve_target_root()
     if relative_path.startswith(f"{root.name}/"):
         relative_path = relative_path[len(f"{root.name}/") :]
     elif relative_path == root.name:
