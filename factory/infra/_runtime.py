@@ -8,4 +8,4 @@ SCOPE_CONTEXT: str = ""
 RAW_OUTPUTS: dict[str, str] = {}
 _SKIPPED_PHASES: list[str] = []
 
-_PHASE_ORDER = ["planner", "supervisor_plan", "coder", "supervisor_review", "red_team"]
+_PHASE_ORDER = ["intern", "engineer", "senior"]

@@ -236,11 +236,11 @@ def update_status_board(history: list[tuple[str, str]], current_role: str | None
     done = list(dict.fromkeys(runtime._SKIPPED_PHASES + [r for r, _ in history]))
     # When a gate blocks (red_team/supervisor_review FAIL with rerun needed),
     # show loop-back to coder so status board reflects what's going on.
-    loop_back = current_role in ("red_team", "supervisor_review") and any(
+    loop_back = current_role in ("senior", "engineer") and any(
         "FAIL" in (v if isinstance(v, str) else str(v)) for r, v in history[-3:] if r == current_role
     )
     if loop_back:
-        current = "coder"
+        current = "intern"
     else:
         current = current_role if current_role and current_role not in done else None
 

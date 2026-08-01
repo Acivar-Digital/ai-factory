@@ -18,12 +18,10 @@ import factory.infra._runtime as runtime
 
 # These will be created in subsequent prompts
 from factory.infra.pipeline import (
-    record_coder, run_gated, _assert_plan_gate_ok, _checkpoint,
-    run_code_review_gate, run_red_team_gate, _recover_from_unexpected_behavior,
+    run_gated, _checkpoint,
 )
-from pydantic_ai.exceptions import UnexpectedModelBehavior
 from factory.infra.agent import (
-    _configure_logfire, load_skill,
+    _configure_logfire,
 )
 from factory.infra.models import TaskBatch
 
@@ -154,13 +152,13 @@ async def main() -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     sys.stdout = TeeLogger(RUNTIME_DIR / "run.log")
 
-    _start_role = args.from_ if args.from_ else "planner"
+    _start_role = args.from_ if args.from_ else "intern"
     update_status_board([], _start_role, bd)
 
     print("=== ORCHESTRATOR RUN (deterministic conductor, no LLM orchestrator) ===")
     print(f"[resume] {resume}  [bd] {bd}")
 
-    prior = load_exchange(bd) if (resume or args.from_ == "coder") else []
+    prior = load_exchange(bd) if (resume or args.from_ == "intern") else []
     history: list[tuple[str, str]] = []
     exchange: list[ExchangeTurn] = []
     pass_counter: dict[str, int] = {}
@@ -173,80 +171,44 @@ async def main() -> None:
             raise RuntimeError("[HALT] no prior state for continuation.")
         st = reset_stale_in_progress(st)
         if st.draft:
-            history.append(("planner", st.draft.model_dump_json()))
+            history.append(("intern", st.draft.model_dump_json()))
         if st.approved:
-            history.append(("supervisor_plan", st.approved.model_dump_json()))
-            runtime.RAW_OUTPUTS["supervisor_plan"] = st.approved.model_dump_json()
-            runtime.PHASE_SUMMARIES["supervisor_plan"] = st.approved.model_dump_json()
+            history.append(("engineer", st.approved.model_dump_json()))
+            runtime.RAW_OUTPUTS["engineer"] = st.approved.model_dump_json()
+            runtime.PHASE_SUMMARIES["engineer"] = st.approved.model_dump_json()
         if st.batch:
-            history.append(("coder", st.batch.model_dump_json()))
+            history.append(("senior", st.batch.model_dump_json()))
         if st.code_passed:
-            history.append(("supervisor_review", st.code_passed.model_dump_json()))
+            history.append(("senior", st.code_passed.model_dump_json()))
         if st.audit:
-            history.append(("red_team", st.audit.model_dump_json()))
+            history.append(("senior", st.audit.model_dump_json()))
     else:
         st = fresh_state(bd, global_alignment="")
 
-    # Planning gate
-    _coder_idx = runtime._PHASE_ORDER.index("coder")
+    # Intern gate
+    _intern_idx = runtime._PHASE_ORDER.index("intern")
     _from_idx = runtime._PHASE_ORDER.index(args.from_) if args.from_ else 0
 
-    if args.from_ and _from_idx >= _coder_idx:
-        print(f"\n=== [conductor] --from {args.from_}: SKIPPING planner/supervisor_plan ===", flush=True)
-        plan = None
+    if args.from_ and _from_idx >= _intern_idx:
+        print(f"\n=== [conductor] --from {args.from_}: SKIPPING intern ===", flush=True)
         batch = None
     else:
-        is_forced_pass = await run_gated("planner", "supervisor_plan", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False})
-        plan = _assert_plan_gate_ok(history, bd, st=st, is_forced_pass=is_forced_pass)
-        if plan is None:
-            return  # Checkpoint stop
-        if _checkpoint("supervisor_plan", st, args.stop_after, bd, exchange, history):
+        await run_gated("intern", "engineer", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False})
+        if _checkpoint("intern", st, args.stop_after, bd, exchange, history):
             return
 
-    approved_json = runtime.RAW_OUTPUTS.get("supervisor_plan") or next((v for r, v in reversed(history) if r == "supervisor_plan"), None)
-    if args.from_ and _from_idx >= _coder_idx and not approved_json:
-        raise RuntimeError("[HALT] --from but no persisted ApprovedPlan found.")
-
-    # Build closure wrappers so coder_fn matches execute_task's contract:
-    #   coder_fn(brief: str, task_id: str | None = None) -> str
-    # and reviewer_fn matches run_code_review_gate/run_red_team_gate's contract:
-    #   reviewer_fn(brief: str) -> str
-    coder_state = {"brief": task, "seeded": False}
-
-    async def _coder_fn(brief: str, task_id: str | None = None) -> str:
-        return await record_coder(brief, bd, history, prior, coder_state, task_id=task_id)
-
-    async def _run_supervisor_review(brief: str) -> str:
-        try:
-            return await load_skill("supervisor_review", brief, bd)
-        except UnexpectedModelBehavior as e:
-            return _recover_from_unexpected_behavior("supervisor_review", e)
-
-    async def _run_red_team_audit(brief: str) -> str:
-        try:
-            return await load_skill("red_team", brief, bd)
-        except UnexpectedModelBehavior as e:
-            return _recover_from_unexpected_behavior("red_team", e)
-
-    # Code-review gate
-    if plan is not None and plan.workplan and plan.workplan.groups:
-        run_dir = TEMP_DIR / bd
-        run_dir.mkdir(parents=True, exist_ok=True)
-        batch = await run_code_review_gate(plan, run_dir, _coder_fn, _run_supervisor_review, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
-        history.append(("supervisor_review", batch.model_dump_json()))
+    # Engineer gate
+    _engineer_idx = runtime._PHASE_ORDER.index("engineer")
+    if args.from_ and _from_idx >= _engineer_idx:
+        print(f"\n=== [conductor] --from {args.from_}: SKIPPING engineer ===", flush=True)
     else:
-        await run_gated("coder", "supervisor_review", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, record_exchange=(args.from_ == "coder"))
-    if _checkpoint("supervisor_review", st, args.stop_after, bd, exchange, history):
-        return
+        await run_gated("engineer", "senior", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, record_exchange=(args.from_ == "engineer"))
+        if _checkpoint("engineer", st, args.stop_after, bd, exchange, history):
+            return
 
-    # Red-team gate
-    if plan is not None and plan.workplan and plan.workplan.groups:
-        run_dir = TEMP_DIR / bd
-        batch = await run_red_team_gate(plan, run_dir, _coder_fn, _run_red_team_audit, {t.task_id: t for t in batch.results} if batch else {}, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history)
-        history.append(("red_team", batch.model_dump_json()))
-    else:
-        await run_gated("coder", "red_team", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, hard=True, record_exchange=(args.from_ == "coder"))
-    if _checkpoint("red_team", st, args.stop_after, bd, exchange, history):
+    # Senior gate
+    await run_gated("senior", "senior", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, hard=True, record_exchange=(args.from_ == "senior"))
+    if _checkpoint("senior", st, args.stop_after, bd, exchange, history):
         return
 
     save_exchange(bd, exchange)
@@ -255,10 +217,10 @@ async def main() -> None:
         all_done = all(r.status == "done" for r in batch.results)
         verdict = "PASS" if all_done else "CHECK"
     else:
-        last_coder = next((v for r, v in reversed(history) if r == "coder"), "")
-        verdict = "PASS" if "This Harness is Working" in last_coder else "CHECK"
+        last_senior = next((v for r, v in reversed(history) if r == "senior"), "")
+        verdict = "PASS" if "This Harness is Working" in last_senior else "CHECK"
     update_status_board(history, None, bd)
-    print("\n=== PIPELINE COMPLETE (propose-only) ===")
+    print("\n=== PIPELINE COMPLETE (3-tier: intern → engineer → senior) ===")
     print("\nVERDICT:", verdict)
 
 

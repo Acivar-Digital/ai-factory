@@ -6,13 +6,13 @@ from factory.infra.models import (
 )
 
 # Roles whose turns are persisted in the reloadable exchange JSON.
-EXCHANGE_ROLES = {"coder", "supervisor_review", "red_team"}
+EXCHANGE_ROLES = {"intern", "engineer", "senior"}
 
 # Reviewer role -> pass/fail boolean field in its JSON output.
 REVIEW_PASS_FIELD = {
-    "supervisor_plan": "approved",
-    "supervisor_review": "passed",
-    "red_team": "green",
+    "intern": "passed",
+    "engineer": "passed",
+    "senior": "passed",
 }
 
 # Max review attempts per gated pair; the 3rd attempt is a FORCED pass.

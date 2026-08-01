@@ -1,5 +1,10 @@
-from factory.infra.tools_const import *
-'Tool confinement for the Orchestrator State Machine (build.md §4, §5c).\n\nEvery worker capability is a subprocess wrapper around an existing\n`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they\nreceive only the allow-listed, ACL-wrapped tools the orchestrator hands them.\n'
+"""Tool confinement for the Orchestrator State Machine (build.md §4, §5c).
+
+Every worker capability is a subprocess wrapper around an existing
+`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they
+receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
+"""
+from factory.infra.tools_const import _REMEMBER_NUDGE
 from factory.common import _run_tool
 
 def investigate(filename: str, query: str, lines: str | None=None, pattern: str | None=None) -> str:

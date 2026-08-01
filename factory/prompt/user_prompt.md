@@ -1,11 +1,11 @@
 ---
-Resume: false
+Resume: true
 bd: cc-reduce-3files-5funcs
 write_mode: staged
 language: python
 lint_command: uv run ruff check
-start_phase: planner
-stop_phase: red_team
+start_phase: intern
+stop_phase: senior
 scope:
   - src2/interfaces/telegram/chronomancer/agents.py
   - src2/interfaces/telegram/chronomancer/forecast_store.py
