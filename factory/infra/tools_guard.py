@@ -132,6 +132,8 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
     async def get_tools(self, ctx: Any) -> dict[str, ToolsetTool[AgentDepsT]]:
         tools = await self.wrapped.get_tools(ctx)
         self._known_tools = dict(tools)
+        for tool in tools.values():
+            tool.max_retries = max(getattr(tool, "max_retries", 5), 20)
         return _GuardDict(tools, self)
 
     async def call_tool(self, name: str, tool_args: dict[str, Any], ctx: Any, tool: ToolsetTool[AgentDepsT]) -> Any:
