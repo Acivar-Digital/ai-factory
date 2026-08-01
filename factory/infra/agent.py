@@ -18,7 +18,8 @@ from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 
 from factory.common import (
     OUTPUT_TYPE_REGISTRY, ROLE_OUTPUT_TYPE,
-    build_md_bridge, log_operator, resolve_model, resolve_run_dir,
+    build_md_bridge,  # noqa: F401
+    log_operator, resolve_model, resolve_run_dir,
 )
 from factory.infra._loopguard import run_with_loopguard, CONTEXT_COMPACT_CEILING, compact_memory_gate, estimate_tokens
 from factory.infra.artefacts import persist_role
@@ -346,7 +347,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # Bind the active role (+ agent id for coder isolation) so the `remember`
     # tool writes to THIS agent's folder (per-coderN isolated memory, a101k).
     set_current_role(role)
-    agent_id = (_coder_agent_id(task_id) or "intern01") if role == "intern" else None
+    agent_id = task_id or role
     set_current_agent(agent_id)
 
     # Each agent receives ITS OWN history. We reconstruct the per-turn continuity
@@ -356,13 +357,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # with a derived `agent_id` this is the agent-isolated `coder/<agent_id>.md`
     # (ticket a101k): each coder sees only its own work, no sibling leakage.
     # Cold spawn (no twin yet) -> None -> no prepend.
-    prior_history = build_md_bridge(role, agent_id=agent_id)
-    if prior_history:
-        log_operator(
-            f"load_skill({role}): feeding {len(prior_history)} MD-twin message as "
-            f"message_history (own-role continuity, per-turn reinjection)",
-            level="INFO",
-        )
+    prior_history = None
 
     # P1 ugvt (M4): SINK-2 cross-phase context. If prior phases stored summaries
     # (other than the current role), inject a compact "PRIOR PHASE SUMMARIES"

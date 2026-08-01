@@ -200,6 +200,42 @@ def extract_function_node_source(file_path: Path | str, function_name: str) -> s
     return ast.unparse(target)
 
 
+def extract_file_skeleton_and_imports(file_path: Path | str) -> str:
+    """Parse file_path and return a skeleton string of imports, classes, and top-level functions.
+
+    Class bodies show only method signatures with ``...`` bodies.
+    Top-level function bodies are replaced with ``...``.
+    """
+    path = Path(file_path)
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    lines: list[str] = []
+
+    for node in tree.body:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            lines.append(ast.unparse(node))
+        elif isinstance(node, ast.ClassDef):
+            lines.append(f"class {node.name}:")
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    sig = _function_signature(item)
+                    lines.append(f"    {sig}...")
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            sig = _function_signature(node)
+            lines.append(f"{sig}...")
+
+    return "\n".join(lines)
+
+
+def _function_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """Return a function header string (name + args + return annotation) without body."""
+    args = ast.unparse(node.args)
+    decorator_prefix = "".join(ast.unparse(d) + "\n" for d in node.decorator_list)
+    async_prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
+    returns = f" -> {ast.unparse(node.returns)}" if node.returns else ""
+    return f"{decorator_prefix}{async_prefix}def {node.name}({args}){returns}:"
+
+
 def stitch_function_node_source(file_path: Path | str, function_name: str, new_func_code: str) -> bool:
     """Replace the target function node in file_path with new_func_code using AST line slicing.
 

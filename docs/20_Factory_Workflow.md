@@ -125,6 +125,11 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ## Changelog
 
+### 2026-08-02 (Function-by-Function Micro-Loops & Surgical Context Sandwich)
+- **Function-by-Function Micro-Loops**: Pipeline in `pipeline.py` executes refactoring sequentially function-by-function. Once a function reaches CC <= 5, it is locked in immediately and skipped in subsequent passes.
+- **Surgical Context Sandwich Pattern**: Constructed 3-layer prompt context block (`extract_file_skeleton_and_imports` + `extract_function_node_source` + function-specific refactoring directive), preserving global imports and symbol outlines while keeping prompt sizes under 3k tokens.
+- **Attempt Generosity**: Increased tier attempt allowance from 3 to 5 attempts per tier (`MAX_ATTEMPTS = 5`).
+
 ### 2026-08-02 (Function-Node Slicing & Enterprise AST Upgrade)
 - **Function-Node Slicing**: Implemented `extract_function_node_source()` and `stitch_function_node_source()` in `virtual_ast_buffer.py` using standard library `ast.parse`. Extracts isolated 15-line target function AST nodes and stitches refactored nodes back deterministically.
 - **Turn 1 Prompt AST Node Injection**: Added `_build_isolated_ast_block()` in `pipeline.py` to automatically inject target function AST source into Turn 1 prompt context, eliminating the 15-read death spiral.

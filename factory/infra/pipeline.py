@@ -27,6 +27,7 @@ from factory.infra.execution import (
     run_execute_phase,
 )
 from factory.infra.virtual_ast_buffer import (
+    extract_file_skeleton_and_imports,
     extract_function_node_source,
 )
 from factory.infra.exchange import (
@@ -52,6 +53,7 @@ from factory.infra.validation import (
 )
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
+MAX_ATTEMPTS = 5
 
 
 def build_todo_checklist(staged_paths: list[str], target_functions: list[str]) -> TodoList:
@@ -486,7 +488,12 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
 
 
 def _build_isolated_ast_block() -> str:
-    """Extract isolated AST node source for each target function and format as a block."""
+    """Construct a Surgical Context Sandwich for each target function.
+
+    Layer 1: File skeleton + imports (top-level structure).
+    Layer 2: Isolated target function AST node source.
+    Layer 3: Refactoring instruction for ONLY that function to reach CC <= 5.
+    """
     prompt_file = REPO_ROOT / "factory" / "prompt" / "user_prompt.md"
     if not prompt_file.exists():
         prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
@@ -527,14 +534,29 @@ def _build_isolated_ast_block() -> str:
     for staged_path in staged_paths:
         for fn_name in target_functions:
             try:
+                skeleton = extract_file_skeleton_and_imports(staged_path)
+            except Exception:
+                continue
+            try:
                 fn_source = extract_function_node_source(staged_path, fn_name)
             except Exception:
                 continue
-            lines.append("### Isolated Target Function AST Nodes")
+            lines.append("### Surgical Context Sandwich")
             lines.append(f"**File**: `{staged_path}` — **Function**: `{fn_name}`")
+            lines.append("")
+            lines.append("#### Layer 1 — File Skeleton & Imports")
+            lines.append("```python")
+            lines.append(skeleton)
+            lines.append("```")
+            lines.append("")
+            lines.append("#### Layer 2 — Target Function AST Node")
             lines.append("```python")
             lines.append(fn_source)
             lines.append("```")
+            lines.append("")
+            lines.append("#### Layer 3 — Refactoring Instruction")
+            lines.append(f"Refactor ONLY the function `{fn_name}` in `{staged_path}` to reduce its cyclomatic complexity to CC <= 5. Do not modify any other function or file.")
+            lines.append("")
     return "\n".join(lines)
 
 
@@ -553,7 +575,11 @@ async def run_tier(
     """Run a single pipeline tier (intern → engineer → senior).
 
     Strict linear flow: do_role → _run_verify_edit → diagnostic injection
-    on failure → retry up to MAX_RETRIES. No backward bouncing.
+    on failure → retry up to MAX_ATTEMPTS. No backward bouncing.
+
+    Per-function micro-loop: iterates target_functions sequentially,
+    verifying CC <= 5 for each fn_name after every edit. Once a function
+    reaches CC <= 5, it is locked in and the loop moves to the next function.
 
     If verification fails, structured diagnostic feedback is prepended to
     the next attempt's input prompt (same-tier retry) or carried forward
@@ -569,7 +595,12 @@ async def run_tier(
         state_dict["brief"] = brief + "\n\n" + ast_block
         run_brief = state_dict["brief"]
 
-    for attempt in range(1, MAX_RETRIES + 1):
+    target_functions = _read_target_functions()
+    staged_paths = _read_staged_paths()
+
+    locked_functions: set[str] = set()
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
         print(f"\n=== [conductor -> {tier}] (attempt {attempt}) ===", flush=True)
         state_dict["brief"] = run_brief
         out = await do_role(tier, task, bd, history, exchange, pass_counter, prior, state_dict)
@@ -596,10 +627,10 @@ async def run_tier(
                 f"4. Ensure the output passes all verification gates.\n"
             )
             run_brief = brief + "\n\n" + diagnostic
-            if attempt == MAX_RETRIES:
+            if attempt == MAX_ATTEMPTS:
                 if tier == "senior" and is_final:
                     raise RuntimeError(
-                        "[gate] Senior tier failed verification after 3 attempts - HALT"
+                        "[gate] Senior tier failed verification after 5 attempts - HALT"
                     )
                 print(
                     f"[gate] {tier} attempt {attempt}: VERIFICATION FAIL -> "
@@ -608,14 +639,96 @@ async def run_tier(
                 )
             continue
 
-        print(f"[gate] {tier} attempt {attempt}: PASS -> proceed", flush=True)
-        return out
+        for staged_path in staged_paths:
+            for fn_name in target_functions:
+                if fn_name in locked_functions:
+                    continue
+                result = verify_edit(staged_path, fn_name)
+                parsed = json.loads(result) if result else {}
+                cc = parsed.get("cc", 0)
+                if parsed.get("ok") is False or cc > 5:
+                    continue
+                locked_functions.add(fn_name)
+                print(
+                    f"[gate] {tier} attempt {attempt}: {fn_name} CC={cc} <= 5 LOCKED",
+                    flush=True,
+                )
+
+        if len(locked_functions) == len(target_functions):
+            print(f"[gate] {tier} attempt {attempt}: ALL functions locked at CC <= 5 -> proceed", flush=True)
+            return out
+
+        remaining = [fn for fn in target_functions if fn not in locked_functions]
+        run_brief = brief + f"\n\n[FUNCTION MICRO-LOOP] Functions still above CC=5: {remaining}. Focus the next edit on these."
 
     if tier == "senior" and is_final:
         raise RuntimeError(
-            "[gate] Senior tier failed verification after 3 attempts - HALT"
+            "[gate] Senior tier failed verification after 5 attempts - HALT"
         )
     return out
+
+
+def _read_target_functions() -> list[str]:
+    """Read target_functions from the user_prompt.md frontmatter."""
+    prompt_file = REPO_ROOT / "factory" / "prompt" / "user_prompt.md"
+    if not prompt_file.exists():
+        prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
+    if not prompt_file.exists():
+        return []
+    try:
+        text = prompt_file.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        if lines and lines[0].strip() == "---":
+            end_idx = None
+            for i in range(1, len(lines)):
+                if lines[i].strip() == "---":
+                    end_idx = i
+                    break
+            if end_idx is not None:
+                fm_text = "\n".join(lines[1:end_idx])
+                front = yaml.safe_load(fm_text) or {}
+                if isinstance(front, dict):
+                    tf = front.get("target_functions", []) or []
+                    if isinstance(tf, list):
+                        return [str(f) for f in tf]
+    except Exception:
+        pass
+    return []
+
+
+def _read_staged_paths() -> list[str]:
+    """Read scope from user_prompt.md and map to staged paths."""
+    prompt_file = REPO_ROOT / "factory" / "prompt" / "user_prompt.md"
+    if not prompt_file.exists():
+        prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
+    if not prompt_file.exists():
+        return []
+    scope: list[str] = []
+    try:
+        text = prompt_file.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        if lines and lines[0].strip() == "---":
+            end_idx = None
+            for i in range(1, len(lines)):
+                if lines[i].strip() == "---":
+                    end_idx = i
+                    break
+            if end_idx is not None:
+                fm_text = "\n".join(lines[1:end_idx])
+                front = yaml.safe_load(fm_text) or {}
+                if isinstance(front, dict):
+                    raw_scope = front.get("scope", []) or []
+                    if isinstance(raw_scope, str):
+                        raw_scope = [raw_scope]
+                    if isinstance(raw_scope, list):
+                        scope = [str(s) for s in raw_scope]
+    except Exception:
+        pass
+    if not scope:
+        temp_dir = REPO_ROOT / "factory" / "temp"
+        if temp_dir.exists():
+            scope = [str(p.relative_to(temp_dir)) for p in temp_dir.rglob("*") if p.is_file() and p.suffix == ".py"]
+    return [f"factory/temp/{s}" for s in scope]
 
 
 def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool = False) -> ExecutablePlan:
