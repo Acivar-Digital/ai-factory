@@ -372,8 +372,8 @@ nemotron = OpenAIChatModel(
     profile=OpenAIModelProfile(openai_supports_tool_choice_required=None),
 )
 
-hy3_free = OpenAIChatModel(
-    "openrouter/tencent/hy3:free",
+ling_flash = OpenAIChatModel(
+    "openrouter/inclusionai/ling-3.0-flash:free",
     provider=PROVIDERS["literouter"],
     profile=OpenAIModelProfile(openai_supports_tool_choice_required=None,
     )
@@ -435,6 +435,13 @@ gemini_3_1_pro_low = OpenAIChatModel(
     )
 )
 
+gemini_3_1_pro_high = OpenAIChatModel(
+    "gemini-pro-agent",
+    provider=PROVIDERS["antigravity_manager"],
+    profile=OpenAIModelProfile(openai_supports_tool_choice_required=None, context_window=200000,
+    )
+)
+
 gemini_3_5_flash_extra_low = OpenAIChatModel(
     "gemini-3.5-flash-extra-low",
     provider=PROVIDERS["antigravity_manager"],
@@ -442,8 +449,15 @@ gemini_3_5_flash_extra_low = OpenAIChatModel(
     )
 )
 
-gemini_3_5_flash_low = OpenAIChatModel(
-    "gemini-3.5-flash-low",
+gemini_3_6_flash_low = OpenAIChatModel(
+    "gemini-3.6-flash-low",
+    provider=PROVIDERS["antigravity_manager"],
+    profile=OpenAIModelProfile(openai_supports_tool_choice_required=None, context_window=200000,
+    )
+)
+
+gemini_3_6_flash_high = OpenAIChatModel(
+    "gemini-3.6-flash-high",
     provider=PROVIDERS["antigravity_manager"],
     profile=OpenAIModelProfile(openai_supports_tool_choice_required=None, context_window=200000,
     )
@@ -481,7 +495,13 @@ def load_control_sheet() -> ControlSheet:
             "ops_model": laguna_xs,
             "compact_model": gemini_3_5_flash_extra_low,
             "codebase_model": gemini_3_5_flash_extra_low,
-            "healer_mode" : gemini_3_5_flash_extra_low,
+            "healer_model" : gemini_3_5_flash_extra_low,
+            "intern_model" : ling_flash,
+            "engineer_model" : gemini_3_6_flash_high,
+            "senior_model" : gemini_3_1_pro_high,
+              
+              
+
         }
     )
 
