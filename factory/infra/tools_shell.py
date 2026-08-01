@@ -7,7 +7,6 @@ receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
 import json
 from factory.common import _run_tool
 from factory.infra.ast_verifier import extract_header_symbol_contract, run_lint_regression, verify_refactored_ast
-from factory.infra.context import stage_path
 from factory.infra.control import REPO_ROOT
 from factory.infra.tools_file import _check_edit_result, _src_write_guard
 from factory.infra.tools_memory import get_current_agent, get_current_role
@@ -24,6 +23,7 @@ def _auto_remember(note: str) -> None:
 
 def replace_text(relative_path: str, target_text: str, replacement_text: str, is_regex: bool=False, case_insensitive: bool=False, ignore_whitespace: bool=False) -> str:
     """Replace exact text or regex in a repo file. Returns JSON result."""
+    from factory.infra.context import stage_path
     staged = stage_path(relative_path)
     _g = _src_write_guard('replace_text', staged)
     if _g:
@@ -41,6 +41,7 @@ def replace_text(relative_path: str, target_text: str, replacement_text: str, is
 
 def replace_function(relative_path: str, function_name: str, new_function_code: str, class_name: str | None=None) -> str:
     """Replace a function's body via AST manipulation. Returns JSON result."""
+    from factory.infra.context import stage_path
     staged = stage_path(relative_path)
     _g = _src_write_guard('replace_function', staged)
     if _g:
@@ -55,6 +56,7 @@ def replace_function(relative_path: str, function_name: str, new_function_code: 
 
 def add_constant(relative_path: str, constant_name: str, constant_code: str) -> str:
     """Add a top-level constant to a Python file (AST). Returns JSON result."""
+    from factory.infra.context import stage_path
     staged = stage_path(relative_path)
     _g = _src_write_guard('add_constant', staged)
     if _g:
@@ -65,6 +67,7 @@ def add_constant(relative_path: str, constant_name: str, constant_code: str) -> 
 
 def add_import(relative_path: str, import_code: str) -> str:
     """Add an import line to the top of a Python file (AST). Returns JSON result."""
+    from factory.infra.context import stage_path
     staged = stage_path(relative_path)
     _g = _src_write_guard('add_import', staged)
     if _g:
@@ -75,6 +78,7 @@ def add_import(relative_path: str, import_code: str) -> str:
 
 def move_symbol(symbol_name: str, source_path: str, dest_path: str) -> str:
     """Move a function/class between files and update imports. Returns JSON result."""
+    from factory.infra.context import stage_path
     staged_src = stage_path(source_path)
     staged_dst = stage_path(dest_path)
     _g = _src_write_guard('move_symbol', staged_src, staged_dst)

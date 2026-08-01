@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 
 from factory.common import _run_tool
-from factory.infra.context import stage_path
 from factory.infra.control import REPO_ROOT
 from factory.infra.tools_const import (
     _BATCH_READ_DEFAULT_HEAD,
@@ -166,6 +165,7 @@ def _src_write_guard(tool_name: str, *paths: str) -> str | None:
     harness marks the task BLOCKED instead of returning a benign string the model
     treats as a successful write. Returns None when the path is allowed.
     """
+    from factory.infra.context import stage_path
     for p in paths:
         if not p or not p.strip():
             continue
@@ -185,6 +185,7 @@ def write_file(relative_path: str, content: str) -> str:
     If the CLI reports success but the file is absent, we raise — the model must
     never be told a write happened when nothing landed on disk.
     """
+    from factory.infra.context import stage_path
     staged = stage_path(relative_path)
     _src_write_guard('write_file', staged)
     target = (REPO_ROOT / staged).resolve()
@@ -219,6 +220,7 @@ def _check_edit_result(tool_name: str, out: str) -> str:
 
 def delete_file(relative_path: str) -> str:
     """Delete a file/dir from the repo and clean its vector index. Returns JSON."""
+    from factory.infra.context import stage_path
     staged = stage_path(relative_path)
     _g = _src_write_guard('delete_file', staged)
     if _g:
@@ -229,6 +231,7 @@ def delete_file(relative_path: str) -> str:
 
 def rename_file(source_relative_path: str, destination_relative_path: str) -> str:
     """Rename/move a file and update the vector index. Returns JSON result."""
+    from factory.infra.context import stage_path
     staged_src = stage_path(source_relative_path)
     staged_dst = stage_path(destination_relative_path)
     _g = _src_write_guard('rename_file', staged_src, staged_dst)
