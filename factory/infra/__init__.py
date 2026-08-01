@@ -23,6 +23,7 @@ from factory.infra.ast_analyzer import scan_file_for_anti_patterns
 from factory.infra.virtual_ast_buffer import (
     VirtualASTBuffer,
     ensure_pydantic_imports,
+    extract_file_skeleton_and_imports,
     extract_function_node_source,
     stitch_function_node_source,
 )
@@ -41,5 +42,5 @@ __all__ = [
     "verify_refactored_ast", "run_lint_regression", "extract_header_symbol_contract",
     "extract_function_node_source", "stitch_function_node_source",
     "scan_file_for_anti_patterns",
-    "VirtualASTBuffer", "ensure_pydantic_imports",
+    "VirtualASTBuffer", "ensure_pydantic_imports", "extract_file_skeleton_and_imports",
 ]
