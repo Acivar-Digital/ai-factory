@@ -7,6 +7,9 @@ without touching disk, then verifying the result via AST + lint checks.
 
 import ast
 import logging
+import os
+import tempfile
+from pathlib import Path
 
 logger = logging.getLogger("virtual_ast_buffer")
 
@@ -180,3 +183,63 @@ def ensure_pydantic_imports(source: str, refactored_code: str) -> str:
         if "from pydantic" not in source and "import pydantic" not in source:
             source = "from pydantic import BaseModel\n" + source
     return source
+
+
+def extract_function_node_source(file_path: Path | str, function_name: str) -> str:
+    """Read file, parse with ast, and return the isolated source of the target function."""
+    path = Path(file_path)
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    target: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+            target = node
+            break
+    if target is None:
+        raise ValueError(f"Function `{function_name}` not found in {path}")
+    return ast.unparse(target)
+
+
+def stitch_function_node_source(file_path: Path | str, function_name: str, new_func_code: str) -> bool:
+    """Replace the target function node in file_path with new_func_code using AST line slicing.
+
+    Writes the updated file atomically. Returns True on success.
+    """
+    path = Path(file_path)
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    target: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+            target = node
+            break
+    if target is None:
+        raise ValueError(f"Function `{function_name}` not found in {path}")
+
+    new_tree = ast.parse(new_func_code)
+    if not new_tree.body:
+        raise ValueError("new_func_code is empty")
+    new_node = new_tree.body[0]
+    if not isinstance(new_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        raise ValueError("new_func_code must be a function definition")
+
+    lines = source.splitlines(keepends=True)
+    start = target.lineno - 1
+    end = target.end_lineno
+    replacement_lines = new_func_code.splitlines(keepends=True)
+    updated = lines[:start] + replacement_lines + lines[end:]
+
+    updated_source = "".join(updated)
+
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".py.tmp")
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+            f.write(updated_source)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+    return True

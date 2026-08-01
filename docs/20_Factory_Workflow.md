@@ -125,6 +125,11 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ## Changelog
 
+### 2026-08-02 (Function-Node Slicing & Enterprise AST Upgrade)
+- **Function-Node Slicing**: Implemented `extract_function_node_source()` and `stitch_function_node_source()` in `virtual_ast_buffer.py` using standard library `ast.parse`. Extracts isolated 15-line target function AST nodes and stitches refactored nodes back deterministically.
+- **Turn 1 Prompt AST Node Injection**: Added `_build_isolated_ast_block()` in `pipeline.py` to automatically inject target function AST source into Turn 1 prompt context, eliminating the 15-read death spiral.
+- **Read Budget Nudge Enforcement**: Enforced `READ_BUDGET=3` cap and `_READ_REDUNDANT` / `_READ_FATAL` nudging inside `GuardToolset`.
+
 ### 2026-08-02 (Pydantic-AI 2.0 & Harness Alignment Upgrade)
 - **Workflow Spec Initialized**: Created `docs/20_Factory_Workflow.md` incorporating the 5 strategic signposts (later expanded to 7).
 - **Pydantic-AI 2.0 Hooks Capability**: Integrated native `@hooks.on.before_model_request` lifecycle hook in `agent.py` for context scrubbing.
