@@ -1,0 +1,12 @@
+criteria: |
+  REJECT if ANY:
+  - Touched src/ or outside src2/, admin/, migrations/
+  - verify command failed or skipped
+  - Hardcoded model strings (must use CONTROL_SHEET)
+  - except: pass or silent error handling
+
+  APPROVE if ALL:
+  - Only intended files changed
+  - Ruff passes
+  - Pydantic V2 patterns
+  - Minimal diff, no unrelated whitespace/quote changes

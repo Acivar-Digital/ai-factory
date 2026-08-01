@@ -1,0 +1,1275 @@
+{
+  "scanned_files_count": 118,
+  "audit_results": [
+    {
+      "name": "get_hour_stem",
+      "file_path": "src2/core/calendar/populate_calendar.py",
+      "line": 53,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/calendar/populate_calendar.py).",
+      "updated_at": "2026-07-07T21:01:44.012669+08:00"
+    },
+    {
+      "name": "get_user_by_uuid",
+      "file_path": "src2/core/identity/service.py",
+      "line": 19,
+      "type": "async_function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function is a simple database query helper that is not likely to be called dynamically via reflection or as a generic entry point.",
+      "updated_at": "2026-07-07T21:01:44.012735+08:00"
+    },
+    {
+      "name": "get_system_prompt",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 136,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @self.agent.system_prompt, which indicates it is registered as a callback or handler for the agent's system prompt logic. This is a dynamic call mechanism, making it a false positive for dead code detection.",
+      "updated_at": "2026-07-07T21:01:44.012748+08:00"
+    },
+    {
+      "name": "generate_response",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 139,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the rest of the codebase, but it is explicitly mentioned in the manual (CHAPTER_04_COMBINATION.md), indicating it is part of the intended core logic but not currently integrated into the active execution pipeline.",
+      "updated_at": "2026-07-07T21:01:44.012755+08:00"
+    },
+    {
+      "name": "get_sys_prompt",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 195,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is defined as a local function within another function, and it is decorated with @target_agent.system_prompt. This decorator likely registers the function as a system prompt provider for the agent, meaning it is called dynamically by the agent's execution framework.",
+      "updated_at": "2026-07-07T21:01:44.012761+08:00"
+    },
+    {
+      "name": "add_episodic",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 415,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function is a helper method within a class that provides a specific memory type wrapper around a generic 'add_memory' method. It does not appear to be part of any dynamic dispatch or public API entry point.",
+      "updated_at": "2026-07-07T21:01:44.012769+08:00"
+    },
+    {
+      "name": "add_semantic",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 418,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function is a helper method within a Mem0Store class that doesn't appear to be called dynamically or as an entry point.",
+      "updated_at": "2026-07-07T21:01:44.012775+08:00"
+    },
+    {
+      "name": "add_feedback",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 421,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function is a helper method within a Mem0Store class that doesn't appear to be called dynamically or as an API entry point.",
+      "updated_at": "2026-07-07T21:01:44.012781+08:00"
+    },
+    {
+      "name": "delete_user_memories",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 459,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/memory/mem0_store.py).",
+      "updated_at": "2026-07-07T21:01:44.012787+08:00"
+    },
+    {
+      "name": "build_context",
+      "file_path": "src2/core/memory/mem0_store.py",
+      "line": 464,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_12_MASTER_CASES.md), indicating it is part of the core logic intended for use or documented as a feature, but not currently integrated into the active execution pipeline.",
+      "updated_at": "2026-07-07T21:01:44.012794+08:00"
+    },
+    {
+      "name": "build_context",
+      "file_path": "src2/engine/context_template.py",
+      "line": 459,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is explicitly mentioned in the manual (CHAPTER_12_MASTER_CASES.md), indicating it is part of the core logic intended for use or documentation purposes.",
+      "updated_at": "2026-07-07T21:01:44.012801+08:00"
+    },
+    {
+      "name": "get_reports_dir",
+      "file_path": "src2/core/memory/memory_manager.py",
+      "line": 91,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/memory/memory_manager.py).",
+      "updated_at": "2026-07-07T21:01:44.012807+08:00"
+    },
+    {
+      "name": "get_profile_path",
+      "file_path": "src2/core/memory/memory_manager.py",
+      "line": 97,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/memory/memory_manager.py).",
+      "updated_at": null
+    },
+    {
+      "name": "clear_all_user_data",
+      "file_path": "src2/core/memory/memory_manager.py",
+      "line": 105,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the codebase, but it is explicitly mentioned in the verified manual chapter CHAPTER_06_HARM_PUNISHMENT.md, indicating it is intended core logic for user data erasure (likely for compliance or administrative purposes) that is not currently integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "parse_incoming",
+      "file_path": "src2/core/platforms/base.py",
+      "line": 31,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "Abstract method defined in a base class for platform integrations. While no static references are found, it is referenced in the documentation (CHAPTER_02_HIDDEN_RESERVES.md), indicating it is part of the core architectural design for handling incoming messages across platforms.",
+      "updated_at": null
+    },
+    {
+      "name": "parse_incoming",
+      "file_path": "src2/core/platforms/telegram.py",
+      "line": 48,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the codebase, but it is explicitly mentioned in the verified manual chapter CHAPTER_02_HIDDEN_RESERVES.md, indicating it is part of the core logic intended for future use or documented as a reference implementation.",
+      "updated_at": null
+    },
+    {
+      "name": "send_outgoing",
+      "file_path": "src2/core/platforms/base.py",
+      "line": 34,
+      "type": "async_function",
+      "status": "FALSE_POSITIVE",
+      "reason": "This is an abstract method defined in a base class. Abstract methods are intended to be implemented and called by subclasses. Since it's part of a core platform interface, it's likely called via polymorphism (dynamic dispatch) in the core logic that handles outgoing messages.",
+      "updated_at": null
+    },
+    {
+      "name": "send_outgoing",
+      "file_path": "src2/core/platforms/telegram.py",
+      "line": 86,
+      "type": "async_function",
+      "status": "FALSE_POSITIVE",
+      "reason": "No static references found in the codebase, and the function is part of a platform-specific implementation of a messaging interface. It is likely called dynamically via a platform manager or a factory pattern common in platform integrations.",
+      "updated_at": null
+    },
+    {
+      "name": "capabilities",
+      "file_path": "src2/core/platforms/base.py",
+      "line": 38,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "This is an abstract method defined in a base class. Abstract methods are intended to be implemented and called by subclasses. Since it is part of a base platform interface, it is likely used dynamically via polymorphism polymorphism (called on an instance of a subclass) and is not statically detectable.",
+      "updated_at": null
+    },
+    {
+      "name": "capabilities",
+      "file_path": "src2/core/platforms/telegram.py",
+      "line": 45,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/platforms/telegram.py).",
+      "updated_at": null
+    },
+    {
+      "name": "close",
+      "file_path": "src2/core/platforms/telegram.py",
+      "line": 127,
+      "type": "async_function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/platforms/telegram.py).",
+      "updated_at": null
+    },
+    {
+      "name": "close",
+      "file_path": "src2/interfaces/telegram/metrics.py",
+      "line": 82,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/metrics.py).",
+      "updated_at": null
+    },
+    {
+      "name": "on_start",
+      "file_path": "src2/core/rotator.py",
+      "line": 18,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a method of a class inheriting from SpanProcessor. In OpenTelemetry's SpanProcessor interface, on_start is a required override method. Even though it is empty (pass), it is called by the tracer provider when a span starts. It is a false positive because it is part of a required interface implementation.",
+      "updated_at": null
+    },
+    {
+      "name": "on_end",
+      "file_path": "src2/core/rotator.py",
+      "line": 21,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function `on_end` is a callback method typically used in tracing/observability frameworks (like OpenTelemetry). Given its signature `(self, span)`, it is likely called dynamically by a tracer or a similar instrumentation framework, making it a static analysis tool's static reference check fail.",
+      "updated_at": null
+    },
+    {
+      "name": "model_profile",
+      "file_path": "src2/core/rotator.py",
+      "line": 148,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code, but is mentioned in the manual (CHAPTER_02_HIDDEN_RESERVES.md), indicating it is part of the intended but unused or dormant core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "get_rotating_google_provider",
+      "file_path": "src2/core/rotator.py",
+      "line": 152,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "LLMRequestPayload",
+      "file_path": "src2/core/schemas/engine.py",
+      "line": 605,
+      "type": "class",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/schemas/engine.py).",
+      "updated_at": null
+    },
+    {
+      "name": "LLMResponsePayload",
+      "file_path": "src2/core/schemas/engine.py",
+      "line": 613,
+      "type": "class",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/schemas/engine.py).",
+      "updated_at": null
+    },
+    {
+      "name": "SerializedProfileContext",
+      "file_path": "src2/core/schemas/engine.py",
+      "line": 619,
+      "type": "class",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/schemas/engine.py).",
+      "updated_at": null
+    },
+    {
+      "name": "SerializedGeJuContext",
+      "file_path": "src2/core/schemas/engine.py",
+      "line": 628,
+      "type": "class",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/schemas/engine.py).",
+      "updated_at": null
+    },
+    {
+      "name": "DailyPillarResolutionResult",
+      "file_path": "src2/core/schemas/engine.py",
+      "line": 635,
+      "type": "class",
+      "status": "CONFIRMED_DEAD",
+      "reason": "The class is a Pydantic model used for structured data representation. No static references were found in the codebase, and there is no evidence of dynamic calls or use as an API endpoint/webhook. It appears to be an unused schema definition.",
+      "updated_at": null
+    },
+    {
+      "name": "handle_message",
+      "file_path": "src2/core/services/intake.py",
+      "line": 9,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the codebase, but it is explicitly mentioned in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the core logic intended for the system's message handling pipeline, but currently disconnected from the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "upload_string",
+      "file_path": "src2/core/services/storage.py",
+      "line": 27,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/services/storage.py).",
+      "updated_at": null
+    },
+    {
+      "name": "download_string",
+      "file_path": "src2/core/services/storage.py",
+      "line": 33,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/services/storage.py).",
+      "updated_at": null
+    },
+    {
+      "name": "delete_file",
+      "file_path": "src2/core/services/storage.py",
+      "line": 37,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/services/storage.py).",
+      "updated_at": null
+    },
+    {
+      "name": "file_exists",
+      "file_path": "src2/core/services/storage.py",
+      "line": 40,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "No static references found in the codebase, but it is explicitly referenced in the verified manual chapter CHAPTER_12_MASTER_CASES.md, indicating it is intended core logic that is currently disconnected from the active implementation.",
+      "updated_at": null
+    },
+    {
+      "name": "save",
+      "file_path": "src2/core/tools/bd_config.py",
+      "line": 10,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/core/tools/bd_config.py).",
+      "updated_at": null
+    },
+    {
+      "name": "footer",
+      "file_path": "src2/core/tools/formatter.py",
+      "line": 59,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The 'footer' method is a standard fpdf2 override for page footers. fpdf2 automatically calls this method if it is defined in a subclass of FPDF. The function is not dead, but is called dynamically by the internal logic of the internal library.",
+      "updated_at": null
+    },
+    {
+      "name": "generate_pdf_report",
+      "file_path": "src2/core/tools/formatter.py",
+      "line": 66,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_04_COMBINATION.md), indicating it is part of the intended core logic but currently disconnected from the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "apply_override",
+      "file_path": "src2/core/tools/user_profile_input.py",
+      "line": 38,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is explicitly mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is part of the core logic intended for user overrides but not currently integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "get_effective_profile",
+      "file_path": "src2/core/tools/user_profile_input.py",
+      "line": 66,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the rest of the codebase, but it is explicitly mentioned in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is part of the core logic intended for use or described in the documentation, but not currently integrated into the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "calculate_bazi",
+      "file_path": "src2/engine/bazi_calculator.py",
+      "line": 7,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "No static references found in the codebase, but it is explicitly referenced in the verified manual documentation (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is core logic that is currently disconnected from the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "ContradictionHierarchy",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 29,
+      "type": "class",
+      "status": "CONFIRMED_DEAD",
+      "reason": "The class is an IntEnum defining priority levels for contradiction resolution. It has no static references in the other files of the codebase, and given its nature as a a configuration-style enum, it is unlikely to be called dynamically.",
+      "updated_at": null
+    },
+    {
+      "name": "_safe_get_pillar_attr",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 41,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is a private helper utility used for safe attribute access on pillar objects. It has no static references in thep codebase, and is mentioned in the manual, suggesting it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "apply_specificity_rule",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 84,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is part of the core logic intended for the system's theoretical framework but not yet integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "calculate_combo_clash_net",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 172,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is part of the core logic intended for the engine but not yet integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "resolve_dm_strength_paradox",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 238,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is explicitly mentioned in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the core logic intended for the system's synthesis phase but not yet integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "resolve_wealth_vs_control",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 293,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the rest of the codebase, but is explicitly mentioned in the manual (CHAPTER_11_SYNTHESIS.md), indicating it implements a specific protocol described in the documentation.",
+      "updated_at": null
+    },
+    {
+      "name": "resolve_resource_vs_output",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 353,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the core theoretical framework but not currently integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "resolve_combination_override",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 394,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the core logic described in the documentation but not currently integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "resolve_paradox_four_step",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 435,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in any other Python files, but it is explicitly mentioned in the verified manual (CHAPTER_11_SYNTHESIS.md), indicating it implements a specific theoretical framework described in the documentation.",
+      "updated_at": null
+    },
+    {
+      "name": "calculate_temporal_weight_enhanced",
+      "file_path": "src2/engine/contradiction_resolver.py",
+      "line": 467,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is explicitly mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is part of the core logic intended for the system's theoretical framework or future implementation.",
+      "updated_at": null
+    },
+    {
+      "name": "get_sg_now",
+      "file_path": "src2/engine/daily_pillar.py",
+      "line": 26,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/engine/daily_pillar.py).",
+      "updated_at": null
+    },
+    {
+      "name": "run_module0_geju",
+      "file_path": "src2/engine/module0_geju.py",
+      "line": 818,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function serves as a pipeline wrapper for Module 0. Given the lack of any call sites or dynamic dispatch mechanisms in the engine's main execution flow, it is confirmed dead.",
+      "updated_at": null
+    },
+    {
+      "name": "analyze_compatibility_with_transits",
+      "file_path": "src2/engine/module12_compatibility.py",
+      "line": 688,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is explicitly mentioned in the manual (CHAPTER_09_TAI_SUI.md), indicating it is part of the core logic intended for use or documented as a feature, but not currently integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "run_module1_macro",
+      "file_path": "src2/engine/module1_macro.py",
+      "line": 557,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "No static references found in the codebase, and the function name follows a standard pipeline wrapper pattern which is often called dynamically via a registry or a configuration-driven execution engine. Given the lack of of static calls, it is likely a dynamic entry point.",
+      "updated_at": null
+    },
+    {
+      "name": "calculate_tier1_simplified_count",
+      "file_path": "src2/engine/module2_root.py",
+      "line": 640,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is explicitly mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is pedagogical logic intended for documentation purposes.",
+      "updated_at": null
+    },
+    {
+      "name": "calculate_ten_god_dominance",
+      "file_path": "src2/engine/module6_ten_gods.py",
+      "line": 307,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is explicitly mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is part of the core logic intended for the engine but not yet integrated into the active pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "fetch_bazi_meaning",
+      "file_path": "src2/engine/monthly_generator.py",
+      "line": 45,
+      "type": "async_function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @report_agent.tool, indicating it is a tool available to an LLM agent (report_agent). LLM tools are called dynamically by the agent's runtime, not through static calls.",
+      "updated_at": null
+    },
+    {
+      "name": "generate_12_months_concurrently",
+      "file_path": "src2/engine/monthly_generator.py",
+      "line": 50,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the active codebase but is explicitly mentioned in the manual (CHAPTER_04_COMBINATION.md), indicating it is part of the core logic intended for the system's functionality but currently disconnected from the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "review_narrative",
+      "file_path": "src2/engine/narrative_review.py",
+      "line": 67,
+      "type": "async_function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function is not used as a dynamic entry point or webhook. It appears to be a part of an unused reviewer agent implementation.",
+      "updated_at": null
+    },
+    {
+      "name": "simplify_full_report",
+      "file_path": "src2/engine/narrative_simplifier.py",
+      "line": 216,
+      "type": "async_function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function is not an entry point or called dynamically. It appears to be unused.",
+      "updated_at": null
+    },
+    {
+      "name": "call_openrouter_async",
+      "file_path": "src2/engine/openrouter.py",
+      "line": 148,
+      "type": "async_function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function name suggests it is a utility for calling OpenRouter, which would typically be called by a higher-level engine or orchestrator. Since no other part of the system uses it, it is confirmed dead.",
+      "updated_at": null
+    },
+    {
+      "name": "stream_openrouter_async",
+      "file_path": "src2/engine/openrouter.py",
+      "line": 290,
+      "type": "async_function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function name suggests it is an asynchronous streaming implementation that is likely unused or replaced by a more generic LLM interface.",
+      "updated_at": null
+    },
+    {
+      "name": "call_openrouter_async_with_history",
+      "file_path": "src2/engine/openrouter.py",
+      "line": 364,
+      "type": "async_function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function name suggests it is a utility for calling OpenRouter with history, which is not dynamically called via common patterns in the engine.",
+      "updated_at": null
+    },
+    {
+      "name": "call_openrouter_sync",
+      "file_path": "src2/engine/openrouter.py",
+      "line": 410,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function name suggests it is a synchronous wrapper for LLM calls, which is typically replaced by asynchronous versions in modern async-first architectures. No dynamic calls or entry points are found.",
+      "updated_at": null
+    },
+    {
+      "name": "run_engine",
+      "file_path": "src2/engine/prompt_engine.py",
+      "line": 33,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the code, but it is explicitly mentioned in the manual (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is a core engine entry point that is likely intended for use or used via a dynamic call/API wrapper not captured by static analysis.",
+      "updated_at": null
+    },
+    {
+      "name": "build_payload",
+      "file_path": "src2/engine/providers/gemini.py",
+      "line": 23,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual (CHAPTER_12_MASTER_CASES.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "build_payload",
+      "file_path": "src2/engine/providers/openai.py",
+      "line": 25,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the codebase, but it is explicitly mentioned in the manual (CHAPTER_12_MASTER_CASES.md), indicating it is part of the core logic intended for use or documentation purposes.",
+      "updated_at": null
+    },
+    {
+      "name": "extract_response",
+      "file_path": "src2/engine/providers/gemini.py",
+      "line": 55,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual (CHAPTER_04_COMBINATION.md), indicating it is part of the core logic intended for use or documented as an example, but not currently integrated into the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "extract_response",
+      "file_path": "src2/engine/providers/openai.py",
+      "line": 54,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the code, but it is explicitly mentioned in the manual (CHAPTER_04_COMBINATION.md), indicating it is part of the core logic intended for use or documentation purposes.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_advisory",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 170,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic @model_validator, which is called automatically by Pydantic during model instantiation. Therefore, it is a false positive.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_score_rating",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 187,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic @model_validator, which is called automatically by Pydantic during model instantiation. Therefore, it is not dead, but a false positive.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_result",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 204,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @model_validator(mode=\"after\"), which means it is automatically called by Pydantic during the model's instantiation or validation process. It is a false positive for dead code detection.",
+      "updated_at": null
+    },
+    {
+      "name": "MonthlyForecastDeps",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 25,
+      "type": "class",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/chronomancer/agents.py).",
+      "updated_at": null
+    },
+    {
+      "name": "validate_career",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 268,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic @model_validator, which is called automatically by Pydantic during model instantiation. Therefore, it is a false positive as it is actively used by the Pydantic framework.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_relationship",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 282,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic model validator (decorated with @model_validator), which is called automatically by Pydantic during model instantiation. Therefore, it is a false positive as it is actively used by the Pydantic framework.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_health",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 296,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic @model_validator, which is called automatically by Pydantic during model instantiation. Therefore, it is a false positive.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_wealth",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 310,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic @model_validator, which is called automatically by Pydantic during model instantiation. Therefore, it is a false positive as it is actively used during the validation process of its parent model.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_overview",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 323,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic model validator (decorated with @model_validator(mode='after')). Pydantic validators are called automatically by the Pydantic library during model instantiation or validation, making this a false positive for static analysis.",
+      "updated_at": null
+    },
+    {
+      "name": "domain_system_prompt",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 384,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @agent.system_prompt, which registers it as a system prompt provider for the 'agent' instance. This is a dynamic registration pattern common in Pydantic AI, meaning it is called by the framework during agent execution, not via direct static calls.",
+      "updated_at": null
+    },
+    {
+      "name": "overview_system_prompt",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 389,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @overview_agent.system_prompt, which registers it as the system prompt for the agent. This is a dynamic registration pattern common in Pydantic AI, meaning it is called by the agent during execution, not via direct static calls.",
+      "updated_at": null
+    },
+    {
+      "name": "DailyForecastResult",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 46,
+      "type": "class",
+      "status": "CONFIRMED_DEAD",
+      "reason": "The class is a Pydantic BaseModel used for structured output from an LLM agent. Such classes are often passed as 'response_format' or 'output_schema' to LLM calls, but since there are no static references to the class name in the codebase, it is not being used to instantiate objects or as a type hint in any active code path.",
+      "updated_at": null
+    },
+    {
+      "name": "build_daily_system_prompt",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 163,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @agent.system_prompt, which indicates it is registered as a system prompt builder for an AI agent. This is a dynamic registration pattern common in frameworks like PydanticAI. This means it's called dynamically by the agent's runtime, not via a direct static call. Additionally, it is referenced in the manual.",
+      "updated_at": null
+    },
+    {
+      "name": "get_forecast_dates",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 269,
+      "type": "async_function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @agent.tool, which indicates it is registered as a tool for an AI agent. These tools are typically called dynamically by the agent's execution engine (e.g., via a PydanticAI agent ory similar framework), making it static analysis unable to detect the call sites.",
+      "updated_at": null
+    },
+    {
+      "name": "get_stakeholder_context",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 425,
+      "type": "async_function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @agent.tool, which means it is registered as a tool for an AI agent. AI agents call these tools dynamically via the agent's tool-calling mechanism, making it a false positive for static analysis.",
+      "updated_at": null
+    },
+    {
+      "name": "build_daily_orchestrator_prompt",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 475,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is decorated with @agent.system_prompt, which indicates it is used as a dynamic callback for the system prompt of an agent. This is a pattern common in agentic frameworks (like PydanticAI), which the codebase uses. Therefore, it is called dynamically by the framework.",
+      "updated_at": null
+    },
+    {
+      "name": "handle_daily",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 211,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "No static references found in the codebase, but it is explicitly referenced in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the core logic intended for the user interface but not currently wired up to a command handler.",
+      "updated_at": null
+    },
+    {
+      "name": "handle_forecast",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 316,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "No static references found in the codebase, but it is explicitly mentioned in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is intended core logic that is currently disconnected from the active Telegram bot pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "handle_forecast_category",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 330,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the documentation (CHAPTER_11_SYNTHESIS.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "handle_forecast_menu",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 374,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the codebase, but it is explicitly mentioned in the verified manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the intended core logic but currently disconnected from the active implementation.",
+      "updated_at": null
+    },
+    {
+      "name": "handle_ask",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 388,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the codebase, but it is explicitly mentioned in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the core logic intended for the user interface but currently disconnected from the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "prebuild_annual_calendar",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 522,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "No static references found in the codebase, but it is referenced in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "get_daily_forecast",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 862,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is mentioned in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "request",
+      "file_path": "src2/interfaces/telegram/chronomancer/rag.py",
+      "line": 23,
+      "type": "async_function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is part of a class (likely a Model implementation for pydantic-ai), and is not called directly by other files. It is called dynamically by the pydantic-ai framework's agent logic.",
+      "updated_at": null
+    },
+    {
+      "name": "RAGQueryOutput",
+      "file_path": "src2/interfaces/telegram/chronomancer/rag.py",
+      "line": 106,
+      "type": "class",
+      "status": "CONFIRMED_DEAD",
+      "reason": "The class RAGQueryOutput is defined but not referenced anywhere in the same file or other files in the codebase. It is a Pydantic model used for structured output, but the function generate_rag_queries (which logically would use it) does not reference it.",
+      "updated_at": null
+    },
+    {
+      "name": "generate_rag_queries",
+      "file_path": "src2/interfaces/telegram/chronomancer/rag.py",
+      "line": 127,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_04_COMBINATION.md), indicating it is part of the intended core logic but currently disconnected from the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "rank_days_aggregate",
+      "file_path": "src2/interfaces/telegram/chronomancer/ranking.py",
+      "line": 86,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/chronomancer/ranking.py).",
+      "updated_at": null
+    },
+    {
+      "name": "rank_days_by_health",
+      "file_path": "src2/interfaces/telegram/chronomancer/ranking.py",
+      "line": 111,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "No static references found in the codebase, but it is explicitly mentioned in the manual (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is part of the intended core logic but currently disconnected from the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "generate_and_link_semantic_id",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 98,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is explicitly mentioned in the manual (CHAPTER_04_COMBINATION.md), indicating it is part of the core logic intended for the system but not currently integrated into the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "get_semantic_id",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 144,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "get_user_tier",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 256,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "set_user_tier",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 265,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "set_monthly_code",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 362,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "No static references found in the codebase, but it is explicitly referenced in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is part of the intended core logic but currently disconnected from the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "set_feature_code",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 394,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is mentioned in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "delete_session",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 466,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "get_active_jobs",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 522,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is mentioned in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "get_global_job_count_today",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 554,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "fail_job",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 583,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "mark_job_pending",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 604,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "clear_user_jobs",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 626,
+      "type": "function",
+      "status": "DISKCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "get_reports_for_alias",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 640,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "get_all_reports_for_user",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 663,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "add_report_metadata",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 684,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "log_chat",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 714,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "upsert_stakeholder",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 727,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "get_stakeholder_aliases",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 783,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "get_stakeholder_count",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 787,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the codebase but is mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "delete_stakeholder",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 795,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "save_daily_forecast",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 813,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is part of the core logic intended for a specific feature set described in the manual.",
+      "updated_at": null
+    },
+    {
+      "name": "get_daily_forecast_range",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 884,
+      "type": "function",
+      "status": "DISKCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "delete_daily_forecast_for_user_date",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 929,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual documentation (CHAPTER_06_HARM_PUNISHMENT.md), indicating it is disconnected core logic.",
+      "updated_at": null
+    },
+    {
+      "name": "delete_user_prefs",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 944,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function performs a standard database deletion of user preferences which is not typically called dynamically.",
+      "updated_at": null
+    },
+    {
+      "name": "delete_reports_for_user",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 956,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "The function is not referenced anywhere in the codebase, and its functionality is entirely superseded by `delete_all_user_data` which performs the same deletion of reports (and other user data) in a more comprehensive manner.",
+      "updated_at": null
+    },
+    {
+      "name": "delete_all_user_data",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 969,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "get_user_prefs",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 997,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "set_user_prefs",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 1024,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "get_users_with_push_enabled",
+      "file_path": "src2/interfaces/telegram/db.py",
+      "line": 1054,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/db.py).",
+      "updated_at": null
+    },
+    {
+      "name": "evaluate_profile",
+      "file_path": "src2/interfaces/telegram/evaluation.py",
+      "line": 16,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the code, but it is explicitly mentioned in the verified manual chapter CHAPTER_01_COMMANDING_QI.md, indicating it is part of the intended core logic but currently disconnected from the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "get_tone_advice",
+      "file_path": "src2/interfaces/telegram/evaluation.py",
+      "line": 73,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "Blocked by Red-Team Auditor: still referenced in live code (src2/interfaces/telegram/evaluation.py).",
+      "updated_at": null
+    },
+    {
+      "name": "_compute_age_display",
+      "file_path": "src2/interfaces/telegram/intake/intake.py",
+      "line": 52,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced by any other function in the same file or other files in the codebase, but it is mentioned in the documentation (CHAPTER_03_PRODUCTION_CONTROL.md), indicating it is part of the intended core logic but currently disconnected from the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "check_openrouter_api",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 136,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual (CHAPTER_10_SPECIAL_STRUCTURES.md), indicating it is part of the same project's documentation/core logic but not currently integrated into the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "start_worker",
+      "file_path": "src2/interfaces/telegram/queue_worker.py",
+      "line": 86,
+      "type": "async_function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not statically referenced in the codebase, but it is mentioned in the manual documentation (CHAPTER_00_THE_DETERMINISTIC_BAZI_TOC.md), indicating it is part of the core logic intended for the system's operation but not currently integrated into the active execution pipeline.",
+      "updated_at": null
+    },
+    {
+      "name": "send_admin_alert",
+      "file_path": "src2/interfaces/telegram/reliability.py",
+      "line": 57,
+      "type": "async_function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and the function's purpose (sending admin alerts for errors) is a typical candidate for dynamic calls or global error handlers, but without any such mechanism present in the codebase, it is confirmed dead.",
+      "updated_at": null
+    },
+    {
+      "name": "normalize_step",
+      "file_path": "src2/interfaces/telegram/schemas.py",
+      "line": 42,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "The function is a class method used as a Pydantic validator (implied by its placement within a BaseModel subclass, though the missing @field_validator decorator is likely a bug or legacy code). It has no static references and is not used as a validator by Pydantic because it lacks the decorator. Therefore, it is dead code.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_jia_zi_math",
+      "file_path": "src2/interfaces/telegram/schemas.py",
+      "line": 55,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a Pydantic model validator (decorated with @model_validator), which is called automatically by Pydantic during model instantiation and validation. Therefore, it is a false positive.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_strength_value",
+      "file_path": "src2/interfaces/telegram/schemas.py",
+      "line": 86,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is a class method used for validation logic (likely for a Pydantic model in schemas.py), and while it not statically referenced in other files, it is explicitly mentioned in the documentation (CHAPTER_11_SYNTHESIS.md), indicating it is part of thes system's core logic but currently disconnected from the active execution path.",
+      "updated_at": null
+    },
+    {
+      "name": "IntakeData",
+      "file_path": "src2/interfaces/telegram/schemas.py",
+      "line": 121,
+      "type": "class",
+      "status": "CONFIRMED_DEAD",
+      "reason": "No static references found in the codebase, and it is a Pydantic model used for data validation. Such models are typically used as type hints for request bodies in API endpoints or handler functions. Since no other part of the code imports or uses this class, it is confirmed dead.",
+      "updated_at": null
+    },
+    {
+      "name": "sanitize_alias",
+      "file_path": "src2/interfaces/telegram/schemas.py",
+      "line": 130,
+      "type": "function",
+      "status": "CONFIRMED_DEAD",
+      "reason": "The function is defined as a class method within a Pydantic-like schema class, but it is not decorated with @field_validator or @validator, and there is not a reference to it being called manually. It is intended as a validator but lacks the necessary decorator to be triggered by Pydantic.",
+      "updated_at": null
+    },
+    {
+      "name": "validate_dob",
+      "file_path": "src2/interfaces/telegram/schemas.py",
+      "line": 139,
+      "type": "function",
+      "status": "FALSE_POSITIVE",
+      "reason": "The function is a class method used for validation in a Pydantic-like schema. In such frameworks, validators are often called dynamically by the framework (e.g., via Pydantic's @validator decorator, though the decorator is not shown in the code snippet provided, it is likely part of the class definition). Additionally, it is explicitly referenced in the manual (CHAPTER_11_SYNTHESIS.md), indicating it is part of the core logic intended for the system.",
+      "updated_at": null
+    },
+    {
+      "name": "build_reviewer_flags_note",
+      "file_path": "src2/interfaces/telegram/tailoring.py",
+      "line": 342,
+      "type": "function",
+      "status": "DISCONNECTED_CORE_LOGIC",
+      "reason": "The function is not referenced in the code but is mentioned in the manual (CHAPTER_12_MASTER_CASES.md), indicating it is part of the intended core logic but currently disconnected from the active execution pipeline.",
+      "updated_at": null
+    }
+  ],
+  "failed_audits": []
+}

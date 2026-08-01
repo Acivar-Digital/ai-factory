@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celery & Valkey — Solo Developer Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                    <i data-lucide="activity" class="w-6 h-6 text-emerald-400 animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">Celery Task Monitor</h1>
+                    <p class="text-xs text-slate-400">Solo Dev Edition</p>
+                </div>
+            </div>
+
+            <!-- Connection Mode Switcher -->
+            <div class="flex items-center space-x-3">
+                <span id="mode-badge"
+                    class="text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                    Demo Mode Active
+                </span>
+                <button id="toggle-mode-btn"
+                    class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-md border border-slate-700 transition">
+                    Switch to Live API
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Live API Alert Config (Hidden by Default) -->
+        <div id="api-config"
+            class="hidden mb-8 bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+                <h3 class="font-semibold text-sm">Live Server Connection Setup</h3>
+                <p class="text-xs text-slate-400">Point this dashboard to your local Python API backend (FastAPI/Flask)
+                    to load live worker metrics.</p>
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <input id="api-url-input" type="text" value="http:///api/celery-stats"
+                    class="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-3 py-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <button id="save-api-btn"
+                    class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-bold px-4 py-2 rounded-lg transition shrink-0">
+                    Connect
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <!-- Metric 1 -->
+            <div class="bg-slate-900 border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Active Tasks</p>
+                        <h3 id="stat-active" class="text-3xl font-bold mt-1 text-sky-400">0</h3>
+                    </div>
+                    <div class="bg-sky-500/10 p-2.5 rounded-xl"><i data-lucide="loader"
+                            class="w-5 h-5 text-sky-400 animate-spin"></i></div>
+                </div>
+            </div>
+            <!-- Metric 2 -->
+            <div class="bg-slate-900 border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Succeeded</p>
+                        <h3 id="stat-success" class="text-3xl font-bold mt-1 text-emerald-400">0</h3>
+                    </div>
+                    <div class="bg-emerald-500/10 p-2.5 rounded-xl"><i data-lucide="check-circle-2"
+                            class="w-5 h-5 text-emerald-400"></i></div>
+                </div>
+            </div>
+            <!-- Metric 3 -->
+            <div class="bg-slate-900 border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Failed Jobs</p>
+                        <h3 id="stat-failed" class="text-3xl font-bold mt-1 text-rose-400">0</h3>
+                    </div>
+                    <div class="bg-rose-500/10 p-2.5 rounded-xl"><i data-lucide="alert-triangle"
+                            class="w-5 h-5 text-rose-400"></i></div>
+                </div>
+            </div>
+            <!-- Metric 4 -->
+            <div class="bg-slate-900 border border-slate-800/80 p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Broker Status</p>
+                        <h3 id="stat-broker"
+                            class="text-sm font-semibold mt-3 text-emerald-400 flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span> Valkey Online
+                        </h3>
+                    </div>
+                    <div class="bg-slate-800 p-2.5 rounded-xl"><i data-lucide="database"
+                            class="w-5 h-5 text-slate-400"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Playground Panel (Only visible/active in Demo mode) -->
+        <div id="demo-playground" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
+                <div>
+                    <h2 class="text-base font-bold flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4 text-emerald-400"></i> Local Sandbox Dispatcher
+                    </h2>
+                    <p class="text-xs text-slate-400">Simulate Celery tasks to watch how state propagates in real-time.
+                    </p>
+                </div>
+                <div
+                    class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
+                    Interactive Preview Enabled
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <button onclick="dispatchMockTask('tasks.fetch_user_data', 'success')"
+                    class="bg-slate-800 hover:bg-slate-700 text-xs border border-slate-700 px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-sky-400"></span> Run User Sync (Succeeds)
+                </button>
+                <button onclick="dispatchMockTask('tasks.process_data', 'failure')"
+                    class="bg-slate-800 hover:bg-slate-700 text-xs border border-slate-700 px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-rose-400"></span> Run Report Generation (Fails)
+                </button>
+                <button onclick="clearDemoData()"
+                    class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs border border-rose-500/20 px-4 py-2.5 rounded-xl transition ml-auto">
+                    Clear Logs
+                </button>
+            </div>
+        </div>
+
+        <!-- Task Logs Table -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold">Tasks Executions</h2>
+                    <p class="text-xs text-slate-400">Real-time update stream of executed Celery jobs</p>
+                </div>
+                <span id="polling-indicator" class="text-xs text-slate-500 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Polling active
+                </span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/60">
+                            <th class="p-4 pl-6">Task ID</th>
+                            <th class="p-4">Name</th>
+                            <th class="p-4">Args</th>
+                            <th class="p-4">Timestamp</th>
+                            <th class="p-4">Runtime</th>
+                            <th class="p-4 pr-6">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-table-body" class="divide-y divide-slate-800/50 text-sm">
+                        <!-- Tasks go here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="empty-state" class="p-12 text-center flex flex-col items-center justify-center hidden">
+                <i data-lucide="inbox" class="w-10 h-10 text-slate-600 mb-2"></i>
+                <h4 class="text-sm font-semibold text-slate-300">No tasks processed yet</h4>
+                <p class="text-xs text-slate-500 mt-1">Dispatched jobs will show up here automatically.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // State State
+        let isDemoMode = false;
+        let apiUrl = "http://127.0.0.1:8445/api/celery-stats";
+        let taskList = [];
+        let pollingInterval = null;
+
+        // Load Initial State
+        document.addEventListener("DOMContentLoaded", () => {
+            applyModeUI();
+            startPolling();
+
+            // Initialize icons
+            lucide.createIcons();
+
+            // Setup buttons listeners
+            document.getElementById("toggle-mode-btn").addEventListener("click", toggleMode);
+            document.getElementById("save-api-btn").addEventListener("click", updateApiConnection);
+        });
+
+        // Apply UI styling based on current mode
+        function applyModeUI() {
+            const modeBadge = document.getElementById("mode-badge");
+            const toggleBtn = document.getElementById("toggle-mode-btn");
+            const configPanel = document.getElementById("api-config");
+            const sandboxPanel = document.getElementById("demo-playground");
+
+            if (isDemoMode) {
+                modeBadge.textContent = "Demo Mode Active";
+                modeBadge.className = "text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium";
+                toggleBtn.textContent = "Switch to Live API";
+                configPanel.classList.add("hidden");
+                sandboxPanel.classList.remove("hidden");
+                setupDemoData();
+            } else {
+                modeBadge.textContent = "Live API Mode";
+                modeBadge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium";
+                toggleBtn.textContent = "Switch to Demo Mode";
+                configPanel.classList.remove("hidden");
+                sandboxPanel.classList.add("hidden");
+                taskList = []; // Clear mock data
+                fetchLiveStats(); // Fetch live stats immediately
+            }
+            renderDashboard();
+        }
+
+        // Toggle Demo vs Live mode
+        function toggleMode() {
+            isDemoMode = !isDemoMode;
+            applyModeUI();
+        }
+
+        // Live API Logic: Set custom connection endpoint
+        function updateApiConnection() {
+            apiUrl = document.getElementById("api-url-input").value;
+            fetchLiveStats();
+        }
+
+        // Polling loop
+        function startPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(() => {
+                if (isDemoMode) {
+                    simulateBackgroundActivity();
+                } else {
+                    fetchLiveStats();
+                }
+            }, 3000);
+        }
+
+        // Fetch metrics and tasks from Python local app backend
+        async function fetchLiveStats() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Backend offline");
+
+                const data = await response.json();
+                taskList = data.tasks;
+
+                // Update stats counter
+                document.getElementById("stat-active").textContent = data.stats.active;
+                document.getElementById("stat-success").textContent = data.stats.succeeded;
+                document.getElementById("stat-failed").textContent = data.stats.failed;
+
+                const brokerStatus = document.getElementById("stat-broker");
+                brokerStatus.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span> Valkey Online`;
+                brokerStatus.className = "text-sm font-semibold mt-3 text-emerald-400 flex items-center gap-1.5";
+
+                renderTasks();
+            } catch (err) {
+                // Handle connection errors gracefully
+                const brokerStatus = document.getElementById("stat-broker");
+                brokerStatus.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span> API Offline`;
+                brokerStatus.className = "text-sm font-semibold mt-3 text-rose-400 flex items-center gap-1.5";
+            }
+        }
+
+        // Seed data for Demo Preview
+        function setupDemoData() {
+            taskList = [
+                { id: "e8a93bf-4f1", name: "tasks.fetch_user_data", args: "[101]", time: new Date(Date.now() - 3600000).toLocaleTimeString(), duration: "0.22s", status: "SUCCESS" },
+                { id: "c18d9f1-3a2", name: "tasks.process_data", args: "{'user_id': 101}", time: new Date(Date.now() - 1800000).toLocaleTimeString(), duration: "1.02s", status: "SUCCESS" },
+                { id: "b22f01d-9c4", name: "tasks.finalize_and_notify", args: "{'user': 'alice'}", time: new Date(Date.now() - 600000).toLocaleTimeString(), duration: "1.45s", status: "SUCCESS" }
+            ];
+        }
+
+        // Clear mock dashboard logs
+        function clearDemoData() {
+            taskList = [];
+            renderDashboard();
+        }
+
+        // Simulates real-time pipeline tasks when using the Demo playground
+        function dispatchMockTask(name, expectedStatus) {
+            const taskId = Math.random().toString(36).substring(2, 10) + "-mock";
+            const newTask = {
+                id: taskId,
+                name: name,
+                args: name.includes("user_data") ? "[101]" : "[102]",
+                time: new Date().toLocaleTimeString(),
+                duration: "Processing...",
+                status: "STARTED"
+            };
+
+            taskList.unshift(newTask);
+            renderDashboard();
+
+            // Simulate the worker completing it asynchronously after 1.5 seconds
+            setTimeout(() => {
+                const task = taskList.find(t => t.id === taskId);
+                if (task) {
+                    task.status = expectedStatus === "success" ? "SUCCESS" : "FAILURE";
+                    task.duration = (0.5 + Math.random()).toFixed(2) + "s";
+                    renderDashboard();
+                }
+            }, 1500);
+        }
+
+        // Simulate random low frequency background tasks in demo mode
+        function simulateBackgroundActivity() {
+            if (Math.random() > 0.8) {
+                const randomTaskNames = ["tasks.cleanup_db_logs", "tasks.sync_analytics", "tasks.invalidate_cache"];
+                const name = randomTaskNames[Math.floor(Math.random() * randomTaskNames.length)];
+                dispatchMockTask(name, Math.random() > 0.15 ? "success" : "failure");
+            }
+        }
+
+        // Render counters & table
+        function renderDashboard() {
+            if (isDemoMode) {
+                const succeeded = taskList.filter(t => t.status === "SUCCESS").length;
+                const failed = taskList.filter(t => t.status === "FAILURE").length;
+                const active = taskList.filter(t => t.status === "STARTED").length;
+
+                document.getElementById("stat-active").textContent = active;
+                document.getElementById("stat-success").textContent = succeeded;
+                document.getElementById("stat-failed").textContent = failed;
+            }
+            renderTasks();
+        }
+
+        // Repopulate DOM table with task instances
+        function renderTasks() {
+            const tableBody = document.getElementById("task-table-body");
+            const emptyState = document.getElementById("empty-state");
+
+            tableBody.innerHTML = "";
+
+            if (taskList.length === 0) {
+                emptyState.classList.remove("hidden");
+                return;
+            }
+            emptyState.classList.add("hidden");
+
+            taskList.forEach(task => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-900/40 transition duration-150 border-b border-slate-800/40";
+
+                // Status styles
+                let statusBadge = "";
+                if (task.status === "SUCCESS") {
+                    statusBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">Succeeded</span>`;
+                } else if (task.status === "FAILURE") {
+                    statusBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full">Failed</span>`;
+                } else {
+                    statusBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full animate-pulse">Running</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-4 pl-6 font-mono text-xs text-slate-500">${task.id}</td>
+                    <td class="p-4 font-semibold text-slate-200">${task.name}</td>
+                    <td class="p-4 font-mono text-xs text-slate-400">${task.args}</td>
+                    <td class="p-4 text-xs text-slate-400">${task.time}</td>
+                    <td class="p-4 text-xs text-slate-400 font-medium">${task.duration}</td>
+                    <td class="p-4 pr-6">${statusBadge}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+
+</html>

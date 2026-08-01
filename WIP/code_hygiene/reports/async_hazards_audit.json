@@ -1,0 +1,213 @@
+{
+  "scanned_files_count": 118,
+  "audit_results": [
+    {
+      "name": "open",
+      "file_path": "src2/core/platforms/telegram.py",
+      "line": 96,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous 'open' call is used to read a file from disk within an async function 'send_outgoing' on a hot path for sending messages. This blocks the event loop during I/O operations.",
+      "updated_at": "2026-07-07T21:59:14.545854+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/core/services/intake.py",
+      "line": 68,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The `open()` call is used to write a JSON export of user data to a temporary file. This is a synchronous I/O operation performed directly within the async `handle_message` function, which blocks the event loop for the duration of the file write.",
+      "updated_at": "2026-07-07T21:59:14.545894+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/narrative_simplifier.py",
+      "line": 258,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous 'open' and 'write' calls are used for logging performance metrics to a local file. Since this is part of a loop processed via 'asyncio.gather', it blocks the event loop for every processed month, potentially causing latency spikes in a high-throughput system.",
+      "updated_at": "2026-07-07T21:59:23.205849+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/narrative_simplifier.py",
+      "line": 268,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous 'open' and 'write' calls are performed inside an async function 'process' which is executed concurrently via 'asyncio.gather'. This blocks the event loop for every processed month, creating a significant performance bottleneck on a hot path.",
+      "updated_at": "2026-07-07T21:59:31.829081+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/prompt_engine.py",
+      "line": 52,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous 'open' and 'json.load' calls are performed directly within the async function 'run_engine', blocking the event loop during I/O operations.",
+      "updated_at": "2026-07-07T21:59:31.829823+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/prompt_engine.py",
+      "line": 93,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The `open` call is used for intermediate file saving within an async function `process_month` which is executed concurrently via `asyncio.gather`. This blocks the event loop during I/O operations, potentially delaying other concurrent tasks.",
+      "updated_at": "2026-07-07T21:59:40.364158+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/prompt_engine.py",
+      "line": 105,
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The synchronous 'open' call is located within an exception handler in an async function that is executed concurrently via 'asyncio.gather'. While it is a blocking I/O operation, it is only triggered during an error state, which is unlikely to be frequent enough to block the event loop on a hot path.",
+      "updated_at": "2026-07-07T21:59:48.799857+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/prompt_engine.py",
+      "line": 138,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous 'open' and 'json.dump' calls are performed within an async function 'run_engine', blocking the event loop during I/O operations. This is a hazard on active paths.",
+      "updated_at": "2026-07-07T21:59:57.108883+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/prompt_engine.py",
+      "line": 152,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The `open` call is used to write a JSON file to disk. This is a synchronous I/O operation that blocks the event loop. Since this occurs within the `run_engine` function, which is likely a hot path for processing prompts, it is a true async hazard.",
+      "updated_at": "2026-07-07T22:00:05.598558+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 413,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous `open` and `json.load` calls are performed directly within the async function `run_pydantic_engine`, blocking the event loop during I/O operations.",
+      "updated_at": "2026-07-07T22:00:13.718895+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 737,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous `open` and `yaml.dump` calls are performed inside an async function `process_month` on a path that appears to be part of a regular processing loop. This blocks the event loop during I/O operations, which is a hazard in high-concurrency async applications.",
+      "updated_at": "2026-07-07T22:00:22.604772+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 743,
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The `open` call is used to save logs/intermediate results to disk. While synchronous, these are small files and the frequency of frequency of the writes is limited to once per month processed in a loop. Given the context of a prompt engine, these are likely not on a hot API path that would cause significant event loop starvation.",
+      "updated_at": "2026-07-07T22:00:31.617074+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 756,
+      "status": "ASYNC_HAZARD",
+      "severity": "LOW",
+      "reason": "The synchronous 'open' call is located within an exception handler in an async function. While it blocks the event loop, it is only executed during an error state, which is not a hot path. Therefore, it is a low-severity hazard.",
+      "updated_at": "2026-07-07T22:00:40.214067+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/engine/pydantic_prompt_engine.py",
+      "line": 785,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous 'open' and 'json.dump' calls are performed within an async function 'run_pydantic_engine', blocking the event loop during I/O operations. This is a hazard on active paths.",
+      "updated_at": "2026-07-07T22:00:48.578073+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/interfaces/telegram/app.py",
+      "line": 167,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The `open` call is used to read a log file from the disk. Since this is inside an async function `get_celery_stats` which is likely part of a Telegram bot interface, it blocks the event loop during I/O operations. This can lead to latency or heartbeat failures in the event loop.",
+      "updated_at": "2026-07-07T22:00:57.323709+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 330,
+      "status": "ASYNC_HAZARD",
+      "severity": "LOW",
+      "reason": "The `open` call is used to read a small JSON file from disk. While technically synchronous, in the context of a Telegram bot agent, this is a typical pattern for reading configuration or state files. However, since it's inside an async function `get_monthly_context` which is likely called on the hot path of a request handler, it blocks the event loop. Given the typical size of these 'master.json' files and the context of a Telegram bot, this is a low-severity hazard.",
+      "updated_at": "2026-07-07T22:01:07.404435+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/interfaces/telegram/chronomancer/agents.py",
+      "line": 624,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The synchronous 'open' and 'json.load' calls are performed within an async function 'get_monthly_context' which is likely part of a request-handling path in a Telegram bot. This blocks the event loop during I/O operations, potentially impacting the rest of the bot's responsiveness.",
+      "updated_at": "2026-07-07T22:01:16.186936+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/interfaces/telegram/chronomancer/coordinator.py",
+      "line": 576,
+      "status": "ASYNC_HAZARD",
+      "severity": "LOW",
+      "reason": "The `open` call is used to read a JSON file from disk. Since this is inside an async function `_get_monthly_context` and is not offloaded to a thread pool, it blocks the event loop. While the file size is likely small, any disk I/O in an async path is a potential hazard.",
+      "updated_at": "2026-07-07T22:01:25.103667+08:00"
+    },
+    {
+      "name": "subprocess.check_output",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 103,
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "subprocess.check_output is a synchronous blocking call that blocks the event loop. Since this is part of a 'preflight' check, it is likely executed during application startup, which is generally acceptable for blocking calls.",
+      "updated_at": "2026-07-07T22:01:33.877819+08:00"
+    },
+    {
+      "name": "time.sleep",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 120,
+      "status": "FALSE_POSITIVE",
+      "severity": "LOW",
+      "reason": "The call to time.sleep(2) is inside an async function (check_cloudflared) used for preflight checks. Preflight checks typically run during application startup, which means this blocking call does not impact the event loop during the active runtime of the service.",
+      "updated_at": "2026-07-07T22:01:42.619618+08:00"
+    },
+    {
+      "name": "subprocess.check_output",
+      "file_path": "src2/interfaces/telegram/preflight.py",
+      "line": 124,
+      "status": "status: 'ASYNC_HAZARD'",
+      "severity": "LOW",
+      "reason": "The call to subprocess.check_output is a synchronous blocking call inside an async function. While this is a preflight check (likely executed during startup), the use of time.sleep(2) on line 120 further exacerbates the blocking of the event loop.",
+      "updated_at": "2026-07-07T22:01:51.574071+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/interfaces/telegram/report_utils.py",
+      "line": 99,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The `open` call is used to read a JSON file from disk. Since this is part of a `get_month_narrative` function (likely called by a Telegram bot handler), it blocks the event loop during I/O operations, which can lead to latency for other users.",
+      "updated_at": "2026-07-07T22:02:00.352854+08:00"
+    },
+    {
+      "name": "open",
+      "file_path": "src2/interfaces/telegram/report_utils.py",
+      "line": 175,
+      "status": "ASYNC_HAZARD",
+      "severity": "HIGH",
+      "reason": "The `open` call and subsequent `json.dump` are synchronous file I/O operations performed directly within an async function, blocking the event loop. This occurs on a path that involves network calls (simplify_month_narrative), suggesting it is part of an active request-handling path.",
+      "updated_at": "2026-07-07T22:02:09.062906+08:00"
+    }
+  ],
+  "failed_audits": []
+}

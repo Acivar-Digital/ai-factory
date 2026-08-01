@@ -1,0 +1,45 @@
+task: |
+  Implement a dedicated `DailyForecastOrchestrator` agent per `_docs/MANUAL/narrative/03_Daily_Function.md`.
+
+  CONSTRAINTS:
+  - NEVER modify anything in `src/` — only `src2/`, `admin/`, `infrastructure/`, `migrations/`
+  - Do NOT break existing /daily and /ask flows — both must still work
+  - Do NOT run the code — user will review first, then run from terminal
+  - Load the orchestrator skill at `.agents/skills/orchestrator/SKILL.md` for full context
+
+  === FILES TO MODIFY ===
+
+  FILE: infrastructure/prompt/daily_forecast.yaml
+  Fix tool names to match actual agents.py tool names.
+  Add Jinja2 template variables: sifu_mode, alias, dm_stem, dm_element, dm_strength,
+  favorable_elements, unfavorable_elements, day_pillar_str, month_pillar_str.
+  Keep retries section.
+
+  FILE: src2/interfaces/telegram/chronomancer/agents.py
+  Add `get_daily_orchestrator()` factory:
+  - Creates Agent with `_make_agent("CHRONO_MODEL")`
+  - Loads prompt from `infrastructure/prompt/daily_forecast.yaml` via Jinja2
+  - retries=3, deps_type=DailyDeps
+  - Tools: get_daily_pillar (combines pillar + score), search_memories, query_rag,
+    get_user_profile, get_monthly_context, get_structural_map
+  - Keep existing `get_sifu_chronomancer_agent()` unchanged
+
+  FILE: src2/interfaces/telegram/chronomancer/forecast_store.py
+  Move agent.run() into get_daily_forecast() for cache-miss path:
+  - Cache check → if miss → instantiate orchestrator → agent.run() → save synthesis
+  - Use simplification for non-sifu mode
+  - Return DailyForecastRecord with synthesis populated
+
+  FILE: src2/interfaces/telegram/chronomancer/coordinator.py
+  Simplify handle_daily() — remove the agent.run() + memory + save block,
+  keep header/events/formatting. get_daily_forecast() now handles synthesis.
+
+  FILE: _docs/MANUAL/narrative/03_Daily_Function.md
+  Mark as completed after all fixes pass.
+
+  VERIFY PER FIX:
+  - uv run ruff check src2/interfaces/telegram/chronomancer/
+  - uv run python -c "from src2.interfaces.telegram.chronomancer.agents import get_daily_orchestrator; a = get_daily_orchestrator(); print('OK')"
+  - uv run python -c "from src2.interfaces.telegram.chronomancer.forecast_store import get_daily_forecast; print('OK')"
+
+resume: coding
