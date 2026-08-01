@@ -1,7 +1,0 @@
-{
-  "phase": null,
-  "role": "coder",
-  "error": "ModelHTTPError: status_code: 401, model_name: test, body: None",
-  "request_limit": 150,
-  "messages": []
-}
