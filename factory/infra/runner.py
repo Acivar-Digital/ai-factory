@@ -18,7 +18,7 @@ import factory.infra._runtime as runtime
 
 # These will be created in subsequent prompts
 from factory.infra.pipeline import (
-    run_gated, _checkpoint,
+    run_tier, _checkpoint,
 )
 from factory.infra.agent import (
     _configure_logfire,
@@ -185,7 +185,6 @@ async def main() -> None:
     else:
         st = fresh_state(bd, global_alignment="")
 
-    # Intern gate
     _intern_idx = runtime._PHASE_ORDER.index("intern")
     _from_idx = runtime._PHASE_ORDER.index(args.from_) if args.from_ else 0
 
@@ -193,7 +192,11 @@ async def main() -> None:
         print(f"\n=== [conductor] --from {args.from_}: SKIPPING intern ===", flush=True)
         batch = None
     else:
-        await run_gated("intern", "engineer", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False})
+        await run_tier(
+            "intern", task, bd, history, exchange, pass_counter, prior,
+            {"brief": task, "seeded": False},
+            record_exchange=(args.from_ == "intern"),
+        )
         if _checkpoint("intern", st, args.stop_after, bd, exchange, history):
             return
 
@@ -202,15 +205,23 @@ async def main() -> None:
     if args.from_ and _from_idx > _engineer_idx:
         print(f"\n=== [conductor] --from {args.from_}: SKIPPING engineer ===", flush=True)
     else:
-        # Stage scope files into factory/temp/ so the engineer can edit them
         if scope:
             _stage_copies(scope, [f"factory/temp/{s}" for s in scope])
-        await run_gated("engineer", "senior", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, record_exchange=(args.from_ == "engineer"))
+        await run_tier(
+            "engineer", task, bd, history, exchange, pass_counter, prior,
+            {"brief": task, "seeded": False},
+            record_exchange=(args.from_ == "engineer"),
+        )
         if _checkpoint("engineer", st, args.stop_after, bd, exchange, history):
             return
 
     # Senior gate
-    await run_gated("senior", "senior", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, hard=True, record_exchange=(args.from_ == "senior"))
+    await run_tier(
+        "senior", task, bd, history, exchange, pass_counter, prior,
+        {"brief": task, "seeded": False},
+        record_exchange=(args.from_ == "senior"),
+        is_final=True,
+    )
     if _checkpoint("senior", st, args.stop_after, bd, exchange, history):
         return
 
