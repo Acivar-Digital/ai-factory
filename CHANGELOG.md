@@ -5,7 +5,73 @@ All notable changes to the ai-factory orchestrator are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to semantic versioning for the harness itself.
 
-## 2026-07-22 — FIX.md: KG Injection (Option B) + Planner Tightening
+## 2026-08-01 — AST Verification Pipeline + Checkpoint/Resume
+
+Incorporated patterns from `WIP/code_hygiene/scanners/kill_tries.py` into the
+factory harness to improve code quality gates and resilience.
+
+### Added
+
+- **`factory/infra/ast_verifier.py`** — Multi-layer AST verification with 7
+  sandbox layers: syntax check, CC/nesting/try-pyramid, attribute hallucination
+  detection, call argument swap detection, signature parity, namespace collision,
+  and unimported symbol detection via `SymbolScopeVisitor`. Also includes
+  `run_lint_regression()` (ruff/pyright baseline comparison),
+  `ensure_pydantic_imports()`, and `VerificationCircuitBreaker` (3 consecutive
+  failures opens the circuit; half-open after 30s).
+
+- **`factory/infra/virtual_ast_buffer.py`** — `VirtualASTBuffer` for in-memory
+  AST replacement (`replace_function`, `inject_helper`, `get_source`). Enables
+  surgical code edits without touching disk, then verify via `ast.unparse()`.
+  Supports nested class methods and recursive class search.
+
+- **`factory/infra/ast_analyzer.py`** — `FunctionCandidateScanner` for
+  anti-pattern detection (try pyramids, deep nesting >3, CC >5) with priority
+  ranking. `scan_file_for_anti_patterns()` for pre-flight checks. Handles
+  `AsyncGeneratorExp` and `ExceptGroup` (Python 3.11+) with backward-compatible
+  `hasattr` guards.
+
+- **`verify_edit` tool** in `factory/infra/tools_shell.py` — Post-edit AST
+  verification that runs ruff/pyright regression checks and multi-layer AST
+  safety checks on edited files. Registered in `MODIFY_TOOLS` and `TOOL_REGISTRY`.
+
+- **Checkpoint/resume** in `factory/infra/pipeline.py` — JSONL checkpoint file
+  per run ID. Atomic writes via temp file + `os.replace()`. Pre-flight
+  anti-pattern check via `ast_analyzer`. Verification results are injected into
+  the Boss prompt when the Intern's edit fails AST checks. Checkpoint TTL of
+  24 hours.
+
+### Changed
+
+- **`factory/infra/pipeline.py`** — Added pre-flight anti-pattern detection,
+  post-edit `verify_edit` call (30s timeout), checkpoint/resume with atomic
+  writes, and result merging from checkpoint + new runs.
+
+- **`factory/infra/tools_guard.py`** — Added `verify_edit` to `MODIFY_TOOLS`
+  and `TOOL_REGISTRY`.
+
+- **`factory/infra/__init__.py`** — Exports new modules: `verify_refactored_ast`,
+  `run_lint_regression`, `extract_header_symbol_contract`,
+  `scan_file_for_anti_patterns`, `VirtualASTBuffer`, `ensure_pydantic_imports`.
+
+### Fixed
+
+- `SymbolScopeVisitor` now handles `ast.NamedExpr` (walrus operator `:=`) and
+  `ast.Starred` expressions.
+- `VirtualASTBuffer.replace_function` now finds functions at any depth in
+  nested class hierarchies (recursive search).
+- `ComplexityVisitor` and `FunctionCandidateScanner` now handle `AsyncGeneratorExp`
+  and `ExceptGroup` (Python 3.11+).
+- Checkpoint file writes are atomic (`os.replace` on temp file) preventing
+  interleaved JSON lines under concurrency.
+- File size limit (1MB) on `ast.parse` calls prevents memory exhaustion on
+  large files.
+
+### Tests
+
+- Added `tests/test_ast_verifier.py` with 64 tests covering all three new
+  modules, the circuit breaker, checkpoint TTL, and all AST verification
+  sandbox layers.
 
 Fixes per `docs/FIX.md`:
 

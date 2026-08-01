@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import ast
+import json
+import os
+import time
 import pytest
 
 from factory.infra.ast_analyzer import (
@@ -586,3 +589,102 @@ class TestComplexityVisitor:
         vis = VerifierComplexityVisitor()
         vis.visit(fn)
         assert vis.complexity == 2
+
+
+class TestVerificationCircuitBreaker:
+    def test_circuit_breaker_starts_closed(self):
+        from factory.infra.ast_verifier import verification_circuit_breaker
+        verification_circuit_breaker.reset("test_file.py")
+        assert not verification_circuit_breaker.is_open("test_file.py")
+
+    def test_circuit_breaker_opens_after_three_failures(self):
+        from factory.infra.ast_verifier import verification_circuit_breaker
+        verification_circuit_breaker.reset("test_file2.py")
+        for _ in range(3):
+            verification_circuit_breaker.record_failure("test_file2.py")
+        assert verification_circuit_breaker.is_open("test_file2.py")
+
+    def test_circuit_breaker_resets_on_success(self):
+        from factory.infra.ast_verifier import verification_circuit_breaker
+        verification_circuit_breaker.reset("test_file3.py")
+        for _ in range(3):
+            verification_circuit_breaker.record_failure("test_file3.py")
+        assert verification_circuit_breaker.is_open("test_file3.py")
+        verification_circuit_breaker.record_success("test_file3.py")
+        assert not verification_circuit_breaker.is_open("test_file3.py")
+
+    def test_circuit_breaker_half_open_after_timeout(self):
+        from factory.infra.ast_verifier import verification_circuit_breaker
+        verification_circuit_breaker.reset("test_file4.py")
+        for _ in range(3):
+            verification_circuit_breaker.record_failure("test_file4.py")
+        assert verification_circuit_breaker.is_open("test_file4.py")
+        assert not verification_circuit_breaker.can_attempt("test_file4.py")
+
+    def test_circuit_breaker_can_attempt_when_closed(self):
+        from factory.infra.ast_verifier import verification_circuit_breaker
+        verification_circuit_breaker.reset("test_file5.py")
+        assert verification_circuit_breaker.can_attempt("test_file5.py")
+
+    def test_circuit_breaker_different_files_are_independent(self):
+        from factory.infra.ast_verifier import verification_circuit_breaker
+        verification_circuit_breaker.reset("file_a.py")
+        verification_circuit_breaker.reset("file_b.py")
+        for _ in range(3):
+            verification_circuit_breaker.record_failure("file_a.py")
+        assert verification_circuit_breaker.is_open("file_a.py")
+        assert not verification_circuit_breaker.is_open("file_b.py")
+
+
+class TestCheckpointTTL:
+    def test_checkpoint_ttl_seconds_is_24_hours(self):
+        from factory.infra.pipeline import CHECKPOINT_TTL_SECONDS
+        assert CHECKPOINT_TTL_SECONDS == 86400
+
+    def test_load_checkpoint_returns_empty_for_missing_file(self, tmp_path):
+        from factory.infra.pipeline import load_checkpoint
+        result = load_checkpoint(tmp_path / "nonexistent.jsonl")
+        assert result == {}
+
+    def test_load_checkpoint_filters_stale_entries(self, tmp_path):
+        from factory.infra.pipeline import CHECKPOINT_TTL_SECONDS, load_checkpoint
+
+        checkpoint_file = tmp_path / "checkpoint.jsonl"
+        stale_entry = {"file_path": "stale.py", "status": "APPROVED"}
+        fresh_entry = {"file_path": "fresh.py", "status": "APPROVED"}
+
+        with checkpoint_file.open("w", encoding="utf-8") as f:
+            f.write(json.dumps(stale_entry) + "\n")
+            f.write(json.dumps(fresh_entry) + "\n")
+
+        old_mtime = time.time() - CHECKPOINT_TTL_SECONDS - 100
+        os.utime(checkpoint_file, (old_mtime, old_mtime))
+
+        result = load_checkpoint(checkpoint_file)
+        assert result == {}
+
+    def test_load_checkpoint_returns_empty_when_file_older_than_ttl(self, tmp_path):
+        from factory.infra.pipeline import CHECKPOINT_TTL_SECONDS, load_checkpoint
+
+        checkpoint_file = tmp_path / "old_checkpoint.jsonl"
+        entry = {"file_path": "old.py", "status": "APPROVED"}
+        with checkpoint_file.open("w", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+
+        old_mtime = time.time() - CHECKPOINT_TTL_SECONDS - 100
+        os.utime(checkpoint_file, (old_mtime, old_mtime))
+
+        result = load_checkpoint(checkpoint_file)
+        assert result == {}
+
+    def test_load_checkpoint_loads_valid_entries(self, tmp_path):
+        from factory.infra.pipeline import load_checkpoint
+
+        checkpoint_file = tmp_path / "valid_checkpoint.jsonl"
+        entry = {"file_path": "valid.py", "status": "APPROVED"}
+        with checkpoint_file.open("w", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+
+        result = load_checkpoint(checkpoint_file)
+        assert "valid.py" in result
+        assert result["valid.py"]["status"] == "APPROVED"
