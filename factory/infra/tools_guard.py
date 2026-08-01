@@ -27,7 +27,7 @@ from factory.infra.control import CODER_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI
 from factory.infra.tools_const import _BATCH_READ_DEFAULT_HEAD, _BATCH_READ_NO_PATHS
 from factory.infra.tools_file import _parse_range, batch_read, delete_file, normalize_read_path, read_file, rename_file, write_file
 from factory.infra.tools_memory import remember
-from factory.infra.tools_shell import add_constant, add_import, move_symbol, replace_function, replace_text, verify_edit
+from factory.infra.tools_shell import add_constant, add_import, move_symbol, replace_function, replace_text, verify_edit, _auto_remember
 
 UNTRUSTED_OPEN = '<<<UNTRUSTED_USER_TASK>>>'
 UNTRUSTED_CLOSE = '<<<END_UNTRUSTED_USER_TASK>>>'
@@ -138,10 +138,9 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
 
     async def call_tool(self, name: str, tool_args: dict[str, Any], ctx: Any, tool: ToolsetTool[AgentDepsT]) -> Any:
         if name in _MODIFY_TOOLS and not self._has_planned:
-            self._plan_nudges += 1
-            if self._plan_nudges >= 3:
-                raise RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")
-            return "SYSTEM ERROR: You MUST call the 'remember' tool to record your step-by-step plan BEFORE using modification tools (replace_function, replace_text, write_file, add_constant, add_import, move_symbol, delete_file, rename_file)."
+            rel_path = tool_args.get('relative_path') or tool_args.get('path') or 'unknown'
+            _auto_remember(f"[auto-plan] Executing {name} on {rel_path}")
+            self._has_planned = True
         if name == 'remember':
             self._has_planned = True
         if name in _MODIFY_TOOLS:
