@@ -1,4 +1,9 @@
-'Tool confinement for the Orchestrator State Machine (build.md §4, §5c).\n\nEvery worker capability is a subprocess wrapper around an existing\n`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they\nreceive only the allow-listed, ACL-wrapped tools the orchestrator hands them.\n'
+"""Tool confinement for the Orchestrator State Machine (build.md §4, §5c).
+
+Every worker capability is a subprocess wrapper around an existing
+`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they
+receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
+"""
 
 from factory.infra.tools_guard import UNTRUSTED_OPEN
 from factory.infra.tools_guard import UNTRUSTED_CLOSE
@@ -48,19 +53,6 @@ from factory.infra.tools_memory import get_current_agent
 from factory.infra.tools_memory import remember
 from factory.infra.tools_memory import keep_memory
 from factory.infra.tools_memory import record_plan
-from factory.infra.tools_guard import UNTRUSTED_OPEN
-from factory.infra.tools_guard import UNTRUSTED_CLOSE
-from factory.infra.tools_guard import CONTEXT_OPEN
-from factory.infra.tools_guard import CONTEXT_CLOSE
-from factory.infra.tools_guard import detect_prompt_injection
-from factory.infra.tools_guard import wrap_untrusted_task
-from factory.infra.tools_guard import wrap_injected_context
-from factory.infra.tools_guard import DEFAULT_TOOL_BUDGET
-from factory.infra.tools_guard import CODER_BUDGET_BASE
-from factory.infra.tools_guard import CODER_BUDGET_PER_FILE
-from factory.infra.tools_guard import CODER_BUDGET_MIN
-from factory.infra.tools_guard import CODER_BUDGET_MAX
-from factory.infra.tools_guard import READ_FORGIVE_BUDGET
 from factory.infra.tools_guard import _READ_FATAL
 from factory.infra.tools_guard import _READ_REDUNDANT
 from factory.infra.tools_guard import _within_repo
@@ -68,41 +60,6 @@ from factory.infra.tools_guard import _acl_allows
 from factory.infra.tools_guard import _log_acl_denied
 from factory.infra.tools_guard import _coder_budget_for
 from factory.infra.tools_guard import _tool_budget_for
-from factory.infra.tools_file import normalize_read_path
-from factory.infra.tools_guard import GuardToolset
-from factory.infra.tools_guard import ROLE_TOOL_BUDGET
-from factory.infra.tools_guard import assert_planner_emitted
-from factory.infra.tools_guard import guard_tools
-from factory.infra.tools_guard import pydantic_ai_default_block
-from factory.infra.tools_guard import log_prompt_sent
-from factory.infra.tools_guard import log_run_prompt
-from factory.infra.tools_guard import log_response_raw
-from factory.infra.tools_skill import MAX_FORGE_ITERS
-from factory.infra.tools_file import read_file
-from factory.infra.tools_file import batch_read
-from factory.infra.tools_context import investigate
-from factory.infra.tools_context import search
-from factory.infra.tools_context import list_files
-from factory.infra.tools_context import get_file_symbols
-from factory.infra.tools_context import get_repo_structure
-from factory.infra.tools_context import query_knowledge_graph
-from factory.infra.tools_context import find_related_code
-from factory.infra.tools_context import get_code_hierarchy
-from factory.infra.tools_file import write_file
-from factory.infra.tools_shell import replace_text
-from factory.infra.tools_shell import replace_function
-from factory.infra.tools_shell import add_constant
-from factory.infra.tools_shell import add_import
-from factory.infra.tools_file import delete_file
-from factory.infra.tools_file import rename_file
-from factory.infra.tools_shell import move_symbol, verify_edit
-from factory.infra.tools_memory import set_current_role
-from factory.infra.tools_memory import get_current_role
-from factory.infra.tools_memory import set_current_agent
-from factory.infra.tools_memory import get_current_agent
-from factory.infra.tools_memory import remember
-from factory.infra.tools_memory import keep_memory
-from factory.infra.tools_memory import record_plan
 from factory.infra.tools_guard import READ_ONLY_TOOLS
 from factory.infra.tools_guard import READ_FILE_TOOLS
 from factory.infra.tools_guard import MODIFY_TOOLS

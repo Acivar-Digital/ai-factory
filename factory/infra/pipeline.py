@@ -46,6 +46,7 @@ from factory.infra.output_sanitizer import (
 )
 from factory.infra.state import save_state, record_phase
 from factory.infra.tools import wrap_injected_context
+from factory.infra.tools_shell import verify_edit
 from factory.infra.validation import (
     EXCHANGE_ROLES, REVIEW_PASS_FIELD, MAX_RETRIES, PLAN_INVARIANT_RETRIES,
     check_plan_invariants, _downstream_closure,
@@ -345,6 +346,9 @@ def passed(reviewer: str, out: str) -> bool:
             level="WARNING",
         )
         return False
+    if reviewer in ("intern", "engineer", "senior"):
+        field = REVIEW_PASS_FIELD.get(reviewer)
+        return bool(obj.get(field, False)) if field else False
     if reviewer in ("supervisor_plan", "supervisor_review", "red_team"):
         evals = obj.get("evaluations")
         if not evals:
@@ -364,6 +368,18 @@ def passed(reviewer: str, out: str) -> bool:
         return True
     field = REVIEW_PASS_FIELD.get(reviewer)
     return bool(obj.get(field, False)) if field else False
+
+
+def _run_verify_edit(author: str, bd: str) -> str | None:
+    """Run verify_edit on the author's output files after a tier edit."""
+    try:
+        result = verify_edit("", None)
+        parsed = json.loads(result) if result else {}
+        if parsed.get("ok") is False:
+            return f"[verify_edit] {author}: FAIL — {parsed.get('error', 'unknown error')}"
+        return f"[verify_edit] {author}: PASS"
+    except Exception as e:
+        return f"[verify_edit] {author}: error — {e}"
 
 
 async def run_gated(
@@ -395,6 +411,11 @@ async def run_gated(
                         stage_workspace_from_draft(draft, bd)
                 except Exception as e:
                     print(f"[WARN] Pre-stage workspace failed: {e}", flush=True)
+
+        if author in ("intern", "engineer", "senior", "coder"):
+            _verify_edit_result = _run_verify_edit(author, bd)
+            if _verify_edit_result is not None:
+                print(f"[verify_edit] {author}: {_verify_edit_result}", flush=True)
 
         print(f"=== [conductor -> {reviewer}] (attempt {attempt}) ===", flush=True)
         reviewer_out = await do_role(reviewer, task, bd, history, exchange, pass_counter, prior, state_dict)

@@ -65,7 +65,7 @@ def build_role_agent(role: str) -> tuple[Agent, "object | None"]:
     spec = build_skill_spec(role)
     entry = SKILL_MAP.roles[role]
     model = resolve_model(entry.model_key)
-    if role == "coder":
+    if role == "intern":
         model = copy.copy(model)
     instructions = pydantic_ai_default_block() + "\n\n" + spec.instructions
     allowed = [name for name in spec.tool_allow_list if name in _TOOL_BY_NAME]
@@ -293,7 +293,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # Bind the active role (+ agent id for coder isolation) so the `remember`
     # tool writes to THIS agent's folder (per-coderN isolated memory, a101k).
     set_current_role(role)
-    agent_id = _coder_agent_id(task_id) if role == "coder" else None
+    agent_id = _coder_agent_id(task_id) if role == "intern" else None
     set_current_agent(agent_id)
 
     # Each agent receives ITS OWN history. We reconstruct the per-turn continuity
@@ -319,7 +319,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # The coder must work ONLY from its per-task ApprovedTask brief (no shared
     # cross-phase pollution) — each coder_N is a fresh agent with isolated
     # memory (ticket a101k) and must not receive the full ApprovedPlan.
-    if PHASE_SUMMARIES and role != "coder":
+    if PHASE_SUMMARIES and role != "intern":
         prior_block = "\n\n".join(
             f"## {r} summary (prior phase):\n{s}"
             for r, s in PHASE_SUMMARIES.items()
@@ -337,7 +337,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # built once in main() from the user prompt's `scope:` front-matter. This
     # replaces the old hand-written hardcoded DictMap block (task-specific,
     # never derived from declared files, and not shared with supervisor_plan).
-    if role in ("planner", "supervisor_plan") and SCOPE_CONTEXT:
+    if role in ("intern", "engineer", "senior") and SCOPE_CONTEXT:
         brief = (
             brief
             + "\n\n"
@@ -458,7 +458,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # which is unique to the loopguard's recovery_agent.run() prompt.
     recovered = _detect_and_mark_recovery(role, result, prior_history)
 
-    if role == "coder" and (getattr(guard, "exhausted", False) or recovered):
+    if role == "intern" and (getattr(guard, "exhausted", False) or recovered):
         try:
             import json
             obj = json.loads(validated_json)
@@ -496,7 +496,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # SA5-F2: per-task transcript for EVERY phase (especially coder/EXECUTE).
     try:
         log_response_raw(
-            phase="EXECUTE" if role == "coder" else role,
+            phase="EXECUTE" if role == "intern" else role,
             role=role,
             ident=agent_id or task_id or f"{bd}_{role}",
             res=result,
@@ -524,7 +524,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # emitted no structured output, it was looping research calls and never
     # produced a plan — HALT loudly instead of proceeding on a None plan (the
     # q9lt failure mode). assert_planner_emitted raises RuntimeError if so.
-    if role in ("planner", "supervisor_plan") and guard is not None:
+    if role in ("intern", "engineer", "senior") and guard is not None:
         assert_planner_emitted(
             getattr(guard, "exhausted", False),
             bool(getattr(result, "output", None)),
@@ -534,11 +534,11 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # P1 ugvt (M4): SINK-2 — store this role's summary for downstream phases.
     # Compact markdown render of the output (not raw JSON) to save cross-phase
     # tokens. Fail loudly if the store itself errors (it never should).
-    # SKIP for coder: multiple concurrent coders race on PHASE_SUMMARIES["coder"]
+    # SKIP for intern: multiple concurrent interns race on PHASE_SUMMARIES["intern"]
     # (last-writer-wins). The coder summary is handled by record_coder after all
     # concurrent tasks finish, and downstream phases use RAW_OUTPUTS / TaskBatch
     # — not PHASE_SUMMARIES — for coder results.
-    if role != "coder":
+    if role != "intern":
         try:
             PHASE_SUMMARIES[role] = _model_to_md(result.output)
         except Exception as exc:

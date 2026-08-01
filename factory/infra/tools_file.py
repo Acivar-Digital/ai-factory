@@ -1,9 +1,24 @@
-from factory.infra.tools_const import *
-'Tool confinement for the Orchestrator State Machine (build.md §4, §5c).\n\nEvery worker capability is a subprocess wrapper around an existing\n`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they\nreceive only the allow-listed, ACL-wrapped tools the orchestrator hands them.\n'
+"""Tool confinement for the Orchestrator State Machine (build.md §4, §5c).
+
+Every worker capability is a subprocess wrapper around an existing
+`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they
+receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
+"""
 import os
 from pathlib import Path
+
 from factory.common import _run_tool
 from factory.infra.control import REPO_ROOT
+from factory.infra.tools_const import (
+    _BATCH_READ_DEFAULT_HEAD,
+    _BATCH_READ_NO_PATHS,
+    _BATCH_READ_STEER,
+    _REMEMBER_NUDGE,
+    _SRC_BAN_MSG,
+    _STEER,
+    _logger,
+    MAX_BATCH_FILES,
+)
 from factory.infra.tools_memory import get_current_role, get_current_agent
 
 

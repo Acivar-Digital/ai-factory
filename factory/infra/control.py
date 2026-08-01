@@ -565,61 +565,40 @@ class SkillMap(BaseModel):
 def load_skill_map() -> SkillMap:
     return SkillMap(
         roles={
-            "planner": SkillEntry(
-                template="planner.yaml",
-                model_key="planner_model",
-                output_type="DraftPlan",
-                tool_bucket="read-only",
-                hard_rules=[
-                    "never author global_alignment; it is pre-injected",
-                    "Research max 5 batch_read rounds, then output the plan. Do NOT loop.",
-                    "grep and read_file are forbidden; use batch_read for all discovery.",
-                ],
-            ),
-            "supervisor_plan": SkillEntry(
-                template="supervisor_plan.yaml",
-                model_key="supervisor_plan_model",
-                output_type="ApprovedPlan",
-                tool_bucket="read-only",
-                hard_rules=[
-                    "Research max 5 batch_read rounds before approving.",
-                    "grep and read_file are unavailable; use batch_read.",
-                ],
-            ),
-            "coder": SkillEntry(
-                template="coder.yaml",
-                model_key="coder_model",
+            "intern": SkillEntry(
+                template="intern.yaml",
+                model_key="intern_model",
                 output_type="TaskResult",
                 tool_bucket="AST-edit",
                 hard_rules=[
                     "never edit src/ or src2/; only write under factory/",
-                    "read_file allowed for targeted reads; grep forbidden \u2014 use batch_read.",
+                    "read_file allowed for targeted reads; grep forbidden — use batch_read.",
                     "Run batch_read BEFORE any edit.",
                 ],
             ),
-            "supervisor_review": SkillEntry(
-                template="supervisor_review.yaml",
-                model_key="supervisor_review_model",
-                output_type="ReviewResult",
-                tool_bucket="read-only",
-                hard_rules=["grep and read_file are forbidden; use batch_read."],
-            ),
-            "red_team": SkillEntry(
-                template="red_team.yaml",
-                model_key="red_team_model",
-                output_type="AuditResult",
-                tool_bucket="read-only",
+            "engineer": SkillEntry(
+                template="engineer.yaml",
+                model_key="engineer_model",
+                output_type="TaskResult",
+                tool_bucket="AST-edit",
                 hard_rules=[
-                    "audit only; never modify code",
-                    "grep and read_file are forbidden; use batch_read.",
+                    "never edit src/ or src2/; only write under factory/",
+                    "read_file allowed for targeted reads; grep forbidden — use batch_read.",
+                    "Run batch_read BEFORE any edit.",
+                    "Verify all AST and lint checks pass before emitting final_result.",
                 ],
             ),
-            "ops": SkillEntry(
-                template="ops.yaml",
-                model_key="ops_model",
-                output_type="GitResult",
-                tool_bucket="",
-                hard_rules=["push is the sole src/ exception; final diff only"],
+            "senior": SkillEntry(
+                template="senior.yaml",
+                model_key="senior_model",
+                output_type="TaskResult",
+                tool_bucket="AST-edit",
+                hard_rules=[
+                    "never edit src/ or src2/; only write under factory/",
+                    "read_file allowed for targeted reads; grep forbidden — use batch_read.",
+                    "Run batch_read BEFORE any edit.",
+                    "Perform final audit and gate verification. Emit final_result for production deployment.",
+                ],
             ),
         }
     )
