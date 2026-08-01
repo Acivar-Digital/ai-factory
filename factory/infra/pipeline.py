@@ -21,7 +21,7 @@ from factory.infra.agent import (
     load_skill, _load_role_messages, _recover_role_output, _coder_agent_id,
 )
 from factory.infra.control import (
-    REPO_ROOT, MAX_AGENTS,
+    REPO_ROOT, MAX_AGENTS, TodoList, TodoItem,
 )
 from factory.infra.execution import (
     run_execute_phase,
@@ -49,6 +49,44 @@ from factory.infra.validation import (
 )
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
+
+
+def build_todo_checklist(staged_paths: list[str], target_functions: list[str]) -> TodoList:
+    """Build an initial TodoList by running verify_edit on target functions at phase startup."""
+    items: list[TodoItem] = []
+    for staged_file_path in staged_paths:
+        if target_functions:
+            for fn_name in target_functions:
+                result = verify_edit(staged_file_path, fn_name)
+                parsed = json.loads(result) if result else {}
+                cc = parsed.get("cc", 0)
+                passed = parsed.get("ok", False) and cc <= 5
+                items.append(
+                    TodoItem(
+                        file_path=staged_file_path,
+                        function_name=fn_name,
+                        target_cc=5,
+                        current_cc=cc,
+                        passed=passed,
+                    )
+                )
+        else:
+            result = verify_edit(staged_file_path, None)
+            parsed = json.loads(result) if result else {}
+            functions = parsed.get("functions", [])
+            for fn in functions:
+                cc = fn.get("cc", 0)
+                passed = fn.get("passed", False) or (cc <= 5)
+                items.append(
+                    TodoItem(
+                        file_path=staged_file_path,
+                        function_name=fn.get("function", "unknown"),
+                        target_cc=5,
+                        current_cc=cc,
+                        passed=passed,
+                    )
+                )
+    return TodoList(items=items)
 
 
 def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, str | None]:
@@ -383,6 +421,9 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
 
     staged_paths = [f"factory/temp/{s}" for s in scope]
 
+    todo_list = build_todo_checklist(staged_paths, target_functions)
+    state_dict["todo_list"] = todo_list
+
     for staged_file_path in staged_paths:
         diagnostic: str | None = None
         try:
@@ -477,6 +518,11 @@ async def run_tier(
         _verify_result = _run_verify_edit(tier, bd, state_dict)
         if _verify_result is not None:
             print(f"[verify_edit] {tier}: {_verify_result}", flush=True)
+
+        todo_list = state_dict.get("todo_list")
+        if todo_list is not None:
+            todo_md = todo_list.render_markdown()
+            state_dict["brief"] = state_dict["brief"] + "\n\n" + todo_md
 
         if _verify_result is not None and "FAIL" in _verify_result:
             diagnostic = (
