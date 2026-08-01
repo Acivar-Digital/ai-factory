@@ -77,11 +77,9 @@ def artefacts_dir() -> Path:
     return Path(os.environ.get("ORCHESTRATOR_ARTEFACTS_DIR", PKG_DIR / "artefacts")).resolve()
 
 ROLE_FOLDER: dict[str, str] = {
-    "planner": "planner",
-    "supervisor_plan": "planner_sup",
-    "coder": "coder",
-    "supervisor_review": "coder_sup",
-    "red_team": "red_team",
+    "intern": "intern",
+    "engineer": "engineer",
+    "senior": "senior",
 }
 
 
