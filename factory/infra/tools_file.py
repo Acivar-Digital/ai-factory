@@ -1,32 +1,10 @@
 from factory.infra.tools_const import *
 'Tool confinement for the Orchestrator State Machine (build.md §4, §5c).\n\nEvery worker capability is a subprocess wrapper around an existing\n`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they\nreceive only the allow-listed, ACL-wrapped tools the orchestrator hands them.\n'
-import contextvars
-import functools
-import inspect
-import json
-import logging
 import os
-import re
-import sys
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
-import yaml
-from pydantic import BaseModel, model_validator
-from pydantic_ai import Agent, RunContext, Tool
-from pydantic_ai._run_context import AgentDepsT
-from pydantic_ai.messages import ModelMessagesTypeAdapter
-from pydantic_ai.settings import ModelSettings
-from pydantic_ai.tools import ToolDefinition
-from pydantic_ai.toolsets import FunctionToolset, WrapperToolset
-from pydantic_ai.toolsets.abstract import ToolsetTool
-from pydantic_core import SchemaValidator
-from factory.common import OUTPUT_TYPE_REGISTRY, _run_tool, log_operator, resolve_model
-from factory.infra.control import CODER_READ_FILE_BUDGET, CONTROL_SHEET, ORCH_ROOT, PKG_DIR, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REPO_ROOT, SKILL_MAP, SKILL_ROLES
+from factory.common import _run_tool
+from factory.infra.control import REPO_ROOT
 from factory.infra.tools_memory import get_current_role, get_current_agent
-from factory.infra.models import ApprovedTask, Strategy, TaskResult
 
 
 def _auto_remember(note: str) -> None:

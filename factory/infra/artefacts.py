@@ -317,19 +317,6 @@ def _evict_dicts(dicts: list[dict]) -> list[dict]:
                     _file_cache_store(path, content)
                     p = dict(p, content=f"File read: {path}")
             elif name == "batch_read":
-                # batch_read historically returned a JSON envelope
-                # {"success": true, "data": [{"file_path", "content", ...}]}
-                # (or a single dict). Evict that envelope + full file bodies to
-                # file_cache and collapse to `File read: <path>` anchors, exactly
-                # like read_file. WITHOUT this, the envelope + every file's full
-                # content leaked verbatim into the transcript.
-                #
-                # BUT as of the read_file.py fix, batch_read returns SCOPED PLAIN
-                # text (a `=== File read: <path> ===` header + file text, possibly
-                # several files joined). In that case `content` is a plain string
-                # with NO envelope — keep it AS-IS (it is already clean + small
-                # enough). Wiping it would destroy the transcript (the bug we hit
-                # on the 2026-07-18 re-run).
                 if isinstance(content, dict) and "data" in content:
                     paths: list[str] = []
                     try:
@@ -346,7 +333,6 @@ def _evict_dicts(dicts: list[dict]) -> list[dict]:
                     except Exception:
                         paths = ["File read: (batch_read envelope)"]
                     p = dict(p, content="\n".join(paths))
-                # else: plain-text batch_read output — leave content untouched.
             elif name in WRITE_BUNDLE_TOOLS:
                 args = call_args.get(cid, {})
                 if not isinstance(content, str):
@@ -357,7 +343,6 @@ def _evict_dicts(dicts: list[dict]) -> list[dict]:
                 if not isinstance(content, str):
                     content = json.dumps(content, ensure_ascii=False)
                 p = dict(p, content=content + _structural_note(name, args))
-            # investigate / search / others: untouched.
             new_parts.append(p)
         out.append(dict(m, parts=new_parts))
     return out
@@ -397,12 +382,6 @@ def _persist_transcript(
     jsonl_path.write_text(
         ModelMessagesTypeAdapter.dump_json(evicted).decode(), encoding="utf-8"
     )
-    # Per-message RECORD-time timestamps (context.md Req 4). The transcript is
-    # cumulative and rewritten whole-file each persist, so a message's true
-    # record time must be frozen from its own pydantic-ai timestamp, not the
-    # whole-file rewrite time. ModelResponse carries a message-level `timestamp`;
-    # ModelRequest's timestamp is None but its parts (e.g. UserPromptPart) carry
-    # one. Guard both: fall back to now() per message if no usable timestamp.
     ts_fmt = "%Y-%m-%d-%H:%M:%S"
 
     def _record_ts(m: object) -> str:
@@ -426,23 +405,11 @@ def _persist_transcript(
 
 
 def _history_filename(role: str, agent_id: str | None) -> str:
-    """Resolve the transcript filename for a role, honouring per-agent isolation.
-
-    Per locked design (baziforecaster-a101k / grill-me 2026-07-18): when `role`
-    is the coder and an `agent_id` is supplied (e.g. ``coder3`` derived from the
-    planner's ``ApprovedTask.id``), the transcript is scoped to that SINGLE agent
-    (``coder/coder3.jsonl``) so parallel coders never share one store. Without an
-    `agent_id` the legacy role-scoped filename is used (backwards-compatible).
-    """
+    """Resolve the transcript filename for a role, honouring per-agent isolation."""
     folder = ROLE_FOLDER.get(role)
     if not folder:
         return f"{role}.jsonl"
     if role == "coder":
-        # Per-coderN isolation (ticket a101k / baziforecaster-chq80): a coder
-        # transcript MUST be scoped to a concrete `agent_id` (e.g. `coder3`).
-        # Refusing to fall back to the legacy shared `coder.jsonl` guarantees the
-        # shared file can never be recreated after the loopguard persist paths were
-        # fixed to thread `agent_id`.
         if not agent_id:
             raise ValueError(
                 "[HALT] _history_filename called for role 'coder' with "
@@ -454,13 +421,7 @@ def _history_filename(role: str, agent_id: str | None) -> str:
 
 
 def load_role_messages(role: str, agent_id: str | None = None) -> list[ModelMessage] | None:
-    """Reconstruct a role's cumulative `message_history` from its `<role>.jsonl`.
-
-    Returns None when the role is unknown or no transcript exists yet. Used by
-    runner.load_skill to feed a fresh D2 subagent its continuity bridge. For the
-    coder role with a non-None `agent_id`, the transcript is the agent-isolated
-    ``coder/<agent_id>.jsonl`` (per-coderN isolated memory, ticket a101k).
-    """
+    """Reconstruct a role's cumulative `message_history` from its `<role>.jsonl`."""
     folder = ROLE_FOLDER.get(role)
     if not folder:
         return None
@@ -482,20 +443,7 @@ def rotate_role_transcript(
     compacted_messages: list[ModelMessage],
     agent_id: str | None = None,
 ) -> None:
-    """Write-back rotation for the keep_memory compaction gate.
-
-    The compacted `message_history` (a leading `SystemPromptPart(keep_memory)` +
-    the safe recent tail) becomes the role's new official transcript (``<role>.jsonl``
-    or, for an isolated coder agent, ``coder/<agent_id>.jsonl``) + `.md`. The
-    PREVIOUS aggregated file is renamed to ``<name>.compact<N>.jsonl`` (a SNAPSHOT —
-    never deleted; N increments per compaction: compact1, compact2…) before the
-    fresh aggregated file is written, so every prior state stays recoverable. The
-    `.md` twin is re-rendered from the fresh jsonl. For the coder role, the snapshot
-    is also agent-scoped (``coderN.compactM.jsonl``) — never-prune applies per agent.
-
-    No-op (silent) if the role is unknown. On ANY failure we log loudly but do
-    NOT raise — rotation must never abort the pipeline.
-    """
+    """Write-back rotation for the keep_memory compaction gate."""
     folder = ROLE_FOLDER.get(role)
     if not folder or not compacted_messages:
         return
@@ -507,14 +455,12 @@ def rotate_role_transcript(
         fname = _history_filename(role, agent_id)
         jsonl_path = hist / fname
 
-        # Snapshot the current aggregated file (if any) as compact<N>.
         n = 1
         while (hist / f"{Path(fname).stem}.compact{n}.jsonl").exists():
             n += 1
         if jsonl_path.exists():
             jsonl_path.rename(hist / f"{Path(fname).stem}.compact{n}.jsonl")
 
-        # Fresh aggregated write = [SystemPromptPart(keep_memory)] + recent tail.
         jsonl_path.write_text(
             ModelMessagesTypeAdapter.dump_json(evicted).decode(), encoding="utf-8"
         )
@@ -547,15 +493,7 @@ def rotate_role_transcript(
 
 
 def remember_note(role: str, note: str, agent_id: str | None = None) -> None:
-    """Append a `remember` note to the agent's OWN role history (<role>.jsonl + .md).
-
-    Write-only to the own role folder. For the coder role with a non-None
-    `agent_id`, the note lands in that agent's isolated ``coder/<agent_id>.jsonl``
-    (keep_memory stays PRIVATE to coderN, never promoted to global_alignment —
-    ticket a101k, Q5). The note is stored as a synthetic `tool-return` message so
-    it round-trips through `ModelMessagesTypeAdapter` and is re-injected as context
-    on the agent's next turn. No-op if role unknown.
-    """
+    """Append a `remember` note to the agent's OWN role history (<role>.jsonl + .md)."""
     folder = ROLE_FOLDER.get(role)
     if not folder:
         return

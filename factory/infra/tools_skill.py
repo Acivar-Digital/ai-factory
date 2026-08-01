@@ -1,34 +1,25 @@
-from factory.infra.tools_const import *
-'Tool confinement for the Orchestrator State Machine (build.md §4, §5c).\n\nEvery worker capability is a subprocess wrapper around an existing\n`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they\nreceive only the allow-listed, ACL-wrapped tools the orchestrator hands them.\n'
-import contextvars
-import functools
+"""Tool confinement for the Orchestrator State Machine (build.md §4, §5c).
+
+Every worker capability is a subprocess wrapper around an existing
+`factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they
+receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
+"""
 import inspect
 import json
-import logging
-import os
-import re
-import sys
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 import yaml
 from pydantic import BaseModel, model_validator
-from pydantic_ai import Agent, RunContext, Tool
-from pydantic_ai._run_context import AgentDepsT
-from pydantic_ai.messages import ModelMessagesTypeAdapter
+from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
-from pydantic_ai.tools import ToolDefinition
-from pydantic_ai.toolsets import FunctionToolset, WrapperToolset
-from pydantic_ai.toolsets.abstract import ToolsetTool
-from pydantic_core import SchemaValidator
 from factory.common import OUTPUT_TYPE_REGISTRY, _run_tool, log_operator, resolve_model
-from factory.infra.control import CODER_READ_FILE_BUDGET, CONTROL_SHEET, ORCH_ROOT, PKG_DIR, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REPO_ROOT, SKILL_MAP, SKILL_ROLES
+from factory.infra.control import CODER_READ_FILE_BUDGET, CONTROL_SHEET, PKG_DIR, READ_BUDGET, SKILL_MAP, SKILL_ROLES
 from factory.infra.models import ApprovedTask, Strategy, TaskResult
+from factory.infra.tools_const import CODER_WRITE_ROOTS
 from factory.infra.tools_file import batch_read
-from factory.infra.tools_memory import record_plan
 from factory.infra.tools_guard import CODING_PHILOSOPHY_BLOCK, MODIFY_TOOLS, TOOL_REGISTRY, TOOL_REGISTRY_KEYS, _DISCOVERY_TOOLS, _TOOL_BY_NAME, _coder_budget_for, _tool_budget_for, _tool_budget_instruction, guard_tools, log_prompt_sent, pydantic_ai_default_block, wrap_with_acl
+from factory.infra.tools_memory import record_plan
 
 MAX_FORGE_ITERS = 3
 

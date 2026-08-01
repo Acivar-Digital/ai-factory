@@ -18,7 +18,7 @@ import factory.infra._runtime as runtime
 
 # These will be created in subsequent prompts
 from factory.infra.pipeline import (
-    do_role, record_coder, run_gated, _assert_plan_gate_ok, _checkpoint,
+    record_coder, run_gated, _assert_plan_gate_ok, _checkpoint,
     run_code_review_gate, run_red_team_gate, _recover_from_unexpected_behavior,
 )
 from pydantic_ai.exceptions import UnexpectedModelBehavior
@@ -43,7 +43,7 @@ from factory.infra.execution import (  # noqa: F401
     run_execute_phase, CODER_VALIDATION_PASSES, DAG_DEADLOCK_TIMEOUT,
 )
 from factory.infra.agent import (  # noqa: F401
-    build_role_agent, _run_agent_retry, load_skill, _coder_agent_id,
+    build_role_agent, _run_agent_retry, _coder_agent_id,
 )
 from factory.infra.artefacts import persist_role  # noqa: F401
 from factory.infra._runtime import RAW_OUTPUTS, SCOPE_CONTEXT, _PHASE_ORDER  # noqa: F401
