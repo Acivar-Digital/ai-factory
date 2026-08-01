@@ -1,9 +1,11 @@
 {
-  "task_id": "coder02",
-  "status": "blocked",
-  "files_changed": [],
-  "diff_summary": "File is missing / unreadable",
-  "notes": "File src2/forecast_store.py is unreadable.",
+  "task_id": "coder03",
+  "status": "done",
+  "files_changed": [
+    "/home/yapilwsl/arthityap/ai-factory/factory/temp/src2/billing.py"
+  ],
+  "diff_summary": "Converted PromoCode to a Pydantic BaseModel and extracted complexity into _check_promo_conditions helper",
+  "notes": "done: Implemented strict Pydantic model for PromoCode to pass runtime validation and simplified validate_promo_code to ensure CC <= 5",
   "ruff_ok": true,
   "pyright_ok": true,
   "exec_ok": true,

@@ -1,0 +1,7 @@
+{
+  "phase": "coder",
+  "role": "coder",
+  "error": "RuntimeError: command failed (rc=1): uv run --no-sync python /home/yapilwsl/arthityap/ai-factory/factory/tools/replace_text.py factory/temp/src2/agents.py nonexistent_string_12345 foo\nstdout:\n{\n  \"success\": false,\n  \"message\": \"File not found: factory/temp/src2/agents.py\"\n}\n\nstderr:\nwarning: `VIRTUAL_ENV=/home/yapilwsl/arthityap/ai-factory/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n",
+  "request_limit": 150,
+  "messages": []
+}
