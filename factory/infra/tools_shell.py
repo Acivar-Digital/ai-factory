@@ -100,12 +100,12 @@ def verify_edit(relative_path: str, function_name: str | None = None) -> str:
     """
     import ast
 
-    from factory.infra.tools_file import normalize_read_path
+    from factory.infra.context import stage_path
 
-    rp = normalize_read_path(relative_path)
-    full_path = REPO_ROOT / rp
+    staged = stage_path(relative_path)
+    full_path = REPO_ROOT / staged
     if not full_path.exists():
-        return json.dumps({"ok": False, "error": f"File not found: {rp}"})
+        return json.dumps({"ok": False, "error": f"File not found: {staged}"})
 
     source = full_path.read_text(encoding="utf-8")
     header_contract = extract_header_symbol_contract(source)
