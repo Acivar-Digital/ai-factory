@@ -203,6 +203,42 @@ def _log_turn(io_dir: Path, phase, role, tag: str, prompt: str,
         )
 
 
+READ_TOOL_NAMES = frozenset({'read_file', 'batch_read', 'grep_codebase', 'list_files', 'search'})
+
+
+def _scrub_old_read_returns(history: list[ModelMessage]) -> None:
+    """Truncate large read-tool returns in older turns to shed stale context.
+
+    Keeps the last 2 turns intact (the current turn + the immediate prior
+    turn) so the model still has the fresh read results it just received.
+    For all earlier ModelRequest messages, any ToolReturnPart whose
+    tool_name is a read-type tool and whose content string exceeds 200
+    bytes is replaced with a compact scrub marker.
+    """
+    if not history:
+        return
+    # Find the index of the last ModelRequest (the latest request turn).
+    last_req_idx = None
+    for i in range(len(history) - 1, -1, -1):
+        if isinstance(history[i], ModelRequest):
+            last_req_idx = i
+            break
+    if last_req_idx is None:
+        return
+    # Keep the last 2 turns (the latest request and the one before it) intact.
+    cutoff = last_req_idx - 1  # scrub everything before this index
+    for i in range(cutoff):
+        msg = history[i]
+        if not isinstance(msg, ModelRequest):
+            continue
+        for part in msg.parts:
+            if isinstance(part, ToolReturnPart) and part.tool_name in READ_TOOL_NAMES:
+                if isinstance(part.content, str) and len(part.content) > 200:
+                    part.content = (
+                        f"[scrubbed for context hygiene: {len(part.content)} bytes from {part.tool_name}]"
+                    )
+
+
 async def run_with_loopguard(
     agent: Agent,
     prompt: str,
@@ -329,6 +365,7 @@ async def run_with_loopguard(
                     f"Agent is stuck exploring without progress."
                 )
             print(f"[{phase or 'RUN'}] turn {turn} → calling model...", flush=True)
+            _scrub_old_read_returns(current_history)
             try:
                 res = await asyncio.wait_for(
                     agent.run(
@@ -351,6 +388,7 @@ async def run_with_loopguard(
                     f"[{phase or 'RUN'}] request_limit hit for {role}; forcing RECOVER (no HALT)",
                     flush=True,
                 )
+                _scrub_old_read_returns(current_history)
                 recovery_agent = Agent(
                     agent.model,
                     output_type=agent.output_type,
@@ -396,6 +434,7 @@ async def run_with_loopguard(
                 total_tool_calls += len(calls)
                 if total_tool_calls > MAX_TOTAL_TOOL_CALLS:
                     print(f"[{phase or 'RUN'}] turn {turn}: {total_tool_calls} tool calls exceeded limit → force RECOVER", flush=True)
+                    _scrub_old_read_returns(res.all_messages())
                     recovery_prompt = (
                         f"You made {total_tool_calls} research tool calls across {turn} turns "
                         f"(limit {MAX_TOTAL_TOOL_CALLS}). Stop researching. Return your best "
@@ -492,6 +531,7 @@ async def run_with_loopguard(
 
             if seen[sig] >= max_same or miss_streak >= max_miss or alt_count >= 2 or result_repeat >= max_same:
                 # KNOB 2: RECOVER, never raise. tools=[] forces an answer on ANY provider.
+                _scrub_old_read_returns(res.all_messages())
                 if seen[sig] >= max_same:
                     stalled = calls[0].tool_name
                     reason = f"repeated tool(s) {max_same}x with no progress"

@@ -228,9 +228,9 @@ async def test_run_with_loopguard_wires_sink1(patch_summarizer, monkeypatch, tmp
 async def test_run_with_loopguard_threads_agent_id_into_persist(
     patch_summarizer, monkeypatch, tmp_path
 ):
-    """chq80: a coder run must NOT write the legacy shared
-    ``coder.jsonl``/``coder.md``. ``run_with_loopguard`` must forward ``agent_id``
-    to every ``persist_messages`` call so transcripts land in ``coderN.jsonl``."""
+    """chq80: an intern run must NOT write the legacy shared
+    ``intern.jsonl``/``intern.md``. ``run_with_loopguard`` must forward ``agent_id``
+    to every ``persist_messages`` call so transcripts land in ``internN.jsonl``."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(tmp_path))
 
@@ -255,36 +255,36 @@ async def test_run_with_loopguard_threads_agent_id_into_persist(
         history=history,
         state=state,
         phase="EXECUTE",
-        role="coder",
-        agent_id="coder3",
+        role="intern",
+        agent_id="intern3",
     )
 
     assert res.output == "DONE"
-    # Every persist call for the coder role carried the isolated agent_id.
+    # Every persist call for the intern role carried the isolated agent_id.
     assert persist_calls, "persist_messages was never invoked"
     for role, agent_id in persist_calls:
-        assert role == "coder"
-        assert agent_id == "coder3", (
-            f"coder persist called with agent_id={agent_id!r} "
-            f"-> would recreate shared coder.jsonl"
+        assert role == "intern"
+        assert agent_id == "intern3", (
+            f"intern persist called with agent_id={agent_id!r} "
+            f"-> would recreate shared intern.jsonl"
         )
-    # The shared file must NOT exist; only the isolated coderN file.
-    hist_dir = tmp_path / "history" / "coder"
-    assert not (hist_dir / "coder.jsonl").exists(), "shared coder.jsonl was created"
-    assert (hist_dir / "coder3.jsonl").exists(), "isolated coder3.jsonl missing"
+    # The shared file must NOT exist; only the isolated internN file.
+    hist_dir = tmp_path / "history" / "intern"
+    assert not (hist_dir / "intern.jsonl").exists(), "shared intern.jsonl was created"
+    assert (hist_dir / "intern3.jsonl").exists(), "isolated intern3.jsonl missing"
 
 
 def test_build_role_agent_clones_coder_model():
     from factory.infra.runner import build_role_agent
-    agent1, _ = build_role_agent("coder")
-    agent2, _ = build_role_agent("coder")
+    agent1, _ = build_role_agent("intern")
+    agent2, _ = build_role_agent("intern")
     # Verify they have different model instances, even though they share the same key in SKILL_MAP
     assert agent1.model is not agent2.model
 
     # Verify sequential roles share the same model instance
-    agent_planner1, _ = build_role_agent("planner")
-    agent_planner2, _ = build_role_agent("planner")
-    assert agent_planner1.model is agent_planner2.model
+    agent_engineer1, _ = build_role_agent("engineer")
+    agent_engineer2, _ = build_role_agent("engineer")
+    assert agent_engineer1.model is agent_engineer2.model
 
 
 async def test_concurrent_loopguard_monkeypatching_isolation(monkeypatch, tmp_path):
@@ -330,4 +330,102 @@ async def test_concurrent_loopguard_monkeypatching_isolation(monkeypatch, tmp_pa
 
     # Verify that the shared model request method was NOT modified
     assert shared_model.request.__func__ is original_request.__func__
+
+
+def _read_tool_return(tool_name: str, content: str) -> ModelRequest:
+    return ModelRequest(
+        parts=[ToolReturnPart(tool_name=tool_name, tool_call_id="1", content=content)]
+    )
+
+
+def test_scrub_old_read_returns_scrubs_large_old_returns():
+    """Older read-tool returns >200 bytes are scrubbed; the last 2 turns are kept."""
+    big_content = "x" * 300
+    history = [
+        _read_tool_return("read_file", big_content),
+        _req("user turn 1"),
+        _read_tool_return("grep_codebase", big_content),
+        _req("user turn 2"),
+        _read_tool_return("list_files", big_content),
+        _req("user turn 3"),
+    ]
+    lg._scrub_old_read_returns(history)
+    # The last 2 ModelRequest messages (indices 4 and 5) are kept intact.
+    assert history[4].parts[0].content == big_content, "2nd-to-last turn's read return must be kept"
+    assert history[5].parts[0].content == "user turn 3"  # user prompt, not a read return
+    # Older turns are scrubbed.
+    assert history[0].parts[0].content.startswith("[scrubbed for context hygiene:")
+    assert history[0].parts[0].content.endswith("bytes from read_file]")
+
+
+def test_scrub_old_read_returns_keeps_small_returns():
+    """Small read-tool returns (<200 bytes) are never scrubbed."""
+    history = [
+        _read_tool_return("read_file", "small"),
+        _req("user turn 1"),
+        _read_tool_return("search", "also small"),
+        _req("user turn 2"),
+    ]
+    lg._scrub_old_read_returns(history)
+    assert history[0].parts[0].content == "small"
+    assert history[2].parts[0].content == "also small"
+
+
+def test_scrub_old_read_returns_non_read_tools_unchanged():
+    """Non-read tool returns are never scrubbed."""
+    big_content = "x" * 300
+    history = [
+        _read_tool_return("write_file", big_content),
+        _req("user turn 1"),
+        _read_tool_return("bash", big_content),
+        _req("user turn 2"),
+    ]
+    lg._scrub_old_read_returns(history)
+    assert history[0].parts[0].content == big_content
+    assert history[2].parts[0].content == big_content
+
+
+def test_scrub_old_read_returns_keeps_last_two_turns():
+    """The last 2 turns (by ModelRequest) are always kept intact."""
+    big_content = "x" * 300
+    history = [
+        _read_tool_return("read_file", big_content),
+        _req("turn 1"),
+        _read_tool_return("batch_read", big_content),
+        _req("turn 2"),
+        _read_tool_return("search", big_content),
+        _req("turn 3"),
+        _read_tool_return("grep_codebase", big_content),
+        _req("turn 4"),
+    ]
+    lg._scrub_old_read_returns(history)
+    # The last 2 ModelRequests are at indices 6 and 7 — kept intact.
+    assert history[6].parts[0].content == big_content
+    assert history[7].parts[0].content == "turn 4"
+    # Earlier ModelRequests (indices 0-5) are scrubbed.
+    assert history[0].parts[0].content.startswith("[scrubbed for context hygiene:")
+    assert history[2].parts[0].content.startswith("[scrubbed for context hygiene:")
+    assert history[4].parts[0].content.startswith("[scrubbed for context hygiene:")
+
+
+def test_scrub_old_read_returns_empty_history():
+    """Scrubbing an empty history is a no-op."""
+    lg._scrub_old_read_returns([])
+
+
+def test_scrub_old_read_returns_no_model_requests():
+    """If there are no ModelRequest messages, nothing is scrubbed."""
+    from pydantic_ai.messages import ModelResponse, TextPart
+
+    history = [ModelResponse(parts=[TextPart("hello")])]
+    lg._scrub_old_read_returns(history)
+    assert history[0].parts[0].content == "hello"
+
+
+def test_scrub_old_read_returns_only_one_turn():
+    """With only 1 turn, nothing is scrubbed (last 2 includes the only turn)."""
+    big_content = "x" * 300
+    history = [_read_tool_return("read_file", big_content)]
+    lg._scrub_old_read_returns(history)
+    assert history[0].parts[0].content == big_content
 
