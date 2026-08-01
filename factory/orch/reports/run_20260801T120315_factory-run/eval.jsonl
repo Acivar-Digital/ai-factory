@@ -1,0 +1,2 @@
+{"timestamp": "2026-08-01T12:05:02.213828+00:00", "bd_id": "factory-run", "phase": "coder", "role": "coder", "task_id": null, "output_type": "TaskResult", "usage": {"input_tokens": 57972, "output_tokens": 469, "requests": 10}, "message_count": 21}
+{"timestamp": "2026-08-01T12:05:08.205837+00:00", "bd_id": "factory-run", "phase": "coder", "role": "coder", "task_id": null, "output_type": "TaskResult", "usage": {"input_tokens": 79923, "output_tokens": 642, "requests": 13}, "message_count": 27}
