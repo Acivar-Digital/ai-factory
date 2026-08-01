@@ -131,6 +131,8 @@ def _render_instructions(instructions: object) -> str:
     """
     if not isinstance(instructions, str):
         return str(instructions)
+    if '_BASE_:' not in instructions:
+        return instructions.strip()
     try:
         inner = yaml.safe_load(instructions)
         if isinstance(inner, dict) and '_BASE_' in inner:

@@ -29,7 +29,7 @@ from factory.infra.models import TaskBatch
 from factory.common.operator import log_operator  # noqa: F401
 from factory.common.md_bridge import build_md_bridge  # noqa: F401
 from factory.infra.context import (  # noqa: F401
-    stage_path, staged_zero_diff, _write_harness_patches,
+    stage_path, staged_zero_diff, _write_harness_patches, _stage_copies,
     TASK_TOKEN_THRESHOLD, _real_source_paths,
 )
 from factory.infra.validation import (  # noqa: F401
@@ -189,7 +189,7 @@ async def main() -> None:
     _intern_idx = runtime._PHASE_ORDER.index("intern")
     _from_idx = runtime._PHASE_ORDER.index(args.from_) if args.from_ else 0
 
-    if args.from_ and _from_idx >= _intern_idx:
+    if args.from_ and _from_idx > _intern_idx:
         print(f"\n=== [conductor] --from {args.from_}: SKIPPING intern ===", flush=True)
         batch = None
     else:
@@ -199,9 +199,12 @@ async def main() -> None:
 
     # Engineer gate
     _engineer_idx = runtime._PHASE_ORDER.index("engineer")
-    if args.from_ and _from_idx >= _engineer_idx:
+    if args.from_ and _from_idx > _engineer_idx:
         print(f"\n=== [conductor] --from {args.from_}: SKIPPING engineer ===", flush=True)
     else:
+        # Stage scope files into factory/temp/ so the engineer can edit them
+        if scope:
+            _stage_copies(scope, [f"factory/temp/{s}" for s in scope])
         await run_gated("engineer", "senior", task, bd, history, exchange, pass_counter, prior, {"brief": task, "seeded": False}, record_exchange=(args.from_ == "engineer"))
         if _checkpoint("engineer", st, args.stop_after, bd, exchange, history):
             return
