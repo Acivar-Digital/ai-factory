@@ -340,7 +340,9 @@ def _run_verify_edit(author: str, bd: str) -> str | None:
 
     Returns a structured error string on failure, or None on success.
     """
-    prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
+    prompt_file = REPO_ROOT / "factory" / "prompt" / "user_prompt.md"
+    if not prompt_file.exists():
+        prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
     scope: list[str] = []
     target_functions: list[str] = []
     if prompt_file.exists():

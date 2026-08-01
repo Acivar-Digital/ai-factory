@@ -37,7 +37,8 @@ def replace_text(relative_path: str, target_text: str, replacement_text: str, is
         argv.append('--ignore-whitespace')
     result = _check_edit_result('replace_text', _run_tool('replace_text', argv))
     _auto_remember(f'[replace_text] {staged}\n---OLD---\n{target_text}\n---NEW---\n{replacement_text}')
-    return result
+    ast_diag = verify_edit(staged, None)
+    return f"{result}\n[AST Verification]: {ast_diag}"
 
 def replace_function(relative_path: str, function_name: str, new_function_code: str, class_name: str | None=None) -> str:
     """Replace a function's body via AST manipulation. Returns JSON result."""
@@ -52,7 +53,8 @@ def replace_function(relative_path: str, function_name: str, new_function_code: 
     result = _check_edit_result('replace_function', _run_tool('replace_function', argv))
     scope = f'{class_name}.{function_name}' if class_name else function_name
     _auto_remember(f'[replace_function] {staged}::{scope}\n{new_function_code}')
-    return result
+    ast_diag = verify_edit(staged, function_name)
+    return f"{result}\n[AST Verification]: {ast_diag}"
 
 def add_constant(relative_path: str, constant_name: str, constant_code: str) -> str:
     """Add a top-level constant to a Python file (AST). Returns JSON result."""
@@ -108,10 +110,15 @@ def verify_edit(relative_path: str, function_name: str | None = None) -> str:
         return json.dumps({"ok": False, "error": f"File not found: {staged}"})
 
     source = full_path.read_text(encoding="utf-8")
+    orig_file_path = full_path.with_suffix(full_path.suffix + ".orig")
+    if orig_file_path.exists():
+        orig_code = orig_file_path.read_text(encoding="utf-8")
+    else:
+        orig_code = source
     header_contract = extract_header_symbol_contract(source)
 
     # Run lint regression check
-    lint_ok, lint_msg = run_lint_regression("", source)
+    lint_ok, lint_msg = run_lint_regression(orig_code, source)
     if not lint_ok:
         return json.dumps({"ok": False, "error": f"Lint regression: {lint_msg}"})
 
@@ -131,7 +138,7 @@ def verify_edit(relative_path: str, function_name: str | None = None) -> str:
             passed, cc, depth, msg = verify_refactored_ast(
                 code=func_source,
                 candidate_name=function_name,
-                orig_code=func_source,
+                orig_code=orig_code,
                 header_contract=header_contract,
             )
             return json.dumps({
@@ -155,7 +162,7 @@ def verify_edit(relative_path: str, function_name: str | None = None) -> str:
                 passed, cc, depth, msg = verify_refactored_ast(
                     code=func_source,
                     candidate_name=node.name,
-                    orig_code=func_source,
+                    orig_code=orig_code,
                     header_contract=header_contract,
                 )
                 if not passed:
