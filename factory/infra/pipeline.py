@@ -1,6 +1,7 @@
 """Pipeline orchestration module containing all gate functions and the phase loop."""
 from __future__ import annotations
 
+import ast
 import asyncio
 import json
 import os
@@ -56,6 +57,68 @@ RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
 MAX_ATTEMPTS = 5
 
 
+def _compute_cc(node: ast.AST) -> int:
+    """Calculate cyclomatic complexity for an AST function node."""
+    cc = 1
+    for child in ast.walk(node):
+        if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor)):
+            cc += 1
+        elif isinstance(child, ast.ExceptHandler):
+            cc += 1
+        elif isinstance(child, (ast.With, ast.AsyncWith)):
+            cc += 1
+        elif isinstance(child, ast.BoolOp):
+            cc += len(child.values) - 1
+        elif isinstance(child, (ast.IfExp, ast.Assert)):
+            cc += 1
+    return cc
+
+
+def auto_discover_high_cc_functions(staged_paths: list[str], max_cc: int = 5) -> list[tuple[str, str]]:
+    """Scan staged_paths for functions with cyclomatic complexity exceeding max_cc.
+
+    Returns a list of ``(staged_file_path, function_name)`` tuples for every
+    ``FunctionDef`` / ``AsyncFunctionDef`` where CC > max_cc.
+    """
+    results: list[tuple[str, str]] = []
+    for staged_path in staged_paths:
+        path = Path(staged_path)
+        if not path.exists():
+            continue
+        try:
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=str(path))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                cc = _compute_cc(node)
+                if cc > max_cc:
+                    results.append((staged_path, node.name))
+    return results
+
+
+def compute_dynamic_retry_budget(file_path: str, function_name: str) -> int:
+    """Calculate a retry budget based on a function's line count.
+
+    Returns ``max(5, line_count // 5)`` where line_count is derived from
+    the function's ``lineno`` and ``end_lineno`` in the AST.
+    """
+    path = Path(file_path)
+    if not path.exists():
+        return 5
+    try:
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return 5
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+            line_count = (node.end_lineno or node.lineno) - node.lineno + 1
+            return max(5, line_count // 5)
+    return 5
+
+
 def build_todo_checklist(staged_paths: list[str], target_functions: list[str]) -> TodoList:
     """Build an initial TodoList by running verify_edit on target functions at phase startup."""
     items: list[TodoItem] = []
@@ -64,8 +127,12 @@ def build_todo_checklist(staged_paths: list[str], target_functions: list[str]) -
             for fn_name in target_functions:
                 result = verify_edit(staged_file_path, fn_name)
                 parsed = json.loads(result) if result else {}
-                cc = parsed.get("cc", 0)
-                passed = parsed.get("ok", False) and cc <= 5
+                funcs = parsed.get("functions", [])
+                target_fn = next((f for f in funcs if f.get("function") == fn_name), None)
+                if not target_fn:
+                    continue
+                cc = target_fn.get("cc", 0)
+                passed = target_fn.get("passed", False) and cc <= 5
                 items.append(
                     TodoItem(
                         file_path=staged_file_path,
@@ -436,19 +503,22 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
                 for fn_name in target_functions:
                     result = verify_edit(staged_file_path, fn_name)
                     parsed = json.loads(result) if result else {}
-                    if parsed.get("ok") is False:
-                        diagnostic = (
-                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                            f"function '{fn_name}': {parsed.get('message', parsed.get('error', 'unknown error'))}"
-                        )
-                        break
-                    cc = parsed.get("cc", 0)
-                    if cc > 5:
-                        diagnostic = (
-                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                            f"function '{fn_name}' has CC={cc} (target CC <= 5)"
-                        )
-                        break
+                    funcs = parsed.get("functions", [])
+                    target_fn = next((f for f in funcs if f.get("function") == fn_name), None)
+                    if target_fn:
+                        if not target_fn.get("passed", False):
+                            diagnostic = (
+                                f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                                f"function '{fn_name}': {target_fn.get('message', 'validation failed')}"
+                            )
+                            break
+                        cc = target_fn.get("cc", 0)
+                        if cc > 5:
+                            diagnostic = (
+                                f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                                f"function '{fn_name}' has CC={cc} (target CC <= 5)"
+                            )
+                            break
             else:
                 result = verify_edit(staged_file_path, None)
                 parsed = json.loads(result) if result else {}
@@ -598,6 +668,11 @@ async def run_tier(
     target_functions = _read_target_functions()
     staged_paths = _read_staged_paths()
 
+    if not target_functions:
+        target_functions = [
+            fn_name for _, fn_name in auto_discover_high_cc_functions(staged_paths)
+        ]
+
     locked_functions: set[str] = set()
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -669,7 +744,11 @@ async def run_tier(
 
 
 def _read_target_functions() -> list[str]:
-    """Read target_functions from the user_prompt.md frontmatter."""
+    """Read target_functions from the user_prompt.md frontmatter.
+
+    If the frontmatter has no target_functions (empty or missing),
+    automatically discovers high-CC functions from staged paths.
+    """
     prompt_file = REPO_ROOT / "factory" / "prompt" / "user_prompt.md"
     if not prompt_file.exists():
         prompt_file = REPO_ROOT / "prompt" / "user_prompt.md"
@@ -690,10 +769,14 @@ def _read_target_functions() -> list[str]:
                 if isinstance(front, dict):
                     tf = front.get("target_functions", []) or []
                     if isinstance(tf, list):
-                        return [str(f) for f in tf]
+                        target_functions = [str(f) for f in tf]
+                        if target_functions:
+                            return target_functions
     except Exception:
         pass
-    return []
+    staged_paths = _read_staged_paths()
+    discovered = auto_discover_high_cc_functions(staged_paths)
+    return [fn_name for _, fn_name in discovered]
 
 
 def _read_staged_paths() -> list[str]:
