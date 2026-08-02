@@ -188,6 +188,7 @@ async def _run_agent_retry(agent: Agent, brief: str, *, loopguard: bool = False,
         except (ModelAPIError, UnexpectedModelBehavior) as exc:
             if isinstance(exc, UnexpectedModelBehavior) and (
                 "Invalid response" not in str(exc) and "validation errors" not in str(exc).lower()
+                and "exceeded max retries count" not in str(exc)
             ):
                 raise
             if attempt >= MAX_RETRIES:

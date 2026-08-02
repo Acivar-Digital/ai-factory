@@ -64,7 +64,7 @@ def wrap_injected_context(text: str, *, label: str='context') -> str:
         return ''
     return f'{CONTEXT_OPEN} ({label})\n{text}\n{CONTEXT_CLOSE}'
 
-_WARNING_TMPL = 'Tool {name!r} does not exist. Available tools: {keys}. You cannot run shell/command execution; produce the file edit via write_file/replace_text/etc. and report it - the harness lints and runs separately.'
+_WARNING_TMPL = "Unknown tool '{name}'. Do NOT call '{name}' — it does not exist. Available tools: {keys}. MANDATORY: Use replace_function or write_file to apply refactoring edits to factory/temp/<target_file>."
 
 @dataclass(kw_only=True)
 class _GuardToolsetTool(ToolsetTool[AgentDepsT]):
@@ -127,8 +127,8 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
     def _make_guard_tool(self, name: str) -> ToolsetTool[AgentDepsT]:
 
         def _run(args: dict[str, Any], ctx: Any) -> str:
-            return f"Unknown tool '{name}'. Available tools: {list(self._known_tools.keys())}"
-        return _GuardToolsetTool(toolset=self, tool_def=ToolDefinition(name=name, description='Guard fallback: unknown tool. Returns guidance, never executes.'), max_retries=20, args_validator=SchemaValidator({'type': 'any'}), call_func=_run, is_async=False, timeout=None)
+            return f"Unknown tool '{name}'. Do NOT call '{name}' — it does not exist. Available tools: {list(self._known_tools.keys())}. MANDATORY: Use replace_function or write_file to apply refactoring edits to factory/temp/<target_file>."
+        return _GuardToolsetTool(toolset=self, tool_def=ToolDefinition(name=name, description='Guard fallback: unknown tool. Returns guidance, never executes.', max_retries=20), max_retries=20, args_validator=SchemaValidator({'type': 'any'}), call_func=_run, is_async=False, timeout=None)
 
     async def get_tools(self, ctx: Any) -> dict[str, ToolsetTool[AgentDepsT]]:
         tools = await self.wrapped.get_tools(ctx)
