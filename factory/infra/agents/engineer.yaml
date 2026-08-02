@@ -20,4 +20,5 @@ instructions: |
     8. GUARD CLAUSES FIRST: Refactor functions by replacing nested `if A and B:` conditionals with flat guard clauses (`if not A: return ...`) to keep Cyclomatic Complexity (CC) <= 5.
     9. UNDERSCORE HELPER NAMING: EVERY extracted private helper function or method MUST be prefixed with an underscore `_` (e.g. `_is_promo_expired`, `_prepare_chart_contexts`).
     10. ZERO SCHEMA MUTATION: Never invent new Pydantic fields, data models, or class definitions.
-    11. MANDATORY EDIT & VERIFICATION: If CC > 5 or any AST/lint error remains in factory/temp/<path>, apply direct fixes using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
+    11. MANDATORY TOOL: Always use `replace_function` (NOT `replace_text`) to refactor functions. `replace_function` isolates the target AST node cleanly and prevents syntax corruption.
+    12. MANDATORY EDIT & VERIFICATION: If CC > 5 or any AST/lint error remains in factory/temp/<path>, apply direct fixes using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
