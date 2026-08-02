@@ -29,29 +29,29 @@
   },
   "target_functions_status": {
     "_format_advisory_value": {
-      "baseline_cc": 6,
+      "baseline_cc": 10,
       "current_cc": 4,
+      "status": "LOCKED_IN_PASSED"
+    },
+    "_get_fallback_narrative": {
+      "baseline_cc": 9,
+      "current_cc": 5,
+      "status": "LOCKED_IN_PASSED"
+    },
+    "_extract_trigger_labels": {
+      "baseline_cc": 7,
+      "current_cc": 3,
+      "status": "LOCKED_IN_PASSED"
+    },
+    "_synthesize_and_save_daily_forecast": {
+      "baseline_cc": 8,
+      "current_cc": 5,
       "status": "LOCKED_IN_PASSED"
     },
     "validate_promo_code": {
       "baseline_cc": 6,
-      "current_cc": 6,
-      "status": "PENDING_REFACTOR"
-    },
-    "_extract_trigger_labels": {
-      "baseline_cc": 7,
-      "current_cc": 7,
-      "status": "PENDING_REFACTOR"
-    },
-    "_synthesize_and_save_daily_forecast": {
-      "baseline_cc": 8,
-      "current_cc": 8,
-      "status": "PENDING_REFACTOR"
-    },
-    "_get_fallback_narrative": {
-      "baseline_cc": 9,
-      "current_cc": 9,
-      "status": "PENDING_REFACTOR"
+      "current_cc": 4,
+      "status": "LOCKED_IN_PASSED"
     }
   },
   "jobs": [
@@ -264,6 +264,54 @@
         "Inject explicit helper function extraction recipes into prompt context for list comprehensions",
         "Lock completed functions atomically to disk immediately upon verify_edit success"
       ]
+    },
+    {
+      "job_id": "006",
+      "timestamp_start": "2026-08-02T02:20:00Z",
+      "harness_changes_applied": [
+        "Implemented strict single-function micro-looping in pipeline.py run_tier()",
+        "Fixed clean_rel prefix stripping in _stage_copies in context.py",
+        "Added list comprehension and BoolOp decomposition rule to intern.yaml and engineer.yaml",
+        "Expanded safe_modules in ast_verifier.py to include stdlib and orig_code imported modules"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_functions": [
+          "_format_advisory_value",
+          "_get_fallback_narrative",
+          "_extract_trigger_labels",
+          "_synthesize_and_save_daily_forecast",
+          "validate_promo_code"
+        ]
+      },
+      "timestamp_end": "2026-08-02T06:07:46.393015+00:00",
+      "status": "PASSED",
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {
+        "_format_advisory_value": {
+          "cc": 4,
+          "passed": true
+        },
+        "_get_fallback_narrative": {
+          "cc": 5,
+          "passed": true
+        },
+        "_extract_trigger_labels": {
+          "cc": 3,
+          "passed": true
+        },
+        "_synthesize_and_save_daily_forecast": {
+          "cc": 5,
+          "passed": true
+        },
+        "validate_promo_code": {
+          "cc": 4,
+          "passed": true
+        }
+      },
+      "improvements_needed": []
     }
   ]
 }

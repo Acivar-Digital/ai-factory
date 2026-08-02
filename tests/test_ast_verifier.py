@@ -261,10 +261,16 @@ class TestVerifyRefactoredAst:
 
     def test_fails_for_unauthorized_imports(self):
         orig = "def foo():\n    pass\n"
-        refactored = "import os\ndef foo():\n    pass\n"
+        refactored = "import requests\ndef foo():\n    pass\n"
         passed, cc, depth, msg = verify_refactored_ast(refactored, candidate_name="foo", orig_code=orig)
         assert passed is False
         assert "unauthorized_import" in msg
+
+    def test_allows_imports_from_orig_code(self):
+        orig = "import shutil\ndef foo():\n    pass\n"
+        refactored = "import shutil\ndef foo():\n    pass\n"
+        passed, cc, depth, msg = verify_refactored_ast(refactored, candidate_name="foo", orig_code=orig)
+        assert passed is True, f"Should allow import present in orig_code: {msg}"
 
     def test_fails_for_class_creation(self):
         orig = "def foo():\n    pass\n"
