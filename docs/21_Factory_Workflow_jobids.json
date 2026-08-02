@@ -1,0 +1,58 @@
+{
+  "project_title": "AI-Factory Self-Refactoring Autonomous Harness Hardening & Quality Alignment",
+  "objective": "Continuously tune, harden, and orchestrate the AI-Factory harness (factory/infra/) so that the multi-agent pipeline (runner.py) autonomously refactors all target codebase functions in factory/infra/ (validation.py, gatekeeper.py, ledger.py) specified in factory/prompt/user_prompt.md to CC <= 5, passing 7-layer AST verification, ruff, pyright, unit tests, and 3-tier review without manual code edits.",
+  "definition_of_done": [
+    "1. 100% of target functions in scoped factory/infra/ files reach Cyclomatic Complexity (CC) <= 5.",
+    "2. All 7 layers of AST verification pass cleanly with 0 syntax errors, 0 unimported symbols, 0 duplicate helper functions, and 0 unauthorized imports.",
+    "3. Mandatory 3-tier review pipeline (Intern -> Engineer -> Senior) completes with Senior Engineer Architect verdict APPROVED.",
+    "4. Refactored factory/infra/ code is production-ready, ruff-clean, Pydantic v2 compliant, and passes pytest suite.",
+    "5. Verified code deliverables stored in factory/temp/ and synced to target repo."
+  ],
+  "autonomous_execution_rules": {
+    "what_you_must_do": [
+      "1. Delegate a sub-agent (subagent_type: general) to execute the harness pipeline via runner.py.",
+      "2. Carefully inspect execution logs, traceback outputs, AST diagnostics, and failure points returned by the sub-agent.",
+      "3. Analyze root cause of failures (e.g. tool budget exhaustion, AST complexity > 5, syntax errors, duplicate functions, unimported symbols).",
+      "4. Formulate targeted harness architecture fixes (pipeline micro-loops, prompt recipes, verifiers, tool retries).",
+      "5. Delegate sub-agents to apply harness modifications in factory/infra/ and factory/infra/agents/.",
+      "6. Delegate a sub-agent to run the updated harness pipeline again.",
+      "7. Append job results, diagnostics, and harness changes applied to docs/21_Factory_Workflow_jobids.json.",
+      "8. Repeat steps 1-7 continuously without stopping until 100% of target functions achieve CC <= 5 and Senior APPROVED verdict."
+    ],
+    "what_you_must_not_do": [
+      "1. MUST NOT manually refactor target codebase code or factory/temp/ files directly — ALL refactoring must be produced autonomously by the harness pipeline.",
+      "2. MUST NOT stop, halt, or request human intervention/confirmation while any target function remains > CC=5 or fails verification.",
+      "3. MUST NOT execute runner.py directly in the orchestrator context window — always delegate to sub-agents to prevent context bloat.",
+      "4. MUST NOT pollute global bd remember database with transient LLM refactoring traces (keep traces isolated in jobids.json and state_dict).",
+      "5. MUST NOT modify user prompt scope or alter core user requirements in user_prompt.md."
+    ]
+  },
+  "target_functions_status": {
+    "_feedback_from_audit": {
+      "baseline_cc": 14,
+      "current_cc": 14,
+      "status": "PENDING_REFACTOR"
+    },
+    "check_plan_invariants": {
+      "baseline_cc": 13,
+      "current_cc": 13,
+      "status": "PENDING_REFACTOR"
+    },
+    "_downstream_closure": {
+      "baseline_cc": 13,
+      "current_cc": 13,
+      "status": "PENDING_REFACTOR"
+    },
+    "_affected_tests": {
+      "baseline_cc": 12,
+      "current_cc": 12,
+      "status": "PENDING_REFACTOR"
+    },
+    "_py_tree": {
+      "baseline_cc": 12,
+      "current_cc": 12,
+      "status": "PENDING_REFACTOR"
+    }
+  },
+  "jobs": []
+}
