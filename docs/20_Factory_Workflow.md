@@ -192,3 +192,6 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ### 2026-08-02 (Delegated Execution Protocol & Harness Enhancement Workflow)
 - **Principle 8 (Delegated Pipeline Execution)**: Added rule requiring Orchestrator to delegate pipeline runs (`runner.py`) to sub-agents via `task` tool, receiving structured diagnostic reports to prevent main context exhaustion while focusing on harness tuning.
+### 2026-08-02 (Loud Mandatory Jobids Ledger Inspection at Every Turn)
+- **Principle 10 (Mandatory Jobids Inspection at Every Turn)**: Orchestrator MUST read and inspect `/home/yapilwsl/arthityap/ai-factory/docs/20_Factory_Workflow_jobids.json` at EVERY turn to prevent context loss during context compaction.
+- **Top-Level Ledger Directives**: Inspect `project_title`, `objective`, `definition_of_done`, `autonomous_execution_rules` (`what_you_must_do` vs `what_you_must_not_do`), and `target_functions_status` table to drive all autonomous harness hardening decisions.
