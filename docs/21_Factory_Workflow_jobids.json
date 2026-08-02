@@ -20,9 +20,9 @@
       "8. Repeat steps 1-7 continuously without stopping until 100% of target functions achieve CC <= 5 and Senior APPROVED verdict."
     ],
     "what_you_must_not_do": [
-      "1. MUST NOT manually refactor target codebase code or factory/temp/ files directly — ALL refactoring must be produced autonomously by the harness pipeline.",
+      "1. MUST NOT manually refactor target codebase code or factory/temp/ files directly \u2014 ALL refactoring must be produced autonomously by the harness pipeline.",
       "2. MUST NOT stop, halt, or request human intervention/confirmation while any target function remains > CC=5 or fails verification.",
-      "3. MUST NOT execute runner.py directly in the orchestrator context window — always delegate to sub-agents to prevent context bloat.",
+      "3. MUST NOT execute runner.py directly in the orchestrator context window \u2014 always delegate to sub-agents to prevent context bloat.",
       "4. MUST NOT pollute global bd remember database with transient LLM refactoring traces (keep traces isolated in jobids.json and state_dict).",
       "5. MUST NOT modify user prompt scope or alter core user requirements in user_prompt.md."
     ]
@@ -54,5 +54,34 @@
       "status": "PENDING_REFACTOR"
     }
   },
-  "jobs": []
+  "jobs": [
+    {
+      "job_id": "001",
+      "timestamp_start": "2026-08-02T14:22:02Z",
+      "timestamp_start_sgt": "2026-08-02 22:22:02 SGT",
+      "harness_changes_applied": [
+        "Initial baseline run for Job 21 factory self-refactoring epic",
+        "Scoped 5 target functions in factory/infra/ (validation.py, gatekeeper.py, ledger.py)"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "_affected_tests",
+          "_py_tree",
+          "check_plan_invariants",
+          "_downstream_closure",
+          "_feedback_from_audit"
+        ]
+      },
+      "timestamp_end": null,
+      "timestamp_end_sgt": null,
+      "status": "IN_PROGRESS",
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": []
+    }
+  ]
 }
