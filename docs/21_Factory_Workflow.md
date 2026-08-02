@@ -377,12 +377,58 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ### 2026-08-02 (Mermaid Flowchart & Unicode ASCII Workflow Diagrams)
 - **Added Section 3.1 Flowchart Diagrams**: Appended a comprehensive `mermaid` flowchart and an 80-column Unicode ASCII box-drawing diagram illustrating the end-to-end pipeline lifecycle:
-  - User Prompt Scope Parsing → Staged Copies in `factory/temp/`
-  - Token Calculator & Compact Model Middleware (`ling_flash` > 100K tokens)
-  - Mandatory Turn 1 Planning Gate (`remember` tool call unlocks edit tools)
-  - Read-Plan-Write Lifecycle (Read Budget = 2× Write Budget)
-  - 3-Tier Execution Loop (Intern → Engineer → Senior)
-  - In-Tool AST Firewall (`replace_function` / `replace_text` → instant `verify_edit()` check → `ModelRetry` on CC > 5 or syntax error)
-  - Upfront Diagnostic Handover & Cumulative Failure Ledger
-  - 15 Write Failures Circuit Breaker Halt Rule
-  - Definition of Done (`pytest` pass + `ruff` clean + CC ≤ 5) → Lock to `checkpoint_state.json`
+   - User Prompt Scope Parsing → Staged Copies in `factory/temp/`
+   - Token Calculator & Compact Model Middleware (`ling_flash` > 100K tokens)
+   - Mandatory Turn 1 Planning Gate (`remember` tool call unlocks edit tools)
+   - Read-Plan-Write Lifecycle (Read Budget = 2× Write Budget)
+   - 3-Tier Execution Loop (Intern → Engineer → Senior)
+   - In-Tool AST Firewall (`replace_function` / `replace_text` → instant `verify_edit()` check → `ModelRetry` on CC > 5 or syntax error)
+   - Upfront Diagnostic Handover & Cumulative Failure Ledger
+   - 15 Write Failures Circuit Breaker Halt Rule
+   - Definition of Done (`pytest` pass + `ruff` clean + CC ≤ 5) → Lock to `checkpoint_state.json`
+
+### Mandatory Sub-Agent BD Ticket Lifecycle Workflow
+
+When the Orchestrator dispatches sub-agents for pipeline execution, every sub-agent **must** follow the BD ticket lifecycle below. This ensures traceability, accountability, and deterministic failure detection across all sub-agent runs.
+
+#### Lifecycle Steps
+
+1. **Orchestrator Creates Ticket** — Before dispatching any sub-agent, the Orchestrator creates a `bd` ticket via `bd create`. The ticket ID is recorded in the job ledger entry (`docs/21_Factory_Workflow_jobids.json`) alongside the `job_id`.
+
+2. **Sub-Agent Claims Ticket** — Upon receiving the dispatch prompt, the sub-agent immediately claims the ticket via `bd update <ticket_id> --claim`. This marks the ticket as in-progress and binds it to the sub-agent's session.
+
+3. **Sub-Agent Executes Work** — The sub-agent performs its assigned work (e.g., running `uv run python factory/infra/runner.py`, capturing diagnostics, applying harness changes).
+
+4. **Sub-Agent Verifies Deliverables** — After completing its work, the sub-agent explicitly verifies that all deliverables are present and correct before closing the ticket.
+
+5. **Sub-Agent Closes Ticket** — Only after verifying deliverables does the sub-agent close the ticket via `bd close <ticket_id>`. The close reason must describe the outcome (e.g., success, failure mode, diagnostic summary).
+
+#### Failure Handling
+
+- **Unclosed Ticket on Return**: If a sub-agent returns control to the Orchestrator (or OpenCode closes the session) while the ticket remains unclosed, the Orchestrator treats this as a **provider network / session failure**. The Orchestrator logs the unclosed ticket ID in the failure diagnostic and may retry or escalate based on the failure mode.
+- **Provider Network Failure**: An unclosed ticket at session termination indicates that the sub-agent did not complete its work cycle. The Orchestrator must not silently ignore unclosed tickets — they are treated as hard failures requiring investigation or retry.
+
+#### Ticket Lifecycle Diagram
+
+```
+[Orchestrator]                    [Sub-Agent]                    [bd Ticket]
+     |                               |                              |
+     |--- bd create ---------------->|                              |
+     |   (record ticket_id)          |                              |
+     |                               |--- bd update <id> --claim -->|
+     |                               |   (claim on start)           |
+     |                               |--- execute work ------------>|
+     |                               |--- verify deliverables ----->|
+     |                               |--- bd close <id> ----------->|
+     |   (record outcome)            |   (only after verification)  |
+     |                               |                              |
+     |   [if session ends unclosed]  |--- (session terminated) ---->|
+     |   Orchestrator treats as      |                              |
+     |   provider network failure    |                              |
+```
+
+### 2026-08-03 (Mandatory Sub-Agent BD Ticket Lifecycle Workflow)
+- **Added Section "Mandatory Sub-Agent BD Ticket Lifecycle Workflow"**: Documents the full lifecycle of `bd` tickets when dispatching sub-agents — from Orchestrator creation (`bd create`), sub-agent claim (`bd update <id> --claim`), work execution, deliverable verification, to explicit close (`bd close <id>`).
+- **Added Failure Handling Rules**: Unclosed tickets on sub-agent return or session termination are treated as provider network / session failures by the Orchestrator — not silently ignored.
+- **Added Ticket Lifecycle Diagram**: Visual flowchart showing the interaction between Orchestrator, Sub-Agent, and `bd` ticket across the lifecycle steps.
+- **Appended Changelog entry** for 2026-08-03.
