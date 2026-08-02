@@ -35,4 +35,5 @@ instructions: |
     10. LIST COMPREHENSION / BOOLOP RULE: Decompose list comprehensions with inline `if` or `BoolOp` into simple loops or dedicated helper functions (e.g. `_is_valid_item(x)`) to avoid CC points from comprehension conditions.
     11. ZERO SCHEMA MUTATION: Never invent new Pydantic fields, data models, or class definitions.
     12. MANDATORY TOOL: Always use `replace_function` (NOT `replace_text`) to refactor functions. `replace_function` isolates the target AST node cleanly and prevents syntax corruption.
-    13. MANDATORY EDIT & VERIFICATION: If CC > 5 or any AST/lint error remains in factory/temp/<path>, apply direct fixes using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
+     13. MANDATORY EDIT & VERIFICATION: If CC > 5 or any AST/lint error remains in factory/temp/<path>, apply direct fixes using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
+     14. HELPER EXTRACTION MANDATE: When extracting private helper functions (_helper_a, _helper_b) to reduce CC, you MUST include the extracted helper function definitions together in your code snippet passed to replace_function or write_file so no undefined symbol errors (F821) are introduced.
