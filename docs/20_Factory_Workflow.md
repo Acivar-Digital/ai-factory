@@ -46,6 +46,36 @@ Mandatory `bd remember` calls persist architectural decisions, AST diagnostics, 
 
 `ModelAPIError` retry budget in `agent.py` expanded to 7 attempts with exponential backoff (`min(64s, (2^attempt) + jitter)`) to withstand OpenRouter 429 rate limit bursts and 502/503 micro-outages.
 
+### 2.8 Delegated Pipeline Execution & Context Preservation
+
+- **Delegated Execution**: The Orchestrator MUST NEVER run long-running multi-agent pipeline executions (`runner.py`) directly in its main context shell window. Pipeline runs MUST be delegated to sub-agents via `task` calls (`subagent_type: "general"`).
+- **Diagnostic Reporting Protocol**: The sub-agent executes `uv run python factory/infra/runner.py --prompt-file factory/prompt/user_prompt.md`, captures full stdout/stderr, AST verification failures, and stack tracebacks, and returns a concise, structured error diagnostic report to the Orchestrator.
+- **Orchestrator Focus**: Upon receiving the sub-agent's report, the Orchestrator analyzes the failure mode, maintains context continuity, and performs surgical harness enhancements (prompts, AST verifiers, tool limits, guardrails).
+
+### 2.9 Job Ledger Logging Ritual (`docs/20_Factory_Workflow_jobids.json`)
+
+Before every delegated runner execution, the runner sub-agent assigns a sequential `job_id` (starting at `"001"`, zero-padded to 3 digits) and records the following entry into `docs/20_Factory_Workflow_jobids.json`:
+
+| Field | Value |
+|-------|-------|
+| `job_id` | Sequential string, e.g. `"001"`, `"002"` |
+| `timestamp_start` | ISO-8601 timestamp when the runner sub-agent begins execution |
+| `harness_changes_applied` | List of harness modifications (prompt patches, AST verifier updates, tool limit changes) made in this run |
+| `pipeline_config` | Snapshot of the pipeline configuration (`start_phase`, `stop_phase`, `TARGET_REPO`, `scope`, `target_functions`) |
+
+Upon run completion, the sub-agent appends the following fields to the same entry:
+
+| Field | Value |
+|-------|-------|
+| `timestamp_end` | ISO-8601 timestamp when the runner sub-agent finishes execution |
+| `status` | `"success"` or `"failed"` |
+| `failing_tier` | Tier name where the pipeline blocked (e.g. `"intern"`, `"engineer"`, `"senior"`), or `null` on success |
+| `root_cause` | Description of the failure root cause, or `null` on success |
+| `ast_verification_summary` | Summary of AST verification results (pass/fail counts per layer) |
+| `improvements_needed` | List of harness improvements identified during the run, or empty list if none |
+
+The JSON file is an append-only array. Each entry is a flat object with the fields above. The Orchestrator reads this ledger to audit delegation history and track harness evolution across runs.
+
 ## 3. Workflow Execution Lifecycle
 
 ```
@@ -155,3 +185,10 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 - **API Transport Resilience**: Expanded `ModelAPIError` retry budget in `agent.py` from 3 to 7 attempts with exponential backoff (`2s -> 4s -> 8s -> 16s -> 32s -> 64s`) + jitter to withstand OpenRouter 429 rate limit bursts and 502/503 micro-outages.
 - **Compound Condition Rule**: Injected explicit Compound Condition Rule into `intern.yaml` and `engineer.yaml` forcing decomposition of `if A and B:` into flat single-condition guard clauses to prevent AST CC inflation.
 - **Section 2 Expanded**: Added Principle 6 (Harness-Generated Live TODO Checklist) and Principle 7 (API Transport Resilience) to Strategic Design Principles.
+
+### 2026-08-02 (Job Ledger Ritual & Structured Experimentation Logging)
+- **Principle 9 (Job Ledger Logging Ritual)**: Added `docs/20_Factory_Workflow_jobids.json` as an append-only JSON ledger. Before every delegated runner execution, the runner sub-agent assigns a sequential `job_id` (zero-padded to 3 digits) and logs `timestamp_start`, `harness_changes_applied`, and `pipeline_config`. Upon completion, `timestamp_end`, `status`, `failing_tier`, `root_cause`, `ast_verification_summary`, and `improvements_needed` are appended to the entry.
+- **Structured Experimentation Logging**: The job ledger provides a deterministic audit trail for all delegation runs, enabling cross-run comparison of harness changes and their outcomes.
+
+### 2026-08-02 (Delegated Execution Protocol & Harness Enhancement Workflow)
+- **Principle 8 (Delegated Pipeline Execution)**: Added rule requiring Orchestrator to delegate pipeline runs (`runner.py`) to sub-agents via `task` tool, receiving structured diagnostic reports to prevent main context exhaustion while focusing on harness tuning.

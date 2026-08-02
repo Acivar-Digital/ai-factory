@@ -25,7 +25,7 @@ from factory.infra._loopguard import run_with_loopguard, CONTEXT_COMPACT_CEILING
 from factory.infra.artefacts import persist_role
 from factory.infra.control import (
     DEFAULT_AGENT_SETTINGS, LOGS_DIR, ROLE_AGENT_SETTINGS,
-    RUNTIME_DIR, SKILL_MAP, TierState,
+    RUNTIME_DIR, SKILL_MAP, TierState, _load_pydantic_ai_coding_skill,
 )
 from factory.infra._runtime import RAW_OUTPUTS, PHASE_SUMMARIES, SCOPE_CONTEXT
 from factory.infra.exchange import (
@@ -94,7 +94,9 @@ def build_role_agent(role: str) -> tuple[Agent, "object | None"]:
     model = resolve_model(entry.model_key)
     if role == "intern":
         model = copy.copy(model)
-    instructions = pydantic_ai_default_block() + "\n\n" + spec.instructions
+    pydantic_ai_skill = _load_pydantic_ai_coding_skill()
+    skill_block = pydantic_ai_skill + "\n\n" if pydantic_ai_skill else ""
+    instructions = pydantic_ai_default_block() + "\n\n" + skill_block + spec.instructions
     allowed = [name for name in spec.tool_allow_list if name in _TOOL_BY_NAME]
     unknown = [name for name in spec.tool_allow_list if name not in _TOOL_BY_NAME]
     if unknown:
