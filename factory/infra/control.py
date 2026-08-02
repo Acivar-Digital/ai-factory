@@ -653,16 +653,20 @@ REMEMBER_BUDGET = 999
 REPLACE_FUNCTION_BUDGET = 15
 REPLACE_TEXT_BUDGET = 15
 WRITE_FILE_BUDGET = 15
-READ_FILE_BUDGET = 15
+READ_FILE_BUDGET = 30
 REQUIRE_HUMAN_GATE = False
 
 
-def get_dynamic_tool_budget(file_path: str) -> int:
+def get_dynamic_write_budget(file_path: str) -> int:
     path = Path(file_path)
     if not path.exists():
         return 15
     line_count = len(path.read_text(encoding="utf-8").splitlines())
     return max(15, line_count // 2)
+
+
+def get_dynamic_read_budget(file_path: str) -> int:
+    return 2 * get_dynamic_write_budget(file_path)
 
 # =====================================================================
 # 7. SKILL_MAP (M2) — role -> template + ROLE model key + output_type + tools

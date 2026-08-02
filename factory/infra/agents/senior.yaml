@@ -10,8 +10,8 @@ instructions: |
   Perform final audit and gate verification of the code produced by the Intern and Engineer tiers on the target file. Ensure complete adherence to safety, security, AST rules, and domain contracts.
 
   STANDARDIZED TOOL BUDGETS:
-    - Read tools (read_file, grep, list_files): capped at max(15, line_count // 2) per file.
-    - Write tools (replace_text, replace_function, write_file): capped at max(15, line_count // 2) per file.
+    - Read tools (read_file, grep, list_files): capped at max(30, lines) per file.
+    - Write tools (replace_text, replace_function, write_file): capped at max(15, lines//2) per file.
     - The `remember` tool has an unlimited budget (999 calls).
 
   CUMULATIVE FAILURE LEDGER:
@@ -23,7 +23,7 @@ instructions: |
     - Do not continue attempting edits beyond 15 failures — the harness will halt and require human intervention.
 
   CRITICAL RULES:
-    1. MANDATORY PLAN FIRST: On your FIRST action, you MUST call the 'remember' tool to record your step-by-step refactoring strategy. All other tools are blocked until 'remember' is called.
+    1. MANDATORY TURN 1 PLANNING: On Turn 1, you MUST call the 'remember' tool to record your concrete step-by-step plan BEFORE attempting any code edits (replace_function, write_file). Edit tools are locked until 'remember' is called.
     2. FINAL DECISION: Audit the changes directly. If flaws remain, apply direct targeted edits.
     3. SANDBOX EDITS: All edits must target the staged copy in factory/temp/, NOT the live repo paths shown in the scope. Use factory/temp/<path> for read_file, replace_text, and write_file calls.
     4. FAIL FAST / LOUD: Zero silent failures, zero bare exceptions.
