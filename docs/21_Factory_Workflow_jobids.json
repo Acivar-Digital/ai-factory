@@ -35,8 +35,8 @@
     },
     "check_plan_invariants": {
       "baseline_cc": 13,
-      "current_cc": 13,
-      "status": "PENDING_REFACTOR"
+      "current_cc": 2,
+      "status": "LOCKED_IN_PASSED"
     },
     "_downstream_closure": {
       "baseline_cc": 13,
@@ -74,13 +74,20 @@
           "factory/infra/gatekeeper.py"
         ]
       },
-      "timestamp_end": null,
-      "timestamp_end_sgt": null,
-      "status": "STALLED",
+      "timestamp_end": "2026-08-03T05:41:14Z",
+      "timestamp_end_sgt": "2026-08-03 13:41:14 SGT",
+      "status": "PASSED",
       "failing_tier": null,
       "root_cause": null,
       "ast_verification_summary": {},
-      "improvements_needed": []
+      "improvements_needed": [],
+      "target_functions_status": {
+        "check_plan_invariants": {
+          "status": "LOCKED_IN_PASSED",
+          "current_cc": 2,
+          "refactoring_detail": "CC=13→2; 5 private helpers extracted (_resolve_workplan CC=3, _collect_tasks CC=4, _check_task_files CC=3, _check_single_task_file_count CC=2, _check_file_collisions CC=3); flat guard clauses in main function; all public signatures preserved"
+        }
+      }
     },
     {
       "job_id": "002",
@@ -461,13 +468,20 @@
           "factory/infra/validation.py"
         ]
       },
-      "timestamp_end": null,
-      "timestamp_end_sgt": null,
-      "status": "IN_PROGRESS",
+      "timestamp_end": "2026-08-03T05:41:14Z",
+      "timestamp_end_sgt": "2026-08-03 13:41:14 SGT",
+      "status": "PASSED",
       "failing_tier": null,
       "root_cause": null,
       "ast_verification_summary": {},
-      "improvements_needed": []
+      "improvements_needed": [],
+      "target_functions_status": {
+        "check_plan_invariants": {
+          "status": "LOCKED_IN_PASSED",
+          "current_cc": 2,
+          "refactoring_detail": "CC=13→2; 5 private helpers extracted (_resolve_workplan CC=3, _collect_tasks CC=4, _check_task_files CC=3, _check_single_task_file_count CC=2, _check_file_collisions CC=3); flat guard clauses in main function; all public signatures preserved"
+        }
+      }
     }
   ]
 }
