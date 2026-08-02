@@ -195,6 +195,20 @@ def build_todo_checklist(staged_paths: list[str], target_functions: list[str]) -
             for fn_name in target_functions:
                 result = verify_edit(staged_file_path, fn_name)
                 parsed = json.loads(result) if result else {}
+                if parsed.get("function_name") == fn_name:
+                    cc = parsed.get("cc", 0)
+                    ok = parsed.get("ok", False)
+                    passed = ok and cc <= 5
+                    items.append(
+                        TodoItem(
+                            file_path=staged_file_path,
+                            function_name=fn_name,
+                            target_cc=5,
+                            current_cc=cc,
+                            passed=passed,
+                        )
+                    )
+                    continue
                 funcs = parsed.get("functions", [])
                 target_fn = next((f for f in funcs if f.get("function") == fn_name), None)
                 if not target_fn:
@@ -572,6 +586,19 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any], target_fn
                 for fn_name in functions_to_verify:
                     result = verify_edit(staged_file_path, fn_name)
                     parsed = json.loads(result) if result else {}
+                    if parsed.get("function_name") == fn_name:
+                        cc = parsed.get("cc", 0)
+                        ok = parsed.get("ok", False)
+                        if ok is False or cc > 5:
+                            diagnostic = (
+                                f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                                f"function '{fn_name}' has CC={cc} (target CC <= 5)"
+                                if cc > 5
+                                else f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                                f"function '{fn_name}' did not pass verification"
+                            )
+                            break
+                        continue
                     if parsed.get("ok") is False:
                         diagnostic = (
                             f"[verify_edit] {author}: FAIL — {staged_file_path} — "
