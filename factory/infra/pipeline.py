@@ -736,6 +736,45 @@ def _persist_checkpoint(staged_path: str, fn_name: str, locked_functions: set[st
     os.replace(tmp, checkpoint_path)
 
 
+def _extract_failure_summary(tier: str, attempt: int, verify_result: str, fn_name: str) -> str:
+    """Extract a concise 2-line failure summary from a verify_edit diagnostic.
+
+    Returns a string like:
+    "Attempt 1 [intern]: Function '_affected_tests' failed CC check: CC=8 (target <= 5)."
+    """
+    reason = verify_result
+    for prefix in (
+        "[verify_edit] intern: FAIL — ",
+        "[verify_edit] engineer: FAIL — ",
+        "[verify_edit] senior: FAIL — ",
+    ):
+        if prefix in reason:
+            reason = reason.split(prefix, 1)[1]
+            break
+    else:
+        for prefix in (
+            "[verify_edit] intern: ",
+            "[verify_edit] engineer: ",
+            "[verify_edit] senior: ",
+        ):
+            if prefix in reason:
+                reason = reason.split(prefix, 1)[1]
+                break
+
+    fn_part = fn_name if fn_name else "unknown"
+    return f"Attempt {attempt} [{tier}]: Function '{fn_part}' {reason}."
+
+
+def _render_cumulative_failure_ledger(failure_history: list[str]) -> str:
+    """Render a [CUMULATIVE FAILURE LEDGER] block from all recorded entries."""
+    lines = [
+        "[CUMULATIVE FAILURE LEDGER — DO NOT REPEAT THESE FAILURE PATHS]",
+    ]
+    for entry in failure_history:
+        lines.append(f"• {entry}")
+    return "\n".join(lines)
+
+
 async def run_tier(
     tier: str,
     task: str,
@@ -761,10 +800,15 @@ async def run_tier(
     the next attempt's input prompt (same-tier retry) or carried forward
     to the next tier via state_dict["brief"].
 
+    A cumulative failure ledger is maintained in state_dict["failure_history"]
+    and rendered into the brief for subsequent attempts and tiers.
+
     Returns the role output string.
     """
     brief = state_dict["brief"]
     run_brief = brief
+
+    state_dict.setdefault("failure_history", [])
 
     target_functions = _read_target_functions()
     staged_paths = _read_staged_paths()
@@ -834,6 +878,9 @@ async def run_tier(
                 state_dict["brief"] = state_dict["brief"] + "\n\n" + todo_md
 
             if _verify_result is not None and "FAIL" in _verify_result:
+                failure_summary = _extract_failure_summary(tier, attempt, _verify_result, fn_name)
+                state_dict["failure_history"].append(failure_summary)
+                ledger_block = _render_cumulative_failure_ledger(state_dict["failure_history"])
                 diagnostic = (
                     f"\n\n[DIAGNOSTIC FEEDBACK — {tier} attempt {attempt}]\n"
                     f"Verification failed: {_verify_result}\n"
@@ -843,7 +890,8 @@ async def run_tier(
                     f"3. Fix any ruff linting failures reported above.\n"
                     f"4. Ensure the output passes all verification gates.\n"
                 )
-                run_brief = brief + "\n\n" + diagnostic
+                run_brief = brief + "\n\n" + ledger_block + "\n\n" + diagnostic
+                state_dict["brief"] = brief + "\n\n" + ledger_block + "\n\n" + diagnostic
                 if attempt == MAX_ATTEMPTS:
                     if tier == "senior" and is_final:
                         raise RuntimeError(
