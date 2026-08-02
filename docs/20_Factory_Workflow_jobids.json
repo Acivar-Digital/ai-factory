@@ -1,0 +1,57 @@
+[
+  {
+    "job_id": "001",
+    "timestamp_start": "2026-08-02T01:02:41Z",
+    "harness_changes_applied": [
+      "Per-function atomic checkpoint lock in pipeline.py",
+      "AST decomposition hints for monoliths CC > 8",
+      "Symbol-enriched ModelRetry guidance in tools_shell.py",
+      "Function missing detection fix in verify_edit",
+      "Set max_retries=20 on FunctionToolset base constructor"
+    ],
+    "pipeline_config": {
+      "start_phase": "intern",
+      "stop_phase": "senior",
+      "target_functions": [
+        "_format_advisory_value",
+        "_get_fallback_narrative",
+        "_synthesize_and_save_daily_forecast",
+        "_extract_trigger_labels",
+        "validate_promo_code"
+      ]
+    },
+    "timestamp_end": "2026-08-02T01:07:58Z",
+    "status": "FAILED",
+    "failing_tier": "intern",
+    "root_cause": "4 of 5 target functions exceed CC=5 threshold: _get_fallback_narrative (CC=7), _synthesize_and_save_daily_forecast (CC=8), _extract_trigger_labels (CC=7), validate_promo_code (CC=6). Pipeline timed out after 300s; coder exhausted tool budget before completing edits.",
+    "ast_verification_summary": {
+      "_format_advisory_value": {
+        "cc": 4,
+        "passed": true
+      },
+      "_get_fallback_narrative": {
+        "cc": 7,
+        "passed": false
+      },
+      "_synthesize_and_save_daily_forecast": {
+        "cc": 8,
+        "passed": false
+      },
+      "_extract_trigger_labels": {
+        "cc": 7,
+        "passed": false
+      },
+      "validate_promo_code": {
+        "cc": 6,
+        "passed": false
+      }
+    },
+    "improvements_needed": [
+      "Increase coder tool budget or add incremental checkpointing to prevent budget exhaustion",
+      "Break _synthesize_and_save_daily_forecast (CC=8) into smaller sub-functions as top priority",
+      "Decompose _get_fallback_narrative (CC=7) and _extract_trigger_labels (CC=7) by extracting helper functions",
+      "Reduce validate_promo_code (CC=6) by extracting validation rules into a separate function",
+      "Consider increasing pipeline timeout beyond 300s for complex multi-function refactor tasks"
+    ]
+  }
+]

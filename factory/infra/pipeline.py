@@ -142,9 +142,11 @@ def auto_discover_high_cc_functions(staged_paths: list[str], max_cc: int = 5) ->
     """Scan staged_paths for functions with cyclomatic complexity exceeding max_cc.
 
     Returns a list of ``(staged_file_path, function_name)`` tuples for every
-    ``FunctionDef`` / ``AsyncFunctionDef`` where CC > max_cc.
+    ``FunctionDef`` / ``AsyncFunctionDef`` where CC > max_cc, sorted in
+    ascending order of their initial CC score so lower-CC functions are
+    refactored before high-CC functions.
     """
-    results: list[tuple[str, str]] = []
+    results: list[tuple[str, str, int]] = []
     for staged_path in staged_paths:
         path = Path(staged_path)
         if not path.exists():
@@ -158,8 +160,9 @@ def auto_discover_high_cc_functions(staged_paths: list[str], max_cc: int = 5) ->
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 cc = _compute_cc(node)
                 if cc > max_cc:
-                    results.append((staged_path, node.name))
-    return results
+                    results.append((staged_path, node.name, cc))
+    results.sort(key=lambda item: item[2])
+    return [(path, name) for path, name, _ in results]
 
 
 def compute_dynamic_retry_budget(file_path: str, function_name: str) -> int:
@@ -567,22 +570,33 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
                 for fn_name in target_functions:
                     result = verify_edit(staged_file_path, fn_name)
                     parsed = json.loads(result) if result else {}
+                    if parsed.get("ok") is False:
+                        diagnostic = (
+                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                            f"{parsed.get('error', 'validation error')}"
+                        )
+                        break
                     funcs = parsed.get("functions", [])
                     target_fn = next((f for f in funcs if f.get("function") == fn_name), None)
-                    if target_fn:
-                        if not target_fn.get("passed", False):
-                            diagnostic = (
-                                f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                                f"function '{fn_name}': {target_fn.get('message', 'validation failed')}"
-                            )
-                            break
-                        cc = target_fn.get("cc", 0)
-                        if cc > 5:
-                            diagnostic = (
-                                f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                                f"function '{fn_name}' has CC={cc} (target CC <= 5)"
-                            )
-                            break
+                    if target_fn is None:
+                        diagnostic = (
+                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                            f"function '{fn_name}' not found or did not pass verification"
+                        )
+                        break
+                    if not target_fn.get("passed", False):
+                        diagnostic = (
+                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                            f"function '{fn_name}': {target_fn.get('message', 'validation failed')}"
+                        )
+                        break
+                    cc = target_fn.get("cc", 0)
+                    if cc > 5:
+                        diagnostic = (
+                            f"[verify_edit] {author}: FAIL — {staged_file_path} — "
+                            f"function '{fn_name}' has CC={cc} (target CC <= 5)"
+                        )
+                        break
             else:
                 result = verify_edit(staged_file_path, None)
                 parsed = json.loads(result) if result else {}

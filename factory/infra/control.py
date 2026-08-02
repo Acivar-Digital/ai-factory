@@ -67,6 +67,14 @@ PYDANTIC_AI_INSTRUCTIONS = (
 )
 
 
+def _load_pydantic_ai_coding_skill() -> str:
+    """Load the pydantic-ai-coding skill SKILL.md content for injection into role prompts."""
+    skill_path = Path(__file__).resolve().parent.parent.parent.parent / ".agents" / "skills" / "pydantic-ai-coding" / "SKILL.md"
+    if skill_path.exists():
+        return skill_path.read_text(encoding="utf-8")
+    return ""
+
+
 # =====================================================================
 # 1. STRONGLY-TYPED SYSTEM SETTINGS
 # =====================================================================
@@ -399,8 +407,15 @@ nemotron = OpenAIChatModel(
 ling_flash = OpenAIChatModel(
     "openrouter/inclusionai/ling-3.0-flash:free",
     provider=PROVIDERS["literouter"],
-    profile=OpenAIModelProfile(openai_supports_tool_choice_required=None,
-    )
+    profile=OpenAIModelProfile(openai_supports_tool_choice_required=None),
+    settings=ModelSettings(
+        extra_body={
+            "reasoning": {
+                "effort": "high",
+                "exclude": True,
+            }
+        }
+    ),
 )
 
 laguna_xs = OpenAIChatModel(
@@ -649,44 +664,44 @@ class SkillMap(BaseModel):
 def load_skill_map() -> SkillMap:
     return SkillMap(
         roles={
-            "intern": SkillEntry(
-                template="intern.yaml",
-                model_key="intern_model",
-                output_type="TaskResult",
-                tool_bucket="AST-edit",
-                hard_rules=[
-                    "never edit src/ or src2/; only write under factory/",
-                    "read_file allowed for targeted reads; grep forbidden — use batch_read.",
-                    "Run batch_read BEFORE any edit.",
-                    "Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.",
-                ],
-            ),
-            "engineer": SkillEntry(
-                template="engineer.yaml",
-                model_key="engineer_model",
-                output_type="TaskResult",
-                tool_bucket="AST-edit",
-                hard_rules=[
-                    "never edit src/ or src2/; only write under factory/",
-                    "read_file allowed for targeted reads; grep forbidden — use batch_read.",
-                    "Run batch_read BEFORE any edit.",
-                    "Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.",
-                    "Verify all AST and lint checks pass before emitting final_result.",
-                ],
-            ),
-            "senior": SkillEntry(
-                template="senior.yaml",
-                model_key="senior_model",
-                output_type="TaskResult",
-                tool_bucket="AST-edit",
-                hard_rules=[
-                    "never edit src/ or src2/; only write under factory/",
-                    "read_file allowed for targeted reads; grep forbidden — use batch_read.",
-                    "Run batch_read BEFORE any edit.",
-                    "Follow strict Pydantic v2 conventions (model_dump(), model_validate(), no legacy v1 .dict()) and Pydantic AI v2 patterns.",
-                    "Perform final audit and gate verification. Emit final_result for production deployment.",
-                ],
-            ),
+             "intern": SkillEntry(
+                 template="intern.yaml",
+                 model_key="intern_model",
+                 output_type="TaskResult",
+                 tool_bucket="AST-edit",
+                 hard_rules=[
+                     "never edit src/ or src2/; only write under factory/",
+                     "read_file allowed for targeted reads; grep forbidden — use batch_read.",
+                     "Run batch_read BEFORE any edit.",
+                     "Follow strict Pydantic v2 conventions (model_dump, model_validate, no legacy v1 .dict()/parse_obj()/class Config:) and Pydantic AI v2 agent design patterns.",
+                 ],
+             ),
+             "engineer": SkillEntry(
+                 template="engineer.yaml",
+                 model_key="engineer_model",
+                 output_type="TaskResult",
+                 tool_bucket="AST-edit",
+                 hard_rules=[
+                     "never edit src/ or src2/; only write under factory/",
+                     "read_file allowed for targeted reads; grep forbidden — use batch_read.",
+                     "Run batch_read BEFORE any edit.",
+                     "Follow strict Pydantic v2 conventions (model_dump, model_validate, no legacy v1 .dict()/parse_obj()/class Config:) and Pydantic AI v2 agent design patterns.",
+                     "Verify all AST and lint checks pass before emitting final_result.",
+                 ],
+             ),
+             "senior": SkillEntry(
+                 template="senior.yaml",
+                 model_key="senior_model",
+                 output_type="TaskResult",
+                 tool_bucket="AST-edit",
+                 hard_rules=[
+                     "never edit src/ or src2/; only write under factory/",
+                     "read_file allowed for targeted reads; grep forbidden — use batch_read.",
+                     "Run batch_read BEFORE any edit.",
+                     "Follow strict Pydantic v2 conventions (model_dump, model_validate, no legacy v1 .dict()/parse_obj()/class Config:) and Pydantic AI v2 agent design patterns.",
+                     "Perform final audit and gate verification. Emit final_result for production deployment.",
+                 ],
+             ),
         }
     )
 
