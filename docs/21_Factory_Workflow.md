@@ -129,26 +129,203 @@ If a file accumulates **15 write failures** within a single tier pass, the pipel
 
 ```
 [User Prompt] -> [Frontmatter Parser] -> [Staged Copies in factory/temp/]
-       |
-       v
+        |
+        v
 [Intern Tier (ling_flash)]
-       |---> Modification Tools (write_file / replace_function / replace_text)
-       |        |---> Instant verify_edit() Check
-       |        +---> Raise ModelRetry on CC > 5 or syntax error -> Turn Self-Correction
-       v
+        |---> Modification Tools (write_file / replace_function / replace_text)
+        |        |---> Instant verify_edit() Check
+        |        +---> Raise ModelRetry on CC > 5 or syntax error -> Turn Self-Correction
+        v
 [_run_verify_edit Gate] -> Persist last_tier_diagnostic in state_dict
-       |
-       v
+        |
+        v
 [Engineer Tier (ling_flash)] -> Receives Upfront Diagnostic Block
-       |---> Modification Tools + ModelRetry
-       v
+        |---> Modification Tools + ModelRetry
+        v
 [_run_verify_edit Gate]
-       |
-       v
+        |
+        v
 [Senior Tier (ling_flash)] -> Final Quality & Architecture Audit Gate
-       |---> Passes CC <= 5 & AST Safety -> Emit final_result
-       v
+        |---> Passes CC <= 5 & AST Safety -> Emit final_result
+        v
 [Definition of Done Validation] -> Staged Files Ready in factory/temp/
+```
+
+### 3.1 Pipeline Workflow Diagrams
+
+#### Mermaid Flowchart
+
+```mermaid
+flowchart TD
+    A["📝 User Prompt Scope Parsing"] --> B["📋 Staged Copies in factory/temp/"]
+    B --> C["🔢 Token Calculator & Compact Model Middleware"]
+    C -->|"ling_flash context > 100K tokens"| C1["⚡ Auto-Summarization"]
+    C1 --> C2["Compressed context preserves decisions, failures, TODO state"]
+    C2 --> D["🔒 Mandatory Turn 1 Planning Gate"]
+    D -->|"remember tool call unlocks edit tools"| D1["GuardToolset blocks all other tools"]
+    D1 -->|"3 blocked attempts → RuntimeError halt"| D2["remember budget = 999"]
+    D2 --> E["📖 Read-Plan-Write Lifecycle"]
+    E --> E1["Read Budget = 2× Write Budget"]
+    E1 --> E2["max(30, line_count) reads / max(15, line_count // 2) writes"]
+    E2 --> F["🔄 3-Tier Execution Loop"]
+    F --> F1["Tier 1: Intern (ling_flash)"]
+    F1 --> F1a["Modification Tools: write_file / replace_function / replace_text"]
+    F1a --> F1b["In-Tool AST Firewall: verify_edit() instant check"]
+    F1b -->|"CC > 5 or syntax error"| F1c["ModelRetry → same-turn self-correction"]
+    F1c --> F1a
+    F1b -->|"Pass"| G["📊 Upfront Diagnostic Handover"]
+    G --> G1["Persist last_tier_diagnostic in state_dict"]
+    G1 --> G2["Inject diagnostic block into next tier prompt"]
+    G2 --> H["Tier 2: Engineer (ling_flash)"]
+    H --> H1["Modification Tools + ModelRetry"]
+    H1 --> H2["In-Tool AST Firewall: verify_edit() instant check"]
+    H2 -->|"CC > 5 or syntax error"| H3["ModelRetry → same-turn self-correction"]
+    H3 --> H1
+    H2 -->|"Pass"| I["📊 Cumulative Failure Ledger Update"]
+    I --> J["Tier 3: Senior (ling_flash)"]
+    J --> J1["Final Quality & Architecture Audit Gate"]
+    J1 -->|"CC ≤ 5 & AST Safety"| K["✅ Final Senior Approval"]
+    J1 -->|"Fail"| J2["RuntimeError — circuit breaker halt"]
+    K --> L["🎯 Definition of Done"]
+    L --> L1["pytest pass"]
+    L1 --> L2["ruff check clean"]
+    L2 --> L3["CC ≤ 5 per function"]
+    L3 --> M["🔒 Lock to checkpoint_state.json"]
+    M --> N["📦 Staged Files Ready in factory/temp/"]
+
+    style A fill:#e1f5fe,stroke:#01579b
+    style B fill:#f3e5f5,stroke:#6a1b9a
+    style C fill:#fff3e0,stroke:#e65100
+    style D fill:#e8f5e9,stroke:#1b5e20
+    style E fill:#e3f2fd,stroke:#0d47a1
+    style F fill:#fce4ec,stroke:#880e4f
+    style G fill:#fff8e1,stroke:#f57f17
+    style H fill:#fce4ec,stroke:#880e4f
+    style I fill:#fff8e1,stroke:#f57f17
+    style J fill:#fce4ec,stroke:#880e4f
+    style K fill:#c8e6c9,stroke:#2e7d32
+    style L fill:#e1f5fe,stroke:#01579b
+    style M fill:#f3e5f5,stroke:#6a1b9a
+    style N fill:#c8e6c9,stroke:#2e7d32
+```
+
+#### Unicode ASCII Box-Drawing Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    AI-FACTORY PIPELINE WORKFLOW                            │
+│                    (Current — Deterministic Conductor)                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────┐    ┌──────────────────────────────────────────┐  │
+│  │ 1. User Prompt      │───▶│ 2. Frontmatter Parser                   │  │
+│  │    Scope Parsing    │    │    Extract start_phase, stop_phase,      │  │
+│  │                     │    │    TARGET_REPO, scope, target_functions  │  │
+│  └─────────────────────┘    └──────────────────┬───────────────────────┘  │
+│                                                  │                          │
+│                                                  ▼                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ 3. Staged Copies in factory/temp/                                  │   │
+│  │    Baseline .orig snapshot captured for diff_vs_orig comparison    │   │
+│  │    Zero direct edits to real code outside staging                  │   │
+│  └──────────────────────────────┬────────────────────────────────────┘   │
+│                                  │                                        │
+│                                  ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ 4. Token Calculator & Compact Model Middleware (ling_flash)         │   │
+│  │    If accumulated prompt context > 100K tokens:                    │   │
+│  │      → Auto-summarization: compress history, preserve decisions,   │   │
+│  │        failure modes, and active TODO state                        │   │
+│  └──────────────────────────────┬────────────────────────────────────┘   │
+│                                  │                                        │
+│                                  ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ 5. Mandatory Turn 1 Planning Gate (remember)                        │   │
+│  │    ┌─────────────────────────────────────────────────────────────┐  │   │
+│  │    │ GuardToolset (tools_guard.py)                               │  │   │
+│  │    │   • remember: EXEMPT — always permitted (budget = 999)     │  │   │
+│  │    │   • All other tools: BLOCKED until remember is called      │  │   │
+│  │    │   • 3 blocked attempts → RuntimeError("[HALT] ...")        │  │   │
+│  │    └─────────────────────────────────────────────────────────────┘  │   │
+│  └──────────────────────────────┬────────────────────────────────────┘   │
+│                                  │                                        │
+│                                  ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ 6. Read-Plan-Write Lifecycle                                        │   │
+│  │    Read Budget  = max(30, line_count)    ← always 2× Write Budget│   │
+│  │    Write Budget = max(15, line_count // 2)                         │   │
+│  │    Phase: Read → Plan → Write (sequential, budget-gated)          │   │
+│  └──────────────────────────────┬────────────────────────────────────┘   │
+│                                  │                                        │
+│                                  ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ 7. 3-Tier Execution Loop (Intern → Engineer → Senior)              │   │
+│  │                                                                     │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
+│  │  │ TIER 1: INTERN (ling_flash)                                  │  │   │
+│  │  │   • Modification tools: write_file / replace_function /     │  │   │
+│  │  │     replace_text                                              │  │   │
+│  │  │   • In-Tool AST Firewall: verify_edit() runs instantly       │  │   │
+│  │  │   • CC > 5 or syntax error → ModelRetry (same-turn fix)     │  │   │
+│  │  │   • Up to 15 write failures per file before circuit breaker │  │   │
+│  │  └──────────────────────────┬───────────────────────────────────┘  │   │
+│  │                             │                                        │   │
+│  │                             ▼                                        │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
+│  │  │ _run_verify_edit Gate → Persist last_tier_diagnostic         │  │   │
+│  │  │   in state_dict (key: last_tier_diagnostic_<file_path>)     │  │   │
+│  │  └──────────────────────────┬───────────────────────────────────┘  │   │
+│  │                             │                                        │   │
+│  │                             ▼                                        │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
+│  │  │ TIER 2: ENGINEER (ling_flash)                                │  │   │
+│  │  │   • Receives UPFRONT diagnostic block from previous tier    │  │   │
+│  │  │   • Same modification tools + ModelRetry + AST Firewall     │  │   │
+│  │  │   • Same 15-write-failure circuit breaker                   │  │   │
+│  │  └──────────────────────────┬───────────────────────────────────┘  │   │
+│  │                             │                                        │   │
+│  │                             ▼                                        │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
+│  │  │ TIER 3: SENIOR (ling_flash)                                  │  │   │
+│  │  │   • Final Quality & Architecture Audit Gate                 │  │   │
+│  │  │   • CC ≤ 5 & AST Safety check                               │  │   │
+│  │  │   • Pass → emit final_result                                │  │   │
+│  │  │   • Fail → RuntimeError (circuit breaker cascade,           │  │   │
+│  │  │     no backward bouncing, no silent degradation)            │  │   │
+│  │  └──────────────────────────────────────────────────────────────┘  │   │
+│  └──────────────────────────────┬────────────────────────────────────┘   │
+│                                  │                                        │
+│                                  ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ 8. Definition of Done                                                │   │
+│  │    ✅ pytest pass (PYTHONPATH=. uv run pytest tests/)              │   │
+│  │    ✅ ruff check clean (uv run ruff check factory/ tests/)         │   │
+│  │    ✅ CC ≤ 5 per function (all tiers)                              │   │
+│  │    ✅ No syntax errors (all tiers)                                 │   │
+│  └──────────────────────────────┬────────────────────────────────────┘   │
+│                                  │                                        │
+│                                  ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ 9. Lock to checkpoint_state.json                                   │   │
+│  │    Atomic state update → all staged files locked for delivery      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ FAILURE HANDLING (applies at every tier)                           │   │
+│  │                                                                     │   │
+│  │  • Upfront Diagnostic Handover: last_tier_diagnostic injected      │   │
+│  │    into next tier's prompt before any work begins                  │   │
+│  │  • Cumulative Failure Ledger: chronicles attempt-by-attempt        │   │
+│  │    failure modes to alter LLM token probability away from          │   │
+│  │    repeating mistakes                                               │   │
+│  │  • 15 Write Failures Circuit Breaker: if a file accumulates 15     │   │
+│  │    write failures in a single tier pass → harness-level error      │   │
+│  │    (indicates harness instruction issue, not LLM guessing)         │   │
+│  │  • Circuit Breaker Tier Cascade: senior tier trip → RuntimeError   │   │
+│  │    raised immediately — no silent degradation, no retry loops      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 4. Verification & Quality Gates
