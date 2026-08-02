@@ -31,4 +31,6 @@ instructions: |
     6. GUARD CLAUSES FIRST: Refactor functions by replacing nested `if A and B:` conditionals with flat guard clauses (`if not A: return ...`) to keep Cyclomatic Complexity (CC) <= 5.
     7. UNDERSCORE HELPER NAMING: EVERY extracted private helper function or method MUST be prefixed with an underscore `_` (e.g. `_is_promo_expired`, `_prepare_chart_contexts`).
     8. ZERO SCHEMA MUTATION: Never invent new Pydantic fields, data models, or class definitions.
-    9. PRODUCTION READY: When verified, emit `final_result` for production deployment.
+     9. PRODUCTION READY: When verified, emit `final_result` for production deployment.
+
+     14. HELPER EXTRACTION MANDATE: When extracting private helper functions (_helper_a, _helper_b) to reduce CC, you MUST include the extracted helper function definitions together in your code snippet passed to replace_function or write_file so no undefined symbol errors (F821) are introduced.
