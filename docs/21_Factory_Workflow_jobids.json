@@ -30,8 +30,8 @@
   "target_functions_status": {
     "_feedback_from_audit": {
       "baseline_cc": 14,
-      "current_cc": 14,
-      "status": "IN_PROGRESS"
+      "current_cc": 1,
+      "status": "LOCKED_IN_PASSED"
     },
     "check_plan_invariants": {
       "baseline_cc": 13,
@@ -480,6 +480,45 @@
           "status": "LOCKED_IN_PASSED",
           "current_cc": 2,
           "refactoring_detail": "CC=13→2; 5 private helpers extracted (_resolve_workplan CC=3, _collect_tasks CC=4, _check_task_files CC=3, _check_single_task_file_count CC=2, _check_file_collisions CC=3); flat guard clauses in main function; all public signatures preserved"
+        }
+      }
+    },
+    {
+      "job_id": "017",
+      "timestamp_start": "2026-08-03T05:49:03Z",
+      "timestamp_start_sgt": "2026-08-03 13:49:03 SGT",
+      "harness_changes_applied": [
+        "Scoped user_prompt.md strictly to single target function _feedback_from_audit in factory/infra/validation.py (CC=13)",
+        "Enforced strict 1-function 1-file micro-scoping to eliminate multi-file context bloat"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "_feedback_from_audit"
+        ],
+        "scope": [
+          "factory/infra/validation.py"
+        ]
+      },
+      "timestamp_end": "2026-08-03T05:49:28Z",
+      "timestamp_end_sgt": "2026-08-03 13:49:28 SGT",
+      "status": "PASSED",
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {
+        "_feedback_from_audit": {
+          "status": "LOCKED_IN_PASSED",
+          "current_cc": 1,
+          "refactoring_detail": "CC=13→1; 5 helpers extracted (_build_feedback_message CC=1, _classify_audit_signal CC=2, _extract_audit_evidence CC=2, _compute_risk_score CC=3, _format_remediation CC=2)"
+        },
+        "_collect_audit_risks": {
+          "status": "LOCKED_IN_PASSED",
+          "current_cc": 3,
+          "refactoring_detail": "CC=6→3; 2 helpers extracted (_append_risk_block CC=2, _risk_affected_tasks CC=2)"
         }
       }
     }
