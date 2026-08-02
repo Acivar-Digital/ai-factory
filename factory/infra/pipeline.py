@@ -508,12 +508,11 @@ async def record_coder(
     return out
 
 
-def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | None:
+def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any], target_fn: str | None = None) -> str | None:
     """Run verify_edit on the author's scoped staged files after a tier edit.
 
-    Reads scope and target_functions from the user_prompt.md frontmatter,
-    maps each to its staged copy under factory/temp/, and verifies every
-    function in each file has CC <= 5 and a clean AST.
+    If target_fn is provided, only verifies that function in the staged paths.
+    If target_fn is None, verifies all target_functions in staged paths.
 
     Per-file diagnostic is persisted into state_dict under
     ``f"last_tier_diagnostic_{staged_file_path}"`` so the conductor
@@ -560,14 +559,16 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
 
     staged_paths = [f"factory/temp/{s}" for s in scope]
 
-    todo_list = build_todo_checklist(staged_paths, target_functions)
+    functions_to_verify = [target_fn] if target_fn is not None else target_functions
+
+    todo_list = build_todo_checklist(staged_paths, functions_to_verify)
     state_dict["todo_list"] = todo_list
 
     for staged_file_path in staged_paths:
         diagnostic: str | None = None
         try:
-            if target_functions:
-                for fn_name in target_functions:
+            if functions_to_verify:
+                for fn_name in functions_to_verify:
                     result = verify_edit(staged_file_path, fn_name)
                     parsed = json.loads(result) if result else {}
                     if parsed.get("ok") is False:
@@ -577,20 +578,20 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
                         )
                         break
                     funcs = parsed.get("functions", [])
-                    target_fn = next((f for f in funcs if f.get("function") == fn_name), None)
-                    if target_fn is None:
+                    target_fn_match = next((f for f in funcs if f.get("function") == fn_name), None)
+                    if target_fn_match is None:
                         diagnostic = (
                             f"[verify_edit] {author}: FAIL — {staged_file_path} — "
                             f"function '{fn_name}' not found or did not pass verification"
                         )
                         break
-                    if not target_fn.get("passed", False):
+                    if not target_fn_match.get("passed", False):
                         diagnostic = (
                             f"[verify_edit] {author}: FAIL — {staged_file_path} — "
-                            f"function '{fn_name}': {target_fn.get('message', 'validation failed')}"
+                            f"function '{fn_name}': {target_fn_match.get('message', 'validation failed')}"
                         )
                         break
-                    cc = target_fn.get("cc", 0)
+                    cc = target_fn_match.get("cc", 0)
                     if cc > 5:
                         diagnostic = (
                             f"[verify_edit] {author}: FAIL — {staged_file_path} — "
@@ -635,8 +636,11 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any]) -> str | 
     return None
 
 
-def _build_isolated_ast_block() -> str:
-    """Construct a Surgical Context Sandwich for each target function.
+def _build_isolated_ast_block(target_fn: str | None = None) -> str:
+    """Construct a Surgical Context Sandwich for target function(s).
+
+    If target_fn is provided, generates the sandwich for ONLY that function.
+    If target_fn is None, generates for all target_functions.
 
     Layer 1: File skeleton + imports (top-level structure).
     Layer 2: Isolated target function AST node source.
@@ -679,8 +683,9 @@ def _build_isolated_ast_block() -> str:
             scope = [str(p.relative_to(temp_dir)) for p in temp_dir.rglob("*") if p.is_file() and p.suffix == ".py"]
     staged_paths = [f"factory/temp/{s}" for s in scope]
     lines: list[str] = []
+    functions_to_process = [target_fn] if target_fn is not None else target_functions
     for staged_path in staged_paths:
-        for fn_name in target_functions:
+        for fn_name in functions_to_process:
             try:
                 skeleton = extract_file_skeleton_and_imports(staged_path)
             except Exception:
@@ -761,11 +766,6 @@ async def run_tier(
     brief = state_dict["brief"]
     run_brief = brief
 
-    ast_block = _build_isolated_ast_block()
-    if ast_block:
-        state_dict["brief"] = brief + "\n\n" + ast_block
-        run_brief = state_dict["brief"]
-
     target_functions = _read_target_functions()
     staged_paths = _read_staged_paths()
 
@@ -774,51 +774,89 @@ async def run_tier(
             fn_name for _, fn_name in auto_discover_high_cc_functions(staged_paths)
         ]
 
+    def _get_cc_for_fn(fn_name: str) -> int:
+        for staged_path in staged_paths:
+            try:
+                source = Path(staged_path).read_text(encoding="utf-8")
+                tree = ast.parse(source, filename=staged_path)
+            except (SyntaxError, UnicodeDecodeError, OSError):
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == fn_name:
+                    return _compute_cc(node)
+        return 0
+
+    target_functions.sort(key=_get_cc_for_fn)
+
     locked_functions: set[str] = set()
 
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        print(f"\n=== [conductor -> {tier}] (attempt {attempt}) ===", flush=True)
-        state_dict["brief"] = run_brief
-        out = await do_role(tier, task, bd, history, exchange, pass_counter, prior, state_dict)
-        if record_exchange and tier in EXCHANGE_ROLES:
-            append_exchange_turn(exchange, pass_counter, tier, out, bd)
-
-        _verify_result = _run_verify_edit(tier, bd, state_dict)
-        if _verify_result is not None:
-            print(f"[verify_edit] {tier}: {_verify_result}", flush=True)
-
-        todo_list = state_dict.get("todo_list")
-        if todo_list is not None:
-            todo_md = todo_list.render_markdown()
-            state_dict["brief"] = state_dict["brief"] + "\n\n" + todo_md
-
-        if _verify_result is not None and "FAIL" in _verify_result:
-            diagnostic = (
-                f"\n\n[DIAGNOSTIC FEEDBACK — {tier} attempt {attempt}]\n"
-                f"Verification failed: {_verify_result}\n"
-                f"Please address the following issues in your next attempt:\n"
-                f"1. Fix any AST violations reported above.\n"
-                f"2. Fix any complexity (CC) errors reported above.\n"
-                f"3. Fix any ruff linting failures reported above.\n"
-                f"4. Ensure the output passes all verification gates.\n"
-            )
-            run_brief = brief + "\n\n" + diagnostic
-            if attempt == MAX_ATTEMPTS:
-                if tier == "senior" and is_final:
-                    raise RuntimeError(
-                        "[gate] Senior tier failed verification after 5 attempts - HALT"
-                    )
-                print(
-                    f"[gate] {tier} attempt {attempt}: VERIFICATION FAIL -> "
-                    f"advancing to next tier with diagnostics",
-                    flush=True,
-                )
+    for fn_name in target_functions:
+        if fn_name in locked_functions:
             continue
 
+        fn_already_passes = False
         for staged_path in staged_paths:
-            for fn_name in target_functions:
-                if fn_name in locked_functions:
-                    continue
+            result = verify_edit(staged_path, fn_name)
+            if not result:
+                continue
+            parsed = json.loads(result) if result else {}
+            funcs = parsed.get("functions", [])
+            target_fn_data = next((f for f in funcs if f.get("function") == fn_name), None)
+            if target_fn_data and target_fn_data.get("passed", False) and target_fn_data.get("cc", 0) <= 5:
+                fn_already_passes = True
+                break
+        if fn_already_passes:
+            locked_functions.add(fn_name)
+            if staged_paths:
+                _persist_checkpoint(staged_paths[0], fn_name, locked_functions)
+            print(f"[conductor -> {tier}] Locked in function {fn_name} (CC <= 5)", flush=True)
+            continue
+
+        ast_block = _build_isolated_ast_block(target_fn=fn_name)
+        if ast_block:
+            state_dict["brief"] = brief + "\n\n" + ast_block
+            run_brief = state_dict["brief"]
+
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            print(f"\n=== [conductor -> {tier}] (attempt {attempt}) ===", flush=True)
+            state_dict["brief"] = run_brief
+            out = await do_role(tier, task, bd, history, exchange, pass_counter, prior, state_dict)
+            if record_exchange and tier in EXCHANGE_ROLES:
+                append_exchange_turn(exchange, pass_counter, tier, out, bd)
+
+            _verify_result = _run_verify_edit(tier, bd, state_dict, target_fn=fn_name)
+            if _verify_result is not None:
+                print(f"[verify_edit] {tier}: {_verify_result}", flush=True)
+
+            todo_list = state_dict.get("todo_list")
+            if todo_list is not None:
+                todo_md = todo_list.render_markdown()
+                state_dict["brief"] = state_dict["brief"] + "\n\n" + todo_md
+
+            if _verify_result is not None and "FAIL" in _verify_result:
+                diagnostic = (
+                    f"\n\n[DIAGNOSTIC FEEDBACK — {tier} attempt {attempt}]\n"
+                    f"Verification failed: {_verify_result}\n"
+                    f"Please address the following issues in your next attempt:\n"
+                    f"1. Fix any AST violations reported above.\n"
+                    f"2. Fix any complexity (CC) errors reported above.\n"
+                    f"3. Fix any ruff linting failures reported above.\n"
+                    f"4. Ensure the output passes all verification gates.\n"
+                )
+                run_brief = brief + "\n\n" + diagnostic
+                if attempt == MAX_ATTEMPTS:
+                    if tier == "senior" and is_final:
+                        raise RuntimeError(
+                            "[gate] Senior tier failed verification after 5 attempts - HALT"
+                        )
+                    print(
+                        f"[gate] {tier} attempt {attempt}: VERIFICATION FAIL -> "
+                        f"advancing to next tier with diagnostics",
+                        flush=True,
+                    )
+                continue
+
+            for staged_path in staged_paths:
                 result = verify_edit(staged_path, fn_name)
                 parsed = json.loads(result) if result else {}
                 cc = parsed.get("cc", 0)
@@ -827,21 +865,20 @@ async def run_tier(
                 locked_functions.add(fn_name)
                 _persist_checkpoint(staged_path, fn_name, locked_functions)
                 print(
-                    f"[gate] {tier} attempt {attempt}: {fn_name} CC={cc} <= 5 LOCKED",
+                    f"[conductor -> {tier}] Locked in function {fn_name} (CC <= 5)",
                     flush=True,
                 )
+                break
 
-        if len(locked_functions) == len(target_functions):
-            print(f"[gate] {tier} attempt {attempt}: ALL functions locked at CC <= 5 -> proceed", flush=True)
-            return out
+            if fn_name in locked_functions:
+                break
 
-        remaining = [fn for fn in target_functions if fn not in locked_functions]
-        run_brief = brief + f"\n\n[FUNCTION MICRO-LOOP] Functions still above CC=5: {remaining}. Focus the next edit on these."
+        if fn_name not in locked_functions:
+            if tier == "senior" and is_final:
+                raise RuntimeError(
+                    "[gate] Senior tier failed verification after 5 attempts - HALT"
+                )
 
-    if tier == "senior" and is_final:
-        raise RuntimeError(
-            "[gate] Senior tier failed verification after 5 attempts - HALT"
-        )
     return out
 
 
