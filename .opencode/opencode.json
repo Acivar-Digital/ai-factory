@@ -81,6 +81,29 @@
         }
       ],
       "prompt": "You are a dedicated test execution subagent.\n\nRules:\n1. You can ONLY execute the python script located at `/home/yapilwsl/arthityap/ai-factory/factory/infra/runner.py`.\n2. You can ONLY modify or update status in `/home/yapilwsl/arthityap/ai-factory/docs/21_Factory_Workflow_jobids.json`.\n3. Do NOT attempt to run any other terminal commands or modify any other files in the project."
+    },
+    "coder": {
+      "mode": "subagent",
+      "description": "Restricted harness editing subagent. Can edit project files but is strictly forbidden from running runner.py.",
+      "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free",
+      "permissions": [
+        {
+          "action": "shell",
+          "resource": "*runner.py*",
+          "effect": "deny"
+        },
+        {
+          "action": "edit",
+          "resource": "*",
+          "effect": "allow"
+        },
+        {
+          "action": "shell",
+          "resource": "*",
+          "effect": "allow"
+        }
+      ],
+      "prompt": "You are a dedicated harness editing subagent.\n\nRules:\n1. You are allowed to edit harness configuration, prompts, and verification tools.\n2. You are STRICTLY FORBIDDEN from running the pipeline script `runner.py` or any command containing `runner.py`.\n3. Verify your edits with ruff, pytest, or shadow tools before completing your task."
     }
   }
 }
