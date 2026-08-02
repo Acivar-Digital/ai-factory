@@ -4,6 +4,7 @@ Every worker capability is a subprocess wrapper around an existing
 `factory/tools/*.py` CLI. Agents NEVER touch the filesystem directly — they
 receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
 """
+import ast
 import json
 from pathlib import Path
 from pydantic_ai import ModelRetry
@@ -23,6 +24,13 @@ def _auto_remember(note: str) -> None:
     except Exception:
         pass
 
+
+def _rollback_from_orig(staged: str) -> None:
+    """Restore staged file from its .orig baseline if available."""
+    orig_path = Path(staged + ".orig")
+    if orig_path.exists():
+        Path(staged).write_text(orig_path.read_text(encoding="utf-8"), encoding="utf-8")
+
 def replace_text(relative_path: str, target_text: str, replacement_text: str, is_regex: bool=False, case_insensitive: bool=False, ignore_whitespace: bool=False) -> str:
     """Replace exact text or regex in a repo file. Returns JSON result."""
     from factory.infra.context import stage_path
@@ -39,6 +47,14 @@ def replace_text(relative_path: str, target_text: str, replacement_text: str, is
         argv.append('--ignore-whitespace')
     result = _check_edit_result('replace_text', _run_tool('replace_text', argv))
     _auto_remember(f'[replace_text] {staged}\n---OLD---\n{target_text}\n---NEW---\n{replacement_text}')
+    try:
+        ast.parse(Path(staged).read_text(encoding="utf-8"))
+    except SyntaxError:
+        _rollback_from_orig(staged)
+        raise ModelRetry(
+            "AST SyntaxError: edit corrupted file syntax. Staged file auto-restored from .orig baseline. "
+            "MANDATORY: Use replace_function on the isolated AST function node instead of whole-file replace_text."
+        )
     ast_diag_str = verify_edit(staged, None)
     parsed = json.loads(ast_diag_str)
     if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
@@ -66,6 +82,14 @@ def replace_function(relative_path: str, function_name: str, new_function_code: 
     result = _check_edit_result('replace_function', _run_tool('replace_function', argv))
     scope = f'{class_name}.{function_name}' if class_name else function_name
     _auto_remember(f'[replace_function] {staged}::{scope}\n{new_function_code}')
+    try:
+        ast.parse(Path(staged).read_text(encoding="utf-8"))
+    except SyntaxError:
+        _rollback_from_orig(staged)
+        raise ModelRetry(
+            "AST SyntaxError: edit corrupted file syntax. Staged file auto-restored from .orig baseline. "
+            "MANDATORY: Use replace_function on the isolated AST function node instead of whole-file replace_text."
+        )
     ast_diag_str = verify_edit(staged, function_name)
     parsed = json.loads(ast_diag_str)
     if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
@@ -156,7 +180,18 @@ def verify_edit(relative_path: str, function_name: str | None = None) -> str:
                     target = node
                     break
             if target is None:
-                return json.dumps({"ok": True, "message": f"Function {function_name} not found for targeted verification"})
+                try:
+                    orig_tree = ast.parse(orig_code)
+                    orig_exists = any(
+                        isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and n.name == function_name
+                        for n in ast.walk(orig_tree)
+                    )
+                except SyntaxError:
+                    orig_exists = False
+                if orig_exists:
+                    return json.dumps({"ok": False, "error": f"Function '{function_name}' was removed or unparseable in {staged}"})
+                return json.dumps({"ok": True, "message": f"Function '{function_name}' not present in file"})
 
             func_source = ast.unparse(target)
             passed, cc, depth, msg = verify_refactored_ast(
