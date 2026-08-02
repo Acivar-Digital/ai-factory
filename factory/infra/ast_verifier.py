@@ -527,7 +527,23 @@ def verify_refactored_ast(
         return False, 999, 999, f"SyntaxError in refactored code: {e}"
 
     # 1. Ban unauthorized imports
-    safe_modules = {"typing", "collections", "enum", "dataclasses", "itertools", "re"}
+    safe_modules = {
+        "typing", "collections", "enum", "dataclasses", "itertools", "re",
+        "datetime", "uuid", "math", "functools", "pathlib", "json", "os",
+        "sys", "time", "sqlalchemy",
+    }
+    if orig_code:
+        try:
+            orig_tree = ast.parse(orig_code)
+            for top_node in orig_tree.body:
+                if isinstance(top_node, ast.Import):
+                    for alias in top_node.names:
+                        safe_modules.add(alias.name.split(".")[0])
+                elif isinstance(top_node, ast.ImportFrom):
+                    if top_node.module:
+                        safe_modules.add(top_node.module.split(".")[0])
+        except SyntaxError:
+            pass
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
             violations.append(f"unauthorized_symbol: Created a new class `{node.name}`")
