@@ -15,7 +15,7 @@ The pipeline enforces a **3-tier linear review flow**: `intern` → `engineer` �
 
 **Strict Sandboxing**: All modifications target staging copies under `factory/temp/`. A baseline `.orig` snapshot is captured at staging time for `diff_vs_orig` comparison. **Zero direct edits** to real code outside staging.
 
-## 2. Strategic Design Principles (The 7 Signposts)
+## 2. Strategic Design Principles (The 12 Signposts)
 
 ### 2.1 Model Assignment Lock
 
@@ -83,6 +83,48 @@ Upon run completion, the sub-agent appends the following fields to the same entr
 
 The JSON file is an append-only array. Each entry is a flat object with the fields above. The Orchestrator reads this ledger to audit delegation history and track harness evolution across runs.
 
+### 2.10 Read-Plan-Write Lifecycle & Dynamic Tool Budgets
+
+The pipeline enforces a structured **Read → Plan → Write** lifecycle with dynamic tool budgets that govern resource allocation per phase:
+
+#### Read Tool Budget
+
+The Read budget is always **2× the Write budget**, computed dynamically from the target file's line count:
+
+| Budget | Formula | Example (100-line file) |
+|--------|---------|------------------------|
+| **Read Budget** | `max(30, line_count)` | `max(30, 100)` = **100** |
+| **Write Budget** | `max(15, line_count // 2)` | `max(15, 50)` = **50** |
+
+This ensures that for small files the minimum budgets floor at 30 reads / 15 writes, while for larger files the Read budget scales linearly and the Write budget scales at half the rate — reflecting the principle that reading (understanding) should always be proportionally more expensive than writing (modifying).
+
+#### Planning Gate: Mandatory `remember` Call
+
+Before any edit tools are unlocked, the agent **must** execute a `remember` call in Turn 1. This is the **Planning Gate** — a hard invariant enforced by `GuardToolset` in `factory/infra/tools_guard.py`:
+
+- `remember` is exempt from the gate and always permitted.
+- All other tools (search, read, edit, write, etc.) are **blocked** until `remember` has been called.
+- After **3 blocked attempts**, the gate raises `RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")`.
+- The `remember` budget is **999** (effectively unlimited), ensuring the planning call never fails due to token constraints.
+
+#### Compact Model Middleware (`ling_flash`)
+
+The `ling_flash` model serves as the **compact model middleware**. When the accumulated prompt context exceeds **100K tokens**, the middleware triggers **auto-summarization** — compressing prior conversation history into a condensed summary that preserves decision points, failure modes, and active TODO state. This prevents context window exhaustion during long pipeline runs while retaining all critical state.
+
+#### Cumulative Failure Ledger
+
+A **Cumulative Failure Ledger** chronicles attempt-by-attempt failure modes across the entire pipeline. Each failure entry records:
+
+- The attempt number and tier where the failure occurred.
+- The failure mode (e.g., CC violation, syntax error, hallucinated field, import safety breach).
+- The diagnostic context injected into the next attempt.
+
+This ledger is used to **alter LLM token probability away from repeating mistakes** — by feeding accumulated failure patterns back into the prompt, the system biases the model away from previously failed approaches and toward successful correction paths.
+
+#### 15 Write Failures Halt Rule
+
+If a file accumulates **15 write failures** within a single tier pass, the pipeline **halts immediately** and raises a harness-level error. This rule indicates a **harness instruction issue** rather than an LLM guessing problem — after 15 attempts, the model has been given sufficient opportunity to self-correct, and persistent failure points to a flaw in the harness instructions, verification criteria, or diagnostic injection rather than the model's reasoning capability.
+
 ## 3. Workflow Execution Lifecycle
 
 ```
@@ -146,3 +188,12 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
   3. **Ascending CC Micro-Loops**: Target functions are processed sequentially in ascending initial CC order (`12` -> `12` -> `13` -> `13` -> `14`) with atomic locking to `checkpoint_state.json`.
   4. **SGT Job Ledger Ritual**: All runner executions log start/end timestamps in Singapore Time (SGT, UTC+8) in `docs/21_Factory_Workflow_jobids.json`.
 - **Scoped Functions**: Selected 5 core infrastructure functions (`_feedback_from_audit`, `check_plan_invariants`, `_downstream_closure`, `_affected_tests`, `_py_tree`).
+
+### 2026-08-02 (Principle 12: Read-Plan-Write Lifecycle & Dynamic Tool Budgets)
+- **Added Principle 2.10** — `Read-Plan-Write Lifecycle & Dynamic Tool Budgets`:
+  - Read Tool Budget = `max(30, line_count)`; Write Budget = `max(15, line_count // 2)`. Read budget is always 2× Write budget.
+  - Planning Gate: Mandatory `remember` call in Turn 1 before edit tools unlock; `remember` budget = 999.
+  - Compact Model Middleware (`ling_flash`): Auto-summarization triggers when prompt context > 100K tokens.
+  - Cumulative Failure Ledger: Chronicles attempt-by-attempt failure modes to alter LLM token probability away from repeating mistakes.
+  - 15 Write Failures Halt Rule: Indicates harness instruction issue rather than LLM guessing.
+- **Updated header** from "The 7 Signposts" to "The 12 Signposts" to reflect the expanded principle set.

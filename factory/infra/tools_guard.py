@@ -23,7 +23,7 @@ from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets import FunctionToolset, WrapperToolset
 from pydantic_ai.toolsets.abstract import ToolsetTool
 from pydantic_core import SchemaValidator
-from factory.infra.control import CODER_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REPO_ROOT
+from factory.infra.control import CODER_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REMEMBER_BUDGET, REPO_ROOT
 from factory.infra.tools_const import _BATCH_READ_DEFAULT_HEAD, _BATCH_READ_NO_PATHS
 from factory.infra.tools_file import _parse_range, batch_read, delete_file, normalize_read_path, read_file, rename_file, write_file
 from factory.infra.tools_memory import remember
@@ -118,6 +118,7 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         self._has_planned: bool = False
         self._plan_nudges: int = 0
         self._has_edited: bool = False
+        self._remember_used: int = 0
 
     def _warning(self, name: str) -> str:
         keys = sorted(self._known_tools.keys())
@@ -126,11 +127,15 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
     def _make_guard_tool(self, name: str) -> ToolsetTool[AgentDepsT]:
 
         def _run(args: dict[str, Any], ctx: Any) -> str:
-            return self._warning(name)
-        return _GuardToolsetTool(toolset=self, tool_def=ToolDefinition(name=name, description='Guard fallback: unknown tool. Returns guidance, never executes.'), max_retries=0, args_validator=SchemaValidator({'type': 'any'}), call_func=_run, is_async=False, timeout=None)
+            return f"Unknown tool '{name}'. Available tools: {list(self._known_tools.keys())}"
+        return _GuardToolsetTool(toolset=self, tool_def=ToolDefinition(name=name, description='Guard fallback: unknown tool. Returns guidance, never executes.'), max_retries=20, args_validator=SchemaValidator({'type': 'any'}), call_func=_run, is_async=False, timeout=None)
 
     async def get_tools(self, ctx: Any) -> dict[str, ToolsetTool[AgentDepsT]]:
         tools = await self.wrapped.get_tools(ctx)
+        from factory.infra.tools_memory import get_current_role
+        role = get_current_role()
+        if role == "senior":
+            tools = {k: v for k, v in tools.items() if k not in _SENIOR_BLOCKED}
         self._known_tools = dict(tools)
         for tool in tools.values():
             tool.max_retries = max(getattr(tool, "max_retries", 5), 20)
@@ -147,6 +152,9 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
             self._has_planned = True
         if name == 'remember':
             self._has_planned = True
+            self._remember_used += 1
+            if self._remember_used > REMEMBER_BUDGET:
+                return f"REMEMBER BUDGET EXHAUSTED ({REMEMBER_BUDGET} calls). You have recorded enough plans. Emit final_result now."
         if name in _MODIFY_TOOLS:
             self._has_edited = True
         if name == 'final_result' and not self._has_edited:
@@ -285,7 +293,7 @@ def assert_planner_emitted(budget_exhausted: bool, produced_output: bool, role: 
         raise RuntimeError(f'[PLANNER] tool budget exhausted ({ROLE_TOOL_BUDGET.get(role, DEFAULT_TOOL_BUDGET)}) without a final_result — HALT')
 
 def guard_tools(tools: list[Callable[..., Any]], budget: int=DEFAULT_TOOL_BUDGET, read_budget: int=READ_BUDGET, read_file_budget: int=CODER_READ_FILE_BUDGET) -> GuardToolset:
-    base = FunctionToolset(tools) if tools else FunctionToolset([])
+    base = FunctionToolset(tools, max_retries=20) if tools else FunctionToolset([], max_retries=20)
     return GuardToolset(wrapped=base, budget=budget, read_budget=read_budget, read_file_budget=read_file_budget)
 
 def pydantic_ai_default_block() -> str:
