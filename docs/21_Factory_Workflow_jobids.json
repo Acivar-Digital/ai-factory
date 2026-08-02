@@ -442,6 +442,32 @@
         }
       },
       "current_cc": 2
+    },
+    {
+      "job_id": "016",
+      "timestamp_start": "2026-08-02T20:55:02.751475+00:00",
+      "timestamp_start_sgt": "2026-08-03 04:55:02 SGT",
+      "harness_changes_applied": [
+        "Scoped user_prompt.md strictly to single target function check_plan_invariants in factory/infra/validation.py (CC=13)"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "check_plan_invariants"
+        ],
+        "scope": [
+          "factory/infra/validation.py"
+        ]
+      },
+      "timestamp_end": null,
+      "timestamp_end_sgt": null,
+      "status": "IN_PROGRESS",
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": []
     }
   ]
 }
