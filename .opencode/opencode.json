@@ -43,6 +43,18 @@
     "compaction": {
       "hidden": true,
       "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free"
+    },
+    "runner": {
+      "mode": "subagent",
+      "description": "Pipeline execution runner that runs runner.py and reports status to jobids JSON. Forbidden from editing source code.",
+      "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "/home/yapilwsl/arthityap/ai-factory/docs/21_Factory_Workflow_jobids.json": "allow"
+        }
+      },
+      "prompt": "You are a pipeline execution runner subagent. Your sole responsibility is to run the project pipeline script (PYTHONPATH=. uv run python factory/infra/runner.py) and update execution status in /home/yapilwsl/arthityap/ai-factory/docs/21_Factory_Workflow_jobids.json. You MUST NOT modify any Python source files or test scripts under any circumstances."
     }
   }
 }
