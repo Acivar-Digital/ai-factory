@@ -46,6 +46,7 @@ from factory.infra.output_sanitizer import (
     clean_role_output, extract_model_json, extract_tool_call_payload,
 )
 from factory.infra.state import save_state, record_phase
+from factory.infra.context import compact_context_if_needed
 from factory.infra.tools import wrap_injected_context
 from factory.infra.tools_shell import verify_edit
 from factory.infra.validation import (
@@ -803,12 +804,20 @@ async def run_tier(
     A cumulative failure ledger is maintained in state_dict["failure_history"]
     and rendered into the brief for subsequent attempts and tiers.
 
+    Before each tier attempt, compact_context_if_needed is called to
+    keep the brief within token budget.
+
+    The 15 write failure halt rule enforces that if a target function
+    reaches 15 write/replace verification failures across attempts,
+    a RuntimeError is raised to signal a harness/prompt instruction mismatch.
+
     Returns the role output string.
     """
     brief = state_dict["brief"]
     run_brief = brief
 
     state_dict.setdefault("failure_history", [])
+    state_dict.setdefault("write_failure_count", {})
 
     target_functions = _read_target_functions()
     staged_paths = _read_staged_paths()
@@ -861,8 +870,11 @@ async def run_tier(
             state_dict["brief"] = brief + "\n\n" + ast_block
             run_brief = state_dict["brief"]
 
+        fn_write_failures = state_dict["write_failure_count"].setdefault(fn_name, 0)
+
         for attempt in range(1, MAX_ATTEMPTS + 1):
             print(f"\n=== [conductor -> {tier}] (attempt {attempt}) ===", flush=True)
+            run_brief = await compact_context_if_needed(run_brief)
             state_dict["brief"] = run_brief
             out = await do_role(tier, task, bd, history, exchange, pass_counter, prior, state_dict)
             if record_exchange and tier in EXCHANGE_ROLES:
@@ -878,6 +890,12 @@ async def run_tier(
                 state_dict["brief"] = state_dict["brief"] + "\n\n" + todo_md
 
             if _verify_result is not None and "FAIL" in _verify_result:
+                fn_write_failures += 1
+                state_dict["write_failure_count"][fn_name] = fn_write_failures
+                if fn_write_failures >= 15:
+                    raise RuntimeError(
+                        "[HALT] Target function exceeded 15 write retries — Harness/AST verification failure. Intervene on harness instructions."
+                    )
                 failure_summary = _extract_failure_summary(tier, attempt, _verify_result, fn_name)
                 state_dict["failure_history"].append(failure_summary)
                 ledger_block = _render_cumulative_failure_ledger(state_dict["failure_history"])
