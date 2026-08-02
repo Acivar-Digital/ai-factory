@@ -31,7 +31,7 @@
     "_feedback_from_audit": {
       "baseline_cc": 14,
       "current_cc": 14,
-      "status": "PENDING_REFACTOR"
+      "status": "IN_PROGRESS"
     },
     "check_plan_invariants": {
       "baseline_cc": 13,
@@ -189,6 +189,259 @@
           "current_cc": 3
         }
       }
+    },
+    {
+      "job_id": "006",
+      "timestamp_start": "2026-08-02T17:23:48Z",
+      "timestamp_start_sgt": "2026-08-03 01:23:48 SGT",
+      "status": "FAILED",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "check_plan_invariants"
+        ],
+        "scope": [
+          "factory/infra/validation.py"
+        ]
+      },
+      "timestamp_end": "2026-08-02T17:26:24Z",
+      "timestamp_end_sgt": "2026-08-03 01:26:24 SGT",
+      "failing_tier": "intern",
+      "root_cause": "RuntimeError: [HALT] role 'intern' output unparseable after sanitize: UnexpectedModelBehavior(\"Invalid response from openai chat completions endpoint: 4 validation errors for ChatCompletion\nid\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nchoices\n  Input should be a valid list [type=list_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/list_type\nmodel\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nobject\n  Input should be 'chat.completion' [type=literal_error, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/literal_error\")"
+    },
+    {
+      "job_id": "007",
+      "timestamp_start": "2026-08-02T17:28:07Z",
+      "timestamp_start_sgt": "2026-08-03 01:28:07 SGT",
+      "status": "FAILED",
+      "failing_tier": "engineer",
+      "root_cause": "RuntimeError: [HALT] role 'engineer' output unparseable after sanitize: UnexpectedModelBehavior(\"Invalid response from openai chat completions endpoint: 4 validation errors for ChatCompletion\nid\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nchoices\n  Input should be a valid list [type=list_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/list_type\nmodel\n  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type\nobject\n  Input should be 'chat.completion' [type=literal_error, input_value=None, input_type=NoneType]\n    For further information visit https://errors.pydantic.dev/2.13/v/literal_error\")",
+      "timestamp_end": "2026-08-02T17:33:38Z",
+      "timestamp_end_sgt": "2026-08-03 01:33:38 SGT",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "check_plan_invariants"
+        ],
+        "scope": [
+          "factory/infra/validation.py"
+        ]
+      },
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {}
+    },
+    {
+      "job_id": "008",
+      "timestamp_start": "2026-08-02T17:36:04Z",
+      "timestamp_start_sgt": "2026-08-03 01:36:04 SGT",
+      "timestamp_end": "2026-08-02T17:55:25Z",
+      "timestamp_end_sgt": "2026-08-03 01:55:25 SGT",
+      "status": "FAILED",
+      "failing_tier": "intern",
+      "root_cause": "RuntimeError: [HALT] role 'intern' output unparseable after sanitize: UnexpectedModelBehavior(\"Tool 'bash' exceeded max retries count of 5. Consider raising the retry limit, or see the docs on tool retries: https://ai.pydantic.dev/tools-advanced/#tool-retries\")",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "check_plan_invariants"
+        ],
+        "scope": [
+          "factory/infra/validation.py"
+        ]
+      },
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {}
+    },
+    {
+      "job_id": "009",
+      "timestamp_start": null,
+      "timestamp_start_sgt": null,
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [],
+        "scope": []
+      },
+      "timestamp_end": "2026-08-02T19:57:12Z",
+      "timestamp_end_sgt": "2026-08-03 03:57:12 SGT",
+      "status": "PASSED",
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {
+        "check_plan_invariants": {
+          "status": "LOCKED_IN_PASSED",
+          "current_cc": 4
+        }
+      }
+    },
+    {
+      "job_id": "010",
+      "timestamp_start": null,
+      "timestamp_start_sgt": null,
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": null,
+        "stop_phase": null,
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [],
+        "scope": []
+      },
+      "timestamp_end": null,
+      "timestamp_end_sgt": null,
+      "status": "IN_PROGRESS",
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {}
+    },
+    {
+      "job_id": "011",
+      "timestamp_start": "2026-08-03T04:05:55Z",
+      "timestamp_start_sgt": "2026-08-03 12:05:55 SGT",
+      "timestamp_end": "2026-08-03T04:09:46Z",
+      "timestamp_end_sgt": "2026-08-03 12:09:46 SGT",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "_feedback_from_audit"
+        ],
+        "scope": [
+          "factory/infra/gatekeeper.py"
+        ]
+      },
+      "status": "PASSED",
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {
+        "_feedback_from_audit": {
+          "status": "LOCKED_IN_PASSED",
+          "current_cc": 4
+        }
+      }
+    },
+    {
+      "job_id": "012",
+      "timestamp_start": null,
+      "timestamp_start_sgt": null,
+      "timestamp_end": null,
+      "timestamp_end_sgt": null,
+      "status": "PASSED",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": null,
+        "stop_phase": null,
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [],
+        "scope": []
+      },
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {
+        "_downstream_closure": {
+          "status": "LOCKED_IN_PASSED",
+          "current_cc": 1
+        }
+      }
+    },
+    {
+      "job_id": "013",
+      "timestamp_start": null,
+      "timestamp_start_sgt": null,
+      "timestamp_end": "2026-08-02T20:24:48Z",
+      "timestamp_end_sgt": "2026-08-03 04:24:48 SGT",
+      "status": "FAILED",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "_unwrap_tool_output"
+        ],
+        "scope": [
+          "factory/infra/ledger.py"
+        ]
+      },
+      "failing_tier": "intern",
+      "root_cause": "RuntimeError: [HALT] intern tier attempt 1 failed verification: [verify_edit] intern: FAIL \u2014 factory/temp/factory/infra/ledger.py \u2014 Lint regression: New ruff errors: {'109:21', '114:16', '{obj.get(\"message\", text)}'}",
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {
+        "_unwrap_tool_output": {
+          "status": "FAILED_AT_INTERN",
+          "reason": "Lint regression: new ruff errors at lines 109:21, 114:16"
+        }
+      }
+    },
+    {
+      "job_id": "014",
+      "timestamp_start": null,
+      "timestamp_start_sgt": null,
+      "timestamp_end": "2026-08-02T20:31:23+00:00",
+      "timestamp_end_sgt": "2026-08-03T04:31:23+08:00",
+      "status": "FAILED",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": null,
+        "stop_phase": null,
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [],
+        "scope": []
+      },
+      "failing_tier": "senior",
+      "root_cause": "Runner process timed out after 300s during senior tier review. Senior agent was still processing (last action: verify_edit at 04:30:34) when the 300s timeout was reached. Senior tier never returned a result.",
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {}
+    },
+    {
+      "job_id": "015",
+      "timestamp_start": null,
+      "timestamp_start_sgt": null,
+      "timestamp_end": "2026-08-02T20:33:17Z",
+      "timestamp_end_sgt": "2026-08-03T04:33:17+08:00",
+      "status": "PASSED",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": null,
+        "stop_phase": null,
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [],
+        "scope": []
+      },
+      "failing_tier": null,
+      "root_cause": null,
+      "ast_verification_summary": {},
+      "improvements_needed": [],
+      "target_functions_status": {
+        "_unwrap_tool_output": {
+          "status": "LOCKED_IN_PASSED",
+          "cc_actual": 2
+        }
+      },
+      "current_cc": 2
     }
   ]
 }
