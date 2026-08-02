@@ -418,6 +418,9 @@ ling_flash = OpenAIChatModel(
     ),
 )
 
+intern_model = ling_flash
+engineer_model = ling_flash
+senior_model = ling_flash
 compact_model = ling_flash
 
 laguna_xs = OpenAIChatModel(
