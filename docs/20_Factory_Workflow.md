@@ -195,3 +195,6 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 ### 2026-08-02 (Loud Mandatory Jobids Ledger Inspection at Every Turn)
 - **Principle 10 (Mandatory Jobids Inspection at Every Turn)**: Orchestrator MUST read and inspect `/home/yapilwsl/arthityap/ai-factory/docs/20_Factory_Workflow_jobids.json` at EVERY turn to prevent context loss during context compaction.
 - **Top-Level Ledger Directives**: Inspect `project_title`, `objective`, `definition_of_done`, `autonomous_execution_rules` (`what_you_must_do` vs `what_you_must_not_do`), and `target_functions_status` table to drive all autonomous harness hardening decisions.
+
+### 2026-08-02 (Unified Sub-Agent Memory Mandate via bd remember)
+- **Principle 11 (Unified Intelligence & bd remember Alignment)**: Orchestrator and sub-agents operate as ONE unified system. Always use `bd remember` for persistent architectural decisions and alignment updates. Sub-agents query and write to `bd remember` to maintain context across context compactions and agent invocations.
