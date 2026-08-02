@@ -584,6 +584,24 @@ def _run_verify_edit(author: str, bd: str, state_dict: dict[str, Any], target_fn
         try:
             if functions_to_verify:
                 for fn_name in functions_to_verify:
+                    full_path = REPO_ROOT / staged_file_path
+                    orig_path = full_path.with_suffix(full_path.suffix + ".orig")
+                    fn_exists = False
+                    for check_path in [full_path, orig_path]:
+                        if check_path.exists():
+                            try:
+                                tree = ast.parse(check_path.read_text(encoding="utf-8"))
+                                if any(
+                                    isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                                    and n.name == fn_name
+                                    for n in ast.walk(tree)
+                                ):
+                                    fn_exists = True
+                                    break
+                            except SyntaxError:
+                                pass
+                    if not fn_exists:
+                        continue
                     result = verify_edit(staged_file_path, fn_name)
                     parsed = json.loads(result) if result else {}
                     if parsed.get("function_name") == fn_name:
