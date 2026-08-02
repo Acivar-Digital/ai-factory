@@ -8,14 +8,25 @@
     "4. Refactored code is production-ready, ruff-clean, Pydantic v2 compliant, and passes pytest suite.",
     "5. Verified code deliverables stored in factory/temp/."
   ],
-  "autonomous_execution_rules": [
-    "NEVER stop or prompt for human intervention until Definition of Done is 100% satisfied across all target functions.",
-    "Orchestrator NEVER modifies target code directly; only tunes harness infrastructure, AST verifiers, YAML prompts, and tool retries.",
-    "If a Job run fails, capture root cause in job ledger, apply targeted harness fix in factory/infra/, and immediately launch next Job run.",
-    "Process functions strictly 1-by-1 sequentially in ascending CC order to guarantee completion within tool turn budgets.",
-    "Auto-rollback on SyntaxError or duplicate function name generation to preserve file integrity.",
-    "Persist all architectural decisions in bd remember and job ledger; keep LLM traces out of global bd database."
-  ],
+  "autonomous_execution_rules": {
+    "what_you_must_do": [
+      "1. Delegate a sub-agent (subagent_type: general) to execute the harness pipeline via runner.py.",
+      "2. Carefully inspect execution logs, traceback outputs, AST diagnostics, and failure points returned by the sub-agent.",
+      "3. Analyze root cause of failures (e.g. tool budget exhaustion, AST complexity > 5, syntax errors, duplicate functions, unimported symbols).",
+      "4. Formulate targeted harness architecture fixes (pipeline micro-loops, prompt recipes, verifiers, tool retries).",
+      "5. Delegate sub-agents to apply harness modifications in factory/infra/ and factory/infra/agents/.",
+      "6. Delegate a sub-agent to run the updated harness pipeline again.",
+      "7. Append job results, diagnostics, and harness changes applied to docs/20_Factory_Workflow_jobids.json.",
+      "8. Repeat steps 1-7 continuously without stopping until 100% of target functions achieve CC <= 5 and Senior APPROVED verdict."
+    ],
+    "what_you_must_not_do": [
+      "1. MUST NOT manually refactor target repository code or factory/temp/ files directly \u2014 ALL refactoring must be produced autonomously by the harness pipeline.",
+      "2. MUST NOT stop, halt, or request human intervention/confirmation while any target function remains > CC=5 or fails verification.",
+      "3. MUST NOT execute runner.py directly in the orchestrator context window \u2014 always delegate to sub-agents to prevent context bloat.",
+      "4. MUST NOT pollute global bd remember database with transient LLM refactoring traces (keep traces isolated in jobids.json and state_dict).",
+      "5. MUST NOT modify user prompt scope or alter core user requirements in user_prompt.md."
+    ]
+  },
   "target_functions_status": {
     "_format_advisory_value": {
       "baseline_cc": 6,
