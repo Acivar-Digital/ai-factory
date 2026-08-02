@@ -8,17 +8,17 @@ start_phase: intern
 stop_phase: senior
 target_repo: /home/yapilwsl/arthityap/ai-factory
 target_functions:
-  - check_plan_invariants
+  - _feedback_from_audit
 scope:
   - factory/infra/validation.py
 ---
 
 # EPIC
-Reduce Cyclomatic Complexity (CC) to <= 5 for check_plan_invariants in factory/infra/validation.py.
+Reduce Cyclomatic Complexity (CC) to <= 5 for _feedback_from_audit in factory/infra/validation.py.
 
 ## CONTEXT
 The CC scanner identified high-complexity violations in factory/infra/validation.py:
-1. validation.py: check_plan_invariants (CC=13)
+1. validation.py: _feedback_from_audit (CC=13)
 
 Refactor using guard clauses, early returns, helper extraction, and single-responsibility decomposition. Do NOT alter public function signatures or break existing contracts.
 
@@ -29,6 +29,6 @@ Refactor using guard clauses, early returns, helper extraction, and single-respo
 4. Preserve full signatures & type annotations: zero changes to public function signatures or parameters.
 
 ## DELIVERABLES
-1. Refactor check_plan_invariants from CC=13 to <= 5.
+1. Refactor _feedback_from_audit from CC=13 to <= 5.
 2. Code must pass uv run ruff check with 0 errors.
 3. Code must pass find_cc_nested.py verification (CC <= 5).
