@@ -911,14 +911,8 @@ async def run_tier(
                 run_brief = brief + "\n\n" + ledger_block + "\n\n" + diagnostic
                 state_dict["brief"] = brief + "\n\n" + ledger_block + "\n\n" + diagnostic
                 if attempt == MAX_ATTEMPTS:
-                    if tier == "senior" and is_final:
-                        raise RuntimeError(
-                            "[gate] Senior tier failed verification after 5 attempts - HALT"
-                        )
-                    print(
-                        f"[gate] {tier} attempt {attempt}: VERIFICATION FAIL -> "
-                        f"advancing to next tier with diagnostics",
-                        flush=True,
+                    raise RuntimeError(
+                        f"[HALT] {tier} tier attempt {attempt} failed verification: {_verify_result}"
                     )
                 continue
 
