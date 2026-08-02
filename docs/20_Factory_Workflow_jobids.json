@@ -213,6 +213,57 @@
         "Enforce strict 1-by-1 function-level micro-iteration to prevent tool budget exhaustion",
         "Auto-clean duplicate helper definitions in AST verifier"
       ]
+    },
+    {
+      "job_id": "004",
+      "timestamp_start": "2026-08-02T02:00:00Z",
+      "harness_changes_applied": [
+        "Added list comprehension and BoolOp decomposition rule to intern.yaml and engineer.yaml",
+        "Fixed clean_rel prefix stripping in _stage_copies in context.py to resolve forecast_store.py staging path",
+        "Sorted target functions in ascending initial CC order"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_functions": [
+          "_format_advisory_value",
+          "validate_promo_code",
+          "_extract_trigger_labels",
+          "_synthesize_and_save_daily_forecast",
+          "_get_fallback_narrative"
+        ]
+      },
+      "timestamp_end": "2026-08-02T05:31:41.705948+00:00",
+      "status": "FAILED",
+      "failing_tier": "intern",
+      "root_cause": "Tool budget exhaustion in intern tier + _format_advisory_value list comprehension inline if conditions added CC points (CC=6 vs target <=5) + staging mirror path resolution error on forecast_store.py.",
+      "ast_verification_summary": {
+        "_format_advisory_value": {
+          "cc": 6,
+          "passed": false
+        },
+        "validate_promo_code": {
+          "cc": 6,
+          "passed": false
+        },
+        "_extract_trigger_labels": {
+          "cc": 7,
+          "passed": false
+        },
+        "_synthesize_and_save_daily_forecast": {
+          "cc": 8,
+          "passed": false
+        },
+        "_get_fallback_narrative": {
+          "cc": 9,
+          "passed": false
+        }
+      },
+      "improvements_needed": [
+        "Execute strict 1-by-1 single-function micro-looping in pipeline.py to dedicate turn budget per function",
+        "Inject explicit helper function extraction recipes into prompt context for list comprehensions",
+        "Lock completed functions atomically to disk immediately upon verify_edit success"
+      ]
     }
   ]
 }
