@@ -172,10 +172,12 @@ async def _run_agent_retry(agent: Agent, brief: str, *, loopguard: bool = False,
     """Run an agent with retry-on-transient-error.
 
     Retries up to MAX_RETRIES on ModelAPIError (transient provider
-    failures). UnexpectedModelBehavior is not retried (structural
-    issue, handled by the caller). On the final failure or on any
-    non-retryable exception, writes a FAIL report and raises
-    SystemExit(1).
+    failures) and on UnexpectedModelBehavior when it contains
+    "Invalid response" or "validation errors" (transient provider
+    errors masquerading as model behavior issues). UnexpectedModelBehavior
+    without those markers is re-raised immediately (structural issue,
+    handled by the caller). On the final failure or on any non-retryable
+    exception, writes a FAIL report and raises SystemExit(1).
     """
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -183,18 +185,20 @@ async def _run_agent_retry(agent: Agent, brief: str, *, loopguard: bool = False,
                 from types import SimpleNamespace
                 return await run_with_loopguard(agent, brief, phase=phase, role=role, state=SimpleNamespace(bd_id=bd_id), history=message_history, require_transcript=True, agent_id=agent_id)
             return await agent.run(brief, message_history=message_history)
-        except ModelAPIError as exc:
+        except (ModelAPIError, UnexpectedModelBehavior) as exc:
+            if isinstance(exc, UnexpectedModelBehavior) and (
+                "Invalid response" not in str(exc) and "validation errors" not in str(exc).lower()
+            ):
+                raise
             if attempt >= MAX_RETRIES:
                 _report_run_failure(phase, exc, attempt, "transient provider failure after retries exhausted")
                 raise SystemExit(1)
             backoff = min(64.0, (2.0 ** attempt) + random.uniform(0.5, 1.5))
             log_operator(
-                f"ModelAPIError on attempt {attempt}/7: {exc}. Retrying in {backoff:.1f}s...",
+                f"{'UnexpectedModelBehavior' if isinstance(exc, UnexpectedModelBehavior) else 'ModelAPIError'} on attempt {attempt}/7: {exc}. Retrying in {backoff:.1f}s...",
                 level="WARN",
             )
             await asyncio.sleep(backoff)
-        except UnexpectedModelBehavior:
-            raise
         except Exception as exc:
             _report_run_failure(phase, exc, attempt, "non-retryable error")
             raise SystemExit(1)
