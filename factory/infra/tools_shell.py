@@ -90,6 +90,15 @@ def replace_function(relative_path: str, function_name: str, new_function_code: 
             "AST SyntaxError: edit corrupted file syntax. Staged file auto-restored from .orig baseline. "
             "MANDATORY: Use replace_function on the isolated AST function node instead of whole-file replace_text."
         )
+    tree = ast.parse(Path(staged).read_text(encoding="utf-8"))
+    seen: dict[str, int] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            seen[node.name] = seen.get(node.name, 0) + 1
+    for name, count in seen.items():
+        if count > 1:
+            _rollback_from_orig(staged)
+            raise ModelRetry(f"Duplicate function definition '{name}' detected in file. Ensure function names are unique.")
     ast_diag_str = verify_edit(staged, function_name)
     parsed = json.loads(ast_diag_str)
     if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
