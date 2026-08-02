@@ -138,7 +138,11 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ## Changelog
 
-### 2026-08-02 (Initialization of Self-Refactoring Job 21)
+### 2026-08-02 (Initialization & Grilling Alignment of Self-Refactoring Job 21)
 - **Created Ledger & Spec**: Created `docs/21_Factory_Workflow_jobids.json` and `docs/21_Factory_Workflow.md` for tracking the self-refactoring epic of `factory/infra/` modules.
+- **Confirmed 4 Core Design Decisions**:
+  1. **Strict Staging Isolation**: All refactoring takes place in `factory/temp/` sandbox. Baseline `.orig` snapshots compare against `.py` working copies. **No auto-deployment** to live `factory/infra/` files.
+  2. **Full Pytest Suite Verification**: Every tier turn runs the full test suite (`PYTHONPATH=. uv run pytest tests/`) to ensure 0 regressions.
+  3. **Ascending CC Micro-Loops**: Target functions are processed sequentially in ascending initial CC order (`12` -> `12` -> `13` -> `13` -> `14`) with atomic locking to `checkpoint_state.json`.
+  4. **SGT Job Ledger Ritual**: All runner executions log start/end timestamps in Singapore Time (SGT, UTC+8) in `docs/21_Factory_Workflow_jobids.json`.
 - **Scoped Functions**: Selected 5 core infrastructure functions (`_feedback_from_audit`, `check_plan_invariants`, `_downstream_closure`, `_affected_tests`, `_py_tree`).
-- **Singapore Time Standard**: Mandatory SGT timestamp formatting (`timestamp_start_sgt`, `timestamp_end_sgt`) in `docs/21_Factory_Workflow_jobids.json`.

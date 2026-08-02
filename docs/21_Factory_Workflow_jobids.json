@@ -6,7 +6,7 @@
     "2. All 7 layers of AST verification pass cleanly with 0 syntax errors, 0 unimported symbols, 0 duplicate helper functions, and 0 unauthorized imports.",
     "3. Mandatory 3-tier review pipeline (Intern -> Engineer -> Senior) completes with Senior Engineer Architect verdict APPROVED.",
     "4. Refactored factory/infra/ code is production-ready, ruff-clean, Pydantic v2 compliant, and passes pytest suite.",
-    "5. Verified code deliverables stored in factory/temp/ and synced to target repo."
+    "5. Verified code deliverables stored in factory/temp/ (no auto-deployment to live factory/infra/ code)."
   ],
   "autonomous_execution_rules": {
     "what_you_must_do": [
