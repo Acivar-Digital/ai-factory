@@ -55,7 +55,7 @@ from factory.infra.validation import (
 )
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
-MAX_ATTEMPTS = 5
+MAX_ATTEMPTS = 1
 
 
 def _compute_cc(node: ast.AST) -> int:
