@@ -125,6 +125,11 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ## Changelog
 
+### 2026-08-02 (Pre-Restart Harness Hardening & Resilience)
+- **Per-Function Atomic Checkpointing**: Implemented `_persist_checkpoint()` in `pipeline.py` to write locked function progress atomically to `factory/orch/reports/checkpoint_state.json`, preserving completed work across restarts/interruptions.
+- **Automated Monolith AST Decomposition Hints**: Added `generate_ast_decomposition_hint()` in `pipeline.py` to analyze CC > 8 functions and inject concrete helper function extraction suggestions into Layer 3 of the Surgical Context Sandwich.
+- **Symbol-Enriched ModelRetry Guidance**: Updated `replace_function` and `replace_text` in `tools_shell.py` to include module symbol outlines (`imported_modules` + `top_level_symbols`) in `ModelRetry` diagnostics when in-tool AST verification fails.
+
 ### 2026-08-02 (Function-by-Function Micro-Loops & Surgical Context Sandwich)
 - **Function-by-Function Micro-Loops**: Pipeline in `pipeline.py` executes refactoring sequentially function-by-function. Once a function reaches CC <= 5, it is locked in immediately and skipped in subsequent passes.
 - **Surgical Context Sandwich Pattern**: Constructed 3-layer prompt context block (`extract_file_skeleton_and_imports` + `extract_function_node_source` + function-specific refactoring directive), preserving global imports and symbol outlines while keeping prompt sizes under 3k tokens.

@@ -74,6 +74,70 @@ def _compute_cc(node: ast.AST) -> int:
     return cc
 
 
+def _extract_condition_vars(node: ast.AST) -> list[str]:
+    """Collect variable names referenced in an AST condition node."""
+    names: list[str] = []
+    for child in ast.walk(node):
+        if isinstance(child, ast.Name):
+            names.append(child.id)
+    return names
+
+
+def generate_ast_decomposition_hint(file_path: str, function_name: str) -> str:
+    """Parse file_path, find function_name, and return a decomposition hint.
+
+    If the function's cyclomatic complexity exceeds 8, scans inner ``if``
+    statements, loops, and nested call nodes to suggest specific helper
+    function extractions (e.g. ``_helper_<name>()``).
+
+    Returns a formatted hint string, or an empty string if CC <= 8.
+    """
+    path = Path(file_path)
+    if not path.exists():
+        return ""
+    try:
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return ""
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+            cc = _compute_cc(node)
+            if cc <= 8:
+                return ""
+            suggestions: list[str] = []
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, ast.If):
+                    cond_vars = _extract_condition_vars(child.test)
+                    if cond_vars:
+                        suggestions.append(
+                            f"Extract condition '{cond_vars[0]}' into _helper_{function_name}_guard()"
+                        )
+                elif isinstance(child, (ast.For, ast.AsyncFor, ast.While)):
+                    suggestions.append(
+                        f"Extract loop body into _helper_{function_name}_loop()"
+                    )
+                elif isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                    callee = child.func.id
+                    if callee != function_name and not callee.startswith("_helper_"):
+                        suggestions.append(
+                            f"Extract call to '{callee}' into _helper_{function_name}_{callee}()"
+                        )
+            unique = []
+            seen = set()
+            for s in suggestions:
+                if s not in seen:
+                    seen.add(s)
+                    unique.append(s)
+            if not unique:
+                return f"Function `{function_name}` has CC={cc}. Consider splitting into smaller helpers."
+            hint_lines = [f"Function `{function_name}` has CC={cc} (above 8). Suggested decompositions:"]
+            for s in unique:
+                hint_lines.append(f"  - {s}")
+            return "\n".join(hint_lines)
+    return ""
+
+
 def auto_discover_high_cc_functions(staged_paths: list[str], max_cc: int = 5) -> list[tuple[str, str]]:
     """Scan staged_paths for functions with cyclomatic complexity exceeding max_cc.
 
@@ -626,8 +690,31 @@ def _build_isolated_ast_block() -> str:
             lines.append("")
             lines.append("#### Layer 3 — Refactoring Instruction")
             lines.append(f"Refactor ONLY the function `{fn_name}` in `{staged_path}` to reduce its cyclomatic complexity to CC <= 5. Do not modify any other function or file.")
+            try:
+                hint = generate_ast_decomposition_hint(staged_path, fn_name)
+                if hint:
+                    lines.append("")
+                    lines.append("#### Decomposition Hint")
+                    lines.append(hint)
+            except Exception:
+                pass
             lines.append("")
     return "\n".join(lines)
+
+
+def _persist_checkpoint(staged_path: str, fn_name: str, locked_functions: set[str]) -> None:
+    """Atomically persist locked_functions and state to checkpoint_state.json."""
+    reports_dir = REPO_ROOT / "factory" / "orch" / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = reports_dir / "checkpoint_state.json"
+    state = {
+        "locked_functions": sorted(locked_functions),
+        "staged_path": staged_path,
+        "function_name": fn_name,
+    }
+    tmp = checkpoint_path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    os.replace(tmp, checkpoint_path)
 
 
 async def run_tier(
@@ -724,6 +811,7 @@ async def run_tier(
                 if parsed.get("ok") is False or cc > 5:
                     continue
                 locked_functions.add(fn_name)
+                _persist_checkpoint(staged_path, fn_name, locked_functions)
                 print(
                     f"[gate] {tier} attempt {attempt}: {fn_name} CC={cc} <= 5 LOCKED",
                     flush=True,

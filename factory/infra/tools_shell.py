@@ -5,6 +5,7 @@ Every worker capability is a subprocess wrapper around an existing
 receive only the allow-listed, ACL-wrapped tools the orchestrator hands them.
 """
 import json
+from pathlib import Path
 from pydantic_ai import ModelRetry
 from factory.common import _run_tool
 from factory.infra.ast_verifier import extract_header_symbol_contract, run_lint_regression, verify_refactored_ast
@@ -41,7 +42,15 @@ def replace_text(relative_path: str, target_text: str, replacement_text: str, is
     ast_diag_str = verify_edit(staged, None)
     parsed = json.loads(ast_diag_str)
     if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
-        raise ModelRetry(f"AST Verification Failed: {parsed.get('message', parsed.get('error', 'CC > 5'))}. Please fix the edit to use simple guard clauses and ensure CC <= 5.")
+        header_contract = extract_header_symbol_contract(
+            Path(staged).read_text(encoding="utf-8")
+        )
+        avail_syms = header_contract.get("imported_modules", []) + header_contract.get("top_level_symbols", [])
+        sym_hint = f" Available symbols in module: {avail_syms[:15]}." if avail_syms else ""
+        raise ModelRetry(
+            f"AST Verification Failed: {parsed.get('message', parsed.get('error', 'CC > 5'))}."
+            f"{sym_hint} Please fix the edit to use simple guard clauses and ensure CC <= 5."
+        )
     return f"{result}\n[AST Verification]: {ast_diag_str}"
 
 def replace_function(relative_path: str, function_name: str, new_function_code: str, class_name: str | None=None) -> str:
@@ -60,7 +69,15 @@ def replace_function(relative_path: str, function_name: str, new_function_code: 
     ast_diag_str = verify_edit(staged, function_name)
     parsed = json.loads(ast_diag_str)
     if parsed.get("ok") is False or parsed.get("cc", 0) > 5:
-        raise ModelRetry(f"AST Verification Failed: {parsed.get('message', parsed.get('error', 'CC > 5'))}. Please fix the edit to use simple guard clauses and ensure CC <= 5.")
+        header_contract = extract_header_symbol_contract(
+            Path(staged).read_text(encoding="utf-8")
+        )
+        avail_syms = header_contract.get("imported_modules", []) + header_contract.get("top_level_symbols", [])
+        sym_hint = f" Available symbols in module: {avail_syms[:15]}." if avail_syms else ""
+        raise ModelRetry(
+            f"AST Verification Failed: {parsed.get('message', parsed.get('error', 'CC > 5'))}."
+            f"{sym_hint} Please fix the edit to use simple guard clauses and ensure CC <= 5."
+        )
     return f"{result}\n[AST Verification]: {ast_diag_str}"
 
 def add_constant(relative_path: str, constant_name: str, constant_code: str) -> str:
