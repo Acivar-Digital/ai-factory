@@ -60,19 +60,18 @@
       "timestamp_start": "2026-08-02T14:22:02Z",
       "timestamp_start_sgt": "2026-08-02 22:22:02 SGT",
       "harness_changes_applied": [
-        "Initial baseline run for Job 21 factory self-refactoring epic",
-        "Scoped 5 target functions in factory/infra/ (validation.py, gatekeeper.py, ledger.py)"
+        "Scoped user_prompt.md strictly to single target function _affected_tests in factory/infra/gatekeeper.py (CC=12)",
+        "Enforced strict 1-function 1-file micro-scoping to eliminate multi-file context bloat"
       ],
       "pipeline_config": {
         "start_phase": "intern",
         "stop_phase": "senior",
         "target_repo": "/home/yapilwsl/arthityap/ai-factory",
         "target_functions": [
-          "_affected_tests",
-          "_py_tree",
-          "check_plan_invariants",
-          "_downstream_closure",
-          "_feedback_from_audit"
+          "_affected_tests"
+        ],
+        "scope": [
+          "factory/infra/gatekeeper.py"
         ]
       },
       "timestamp_end": null,
