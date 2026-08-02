@@ -1,130 +1,207 @@
-[
-  {
-    "job_id": "001",
-    "timestamp_start": "2026-08-02T01:02:41Z",
-    "harness_changes_applied": [
-      "Per-function atomic checkpoint lock in pipeline.py",
-      "AST decomposition hints for monoliths CC > 8",
-      "Symbol-enriched ModelRetry guidance in tools_shell.py",
-      "Function missing detection fix in verify_edit",
-      "Set max_retries=20 on FunctionToolset base constructor"
-    ],
-    "pipeline_config": {
-      "start_phase": "intern",
-      "stop_phase": "senior",
-      "target_functions": [
-        "_format_advisory_value",
-        "_get_fallback_narrative",
-        "_synthesize_and_save_daily_forecast",
-        "_extract_trigger_labels",
-        "validate_promo_code"
-      ]
+{
+  "project_title": "AI-Factory Autonomous Harness Hardening & Quality Alignment",
+  "objective": "Continuously tune, harden, and orchestrate the AI-Factory harness (factory/infra/) so that the multi-agent pipeline (runner.py) autonomously refactors all target codebase functions in factory/prompt/user_prompt.md to CC <= 5, passing 7-layer AST verification, ruff, pyright, unit tests, and 3-tier review without manual orchestrator code edits.",
+  "definition_of_done": [
+    "1. 100% of target functions in scoped files reach Cyclomatic Complexity (CC) <= 5.",
+    "2. All 7 layers of AST verification pass cleanly with 0 syntax errors, 0 unimported symbols, 0 duplicate helper functions, and 0 unauthorized imports.",
+    "3. Mandatory 3-tier review pipeline (Intern -> Engineer -> Senior) completes with Senior Engineer Architect verdict APPROVED.",
+    "4. Refactored code is production-ready, ruff-clean, Pydantic v2 compliant, and passes pytest suite.",
+    "5. Verified code deliverables stored in factory/temp/."
+  ],
+  "autonomous_execution_rules": [
+    "NEVER stop or prompt for human intervention until Definition of Done is 100% satisfied across all target functions.",
+    "Orchestrator NEVER modifies target code directly; only tunes harness infrastructure, AST verifiers, YAML prompts, and tool retries.",
+    "If a Job run fails, capture root cause in job ledger, apply targeted harness fix in factory/infra/, and immediately launch next Job run.",
+    "Process functions strictly 1-by-1 sequentially in ascending CC order to guarantee completion within tool turn budgets.",
+    "Auto-rollback on SyntaxError or duplicate function name generation to preserve file integrity.",
+    "Persist all architectural decisions in bd remember and job ledger; keep LLM traces out of global bd database."
+  ],
+  "target_functions_status": {
+    "_format_advisory_value": {
+      "baseline_cc": 6,
+      "current_cc": 4,
+      "status": "LOCKED_IN_PASSED"
     },
-    "timestamp_end": "2026-08-02T01:07:58Z",
-    "status": "FAILED",
-    "failing_tier": "intern",
-    "root_cause": "4 of 5 target functions exceed CC=5 threshold: _get_fallback_narrative (CC=7), _synthesize_and_save_daily_forecast (CC=8), _extract_trigger_labels (CC=7), validate_promo_code (CC=6). Pipeline timed out after 300s; coder exhausted tool budget before completing edits.",
-    "ast_verification_summary": {
-      "_format_advisory_value": {
-        "cc": 4,
-        "passed": true
-      },
-      "_get_fallback_narrative": {
-        "cc": 7,
-        "passed": false
-      },
-      "_synthesize_and_save_daily_forecast": {
-        "cc": 8,
-        "passed": false
-      },
-      "_extract_trigger_labels": {
-        "cc": 7,
-        "passed": false
-      },
-      "validate_promo_code": {
-        "cc": 6,
-        "passed": false
-      }
+    "validate_promo_code": {
+      "baseline_cc": 6,
+      "current_cc": 6,
+      "status": "PENDING_REFACTOR"
     },
-    "improvements_needed": [
-      "Increase coder tool budget or add incremental checkpointing to prevent budget exhaustion",
-      "Break _synthesize_and_save_daily_forecast (CC=8) into smaller sub-functions as top priority",
-      "Decompose _get_fallback_narrative (CC=7) and _extract_trigger_labels (CC=7) by extracting helper functions",
-      "Reduce validate_promo_code (CC=6) by extracting validation rules into a separate function",
-      "Consider increasing pipeline timeout beyond 300s for complex multi-function refactor tasks"
-    ]
+    "_extract_trigger_labels": {
+      "baseline_cc": 7,
+      "current_cc": 7,
+      "status": "PENDING_REFACTOR"
+    },
+    "_synthesize_and_save_daily_forecast": {
+      "baseline_cc": 8,
+      "current_cc": 8,
+      "status": "PENDING_REFACTOR"
+    },
+    "_get_fallback_narrative": {
+      "baseline_cc": 9,
+      "current_cc": 9,
+      "status": "PENDING_REFACTOR"
+    }
   },
-  {
-    "job_id": "002",
-    "timestamp_start": "2026-08-02T01:15:00Z",
-    "harness_changes_applied": [
-      "Injected pydantic-ai-coding skill SKILL.md into agent system prompts",
-      "Enforced strict Pydantic v2 syntax hard rules in control.py SKILL_MAP",
-      "Sorted target functions in ascending initial CC order in pipeline.py"
-    ],
-    "pipeline_config": {
-      "start_phase": "intern",
-      "stop_phase": "senior",
-      "target_functions": [
-        "validate_promo_code",
-        "_format_advisory_value",
-        "_extract_trigger_labels",
-        "_get_fallback_narrative",
-        "_synthesize_and_save_daily_forecast"
+  "jobs": [
+    {
+      "job_id": "001",
+      "timestamp_start": "2026-08-02T01:02:41Z",
+      "harness_changes_applied": [
+        "Per-function atomic checkpoint lock in pipeline.py",
+        "AST decomposition hints for monoliths CC > 8",
+        "Symbol-enriched ModelRetry guidance in tools_shell.py",
+        "Function missing detection fix in verify_edit",
+        "Set max_retries=20 on FunctionToolset base constructor"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_functions": [
+          "_format_advisory_value",
+          "_get_fallback_narrative",
+          "_synthesize_and_save_daily_forecast",
+          "_extract_trigger_labels",
+          "validate_promo_code"
+        ]
+      },
+      "timestamp_end": "2026-08-02T01:07:58Z",
+      "status": "FAILED",
+      "failing_tier": "intern",
+      "root_cause": "4 of 5 target functions exceed CC=5 threshold: _get_fallback_narrative (CC=7), _synthesize_and_save_daily_forecast (CC=8), _extract_trigger_labels (CC=7), validate_promo_code (CC=6). Pipeline timed out after 300s; coder exhausted tool budget before completing edits.",
+      "ast_verification_summary": {
+        "_format_advisory_value": {
+          "cc": 4,
+          "passed": true
+        },
+        "_get_fallback_narrative": {
+          "cc": 7,
+          "passed": false
+        },
+        "_synthesize_and_save_daily_forecast": {
+          "cc": 8,
+          "passed": false
+        },
+        "_extract_trigger_labels": {
+          "cc": 7,
+          "passed": false
+        },
+        "validate_promo_code": {
+          "cc": 6,
+          "passed": false
+        }
+      },
+      "improvements_needed": [
+        "Increase coder tool budget or add incremental checkpointing to prevent budget exhaustion",
+        "Break _synthesize_and_save_daily_forecast (CC=8) into smaller sub-functions as top priority",
+        "Decompose _get_fallback_narrative (CC=7) and _extract_trigger_labels (CC=7) by extracting helper functions",
+        "Reduce validate_promo_code (CC=6) by extracting validation rules into a separate function",
+        "Consider increasing pipeline timeout beyond 300s for complex multi-function refactor tasks"
       ]
     },
-    "timestamp_end": "2026-08-02T01:21:00Z",
-    "status": "FAILED",
-    "failing_tier": "intern",
-    "root_cause": "File corruption in agents.py during replace_text (merged function signatures causing AST SyntaxError) + timeout at 300s.",
-    "ast_verification_summary": {
-      "validate_promo_code": {"cc": 6, "passed": false},
-      "_format_advisory_value": {"cc": 4, "passed": false, "syntax_error": true},
-      "_extract_trigger_labels": {"cc": 7, "passed": false},
-      "_get_fallback_narrative": {"cc": 7, "passed": false, "syntax_error": true},
-      "_synthesize_and_save_daily_forecast": {"cc": 8, "passed": false}
-    },
-    "improvements_needed": [
-      "Implement auto-rollback on SyntaxError during replace_function/replace_text",
-      "Mandate replace_function over replace_text for function refactoring",
-      "Fix staging path resolution for forecast_store.py"
-    ]
-  }
-,
-  {
-    "job_id": "003",
-    "timestamp_start": "2026-08-02T01:30:00Z",
-    "harness_changes_applied": [
-      "Auto-rollback on SyntaxError during replace_function/replace_text in tools_shell.py",
-      "Mandated replace_function over replace_text in intern.yaml and engineer.yaml",
-      "Sorted target functions in ascending initial CC order"
-    ],
-    "pipeline_config": {
-      "start_phase": "intern",
-      "stop_phase": "senior",
-      "target_functions": [
-        "_format_advisory_value",
-        "validate_promo_code",
-        "_extract_trigger_labels",
-        "_synthesize_and_save_daily_forecast",
-        "_get_fallback_narrative"
+    {
+      "job_id": "002",
+      "timestamp_start": "2026-08-02T01:15:00Z",
+      "harness_changes_applied": [
+        "Injected pydantic-ai-coding skill SKILL.md into agent system prompts",
+        "Enforced strict Pydantic v2 syntax hard rules in control.py SKILL_MAP",
+        "Sorted target functions in ascending initial CC order in pipeline.py"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_functions": [
+          "validate_promo_code",
+          "_format_advisory_value",
+          "_extract_trigger_labels",
+          "_get_fallback_narrative",
+          "_synthesize_and_save_daily_forecast"
+        ]
+      },
+      "timestamp_end": "2026-08-02T01:21:00Z",
+      "status": "FAILED",
+      "failing_tier": "intern",
+      "root_cause": "File corruption in agents.py during replace_text (merged function signatures causing AST SyntaxError) + timeout at 300s.",
+      "ast_verification_summary": {
+        "validate_promo_code": {
+          "cc": 6,
+          "passed": false
+        },
+        "_format_advisory_value": {
+          "cc": 4,
+          "passed": false,
+          "syntax_error": true
+        },
+        "_extract_trigger_labels": {
+          "cc": 7,
+          "passed": false
+        },
+        "_get_fallback_narrative": {
+          "cc": 7,
+          "passed": false,
+          "syntax_error": true
+        },
+        "_synthesize_and_save_daily_forecast": {
+          "cc": 8,
+          "passed": false
+        }
+      },
+      "improvements_needed": [
+        "Implement auto-rollback on SyntaxError during replace_function/replace_text",
+        "Mandate replace_function over replace_text for function refactoring",
+        "Fix staging path resolution for forecast_store.py"
       ]
     },
-    "timestamp_end": "2026-08-02T01:38:00Z",
-    "status": "FAILED",
-    "failing_tier": "senior",
-    "root_cause": "Senior tier HALT after 5 verification failures. Tool budget exhaustion in coder agent left functions 2-5 unrefactored. Only _format_advisory_value (CC=4) locked in.",
-    "ast_verification_summary": {
-      "_format_advisory_value": {"cc": 4, "passed": true},
-      "validate_promo_code": {"cc": 6, "passed": false},
-      "_extract_trigger_labels": {"cc": 7, "passed": false},
-      "_synthesize_and_save_daily_forecast": {"cc": 8, "passed": false},
-      "_get_fallback_narrative": {"cc": 9, "passed": false}
-    },
-    "improvements_needed": [
-      "In replace_function, detect duplicate top-level function names and raise ModelRetry",
-      "Enforce strict 1-by-1 function-level micro-iteration to prevent tool budget exhaustion",
-      "Auto-clean duplicate helper definitions in AST verifier"
-    ]
-  }
-]
+    {
+      "job_id": "003",
+      "timestamp_start": "2026-08-02T01:30:00Z",
+      "harness_changes_applied": [
+        "Auto-rollback on SyntaxError during replace_function/replace_text in tools_shell.py",
+        "Mandated replace_function over replace_text in intern.yaml and engineer.yaml",
+        "Sorted target functions in ascending initial CC order"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_functions": [
+          "_format_advisory_value",
+          "validate_promo_code",
+          "_extract_trigger_labels",
+          "_synthesize_and_save_daily_forecast",
+          "_get_fallback_narrative"
+        ]
+      },
+      "timestamp_end": "2026-08-02T01:38:00Z",
+      "status": "FAILED",
+      "failing_tier": "senior",
+      "root_cause": "Senior tier HALT after 5 verification failures. Tool budget exhaustion in coder agent left functions 2-5 unrefactored. Only _format_advisory_value (CC=4) locked in.",
+      "ast_verification_summary": {
+        "_format_advisory_value": {
+          "cc": 4,
+          "passed": true
+        },
+        "validate_promo_code": {
+          "cc": 6,
+          "passed": false
+        },
+        "_extract_trigger_labels": {
+          "cc": 7,
+          "passed": false
+        },
+        "_synthesize_and_save_daily_forecast": {
+          "cc": 8,
+          "passed": false
+        },
+        "_get_fallback_narrative": {
+          "cc": 9,
+          "passed": false
+        }
+      },
+      "improvements_needed": [
+        "In replace_function, detect duplicate top-level function names and raise ModelRetry",
+        "Enforce strict 1-by-1 function-level micro-iteration to prevent tool budget exhaustion",
+        "Auto-clean duplicate helper definitions in AST verifier"
+      ]
+    }
+  ]
+}
