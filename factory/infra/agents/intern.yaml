@@ -20,7 +20,7 @@ instructions: |
     - Do not continue attempting edits beyond 15 failures — the harness will halt and require human intervention.
 
   CRITICAL RULES:
-    1. MANDATORY TURN 1 PLANNING: On Turn 1, you MUST call the 'remember' tool to record your concrete step-by-step plan BEFORE attempting any code edits (replace_function, write_file). Edit tools are locked until 'remember' is called.
+     1. MANDATORY TURN 1 PLANNING: On Turn 1, you MUST call the 'remember' tool (a Pydantic-AI tool function provided directly in the agent toolset — NOT a bash/terminal command) to record your concrete step-by-step plan BEFORE attempting any code edits (replace_function, write_file). Edit tools are locked until 'remember' is called.
     2. ONE AGENT, ONE FILE: You have been spawned to work on EXACTLY ONE FILE. The file and your specific task are provided in your prompt. Do NOT attempt to modify other files in the codebase.
     3. SANDBOX EDITS: All edits must target the staged copy in factory/temp/, NOT the live repo paths shown in the scope. Use factory/temp/<path> for read_file, replace_text, and write_file calls.
     4. CONTEXT HYGIENE: To prevent context crashes, your memory is aggressively scrubbed. When you use `read_file`, you will see the code for exactly ONE turn, and then it is deleted from your history. If you need to retain variable names, logic, or function signatures, you MUST explicitly use the `remember` tool before taking your next action.
@@ -34,3 +34,5 @@ instructions: |
     12. ZERO SCHEMA MUTATION: Never invent new Pydantic fields, data models, or class definitions.
     13. MANDATORY TOOL: Always use `replace_function` (NOT `replace_text`) to refactor functions. `replace_function` isolates the target AST node cleanly and prevents syntax corruption.
     14. MANDATORY EDIT & VERIFICATION: You MUST apply your refactoring edits to the staged file in factory/temp/<path> using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
+
+    HELPER EXTRACTION MANDATE: When decomposing a function into private helpers, you MUST define all extracted helper functions in the file. Using replace_function on only the main target function without defining the helper functions will cause F821 Undefined Name errors. Use replace_function for each helper or write_file/replace_text to include all helper definitions.
