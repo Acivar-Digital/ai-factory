@@ -374,3 +374,15 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
   - Cumulative Failure Ledger: Chronicles attempt-by-attempt failure modes to alter LLM token probability away from repeating mistakes.
   - 15 Write Failures Halt Rule: Indicates harness instruction issue rather than LLM guessing.
 - **Updated header** from "The 7 Signposts" to "The 12 Signposts" to reflect the expanded principle set.
+
+### 2026-08-02 (Mermaid Flowchart & Unicode ASCII Workflow Diagrams)
+- **Added Section 3.1 Flowchart Diagrams**: Appended a comprehensive `mermaid` flowchart and an 80-column Unicode ASCII box-drawing diagram illustrating the end-to-end pipeline lifecycle:
+  - User Prompt Scope Parsing → Staged Copies in `factory/temp/`
+  - Token Calculator & Compact Model Middleware (`ling_flash` > 100K tokens)
+  - Mandatory Turn 1 Planning Gate (`remember` tool call unlocks edit tools)
+  - Read-Plan-Write Lifecycle (Read Budget = 2× Write Budget)
+  - 3-Tier Execution Loop (Intern → Engineer → Senior)
+  - In-Tool AST Firewall (`replace_function` / `replace_text` → instant `verify_edit()` check → `ModelRetry` on CC > 5 or syntax error)
+  - Upfront Diagnostic Handover & Cumulative Failure Ledger
+  - 15 Write Failures Circuit Breaker Halt Rule
+  - Definition of Done (`pytest` pass + `ruff` clean + CC ≤ 5) → Lock to `checkpoint_state.json`
