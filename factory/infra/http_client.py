@@ -49,6 +49,11 @@ def _fix_openrouter_error_finish_reason(response: httpx.Response) -> None:
     OpenRouter sets ``finish_reason`` to ``"error"`` when the endpoint fails or
     returns an error status. Pydantic-AI's OpenAI provider only accepts
     ``stop``, ``length``, ``tool_calls``, ``content_filter`` or ``function_call``.
+
+    If the body contains an ``"error"`` field, or if ``choices`` is missing,
+    ``None``, not a list, or an empty list, the response is treated as a
+    transient gateway error (status 502) so that ``AsyncTenacityTransport``
+    retries the request.
     """
     if response.status_code != 200:
         return
@@ -59,8 +64,12 @@ def _fix_openrouter_error_finish_reason(response: httpx.Response) -> None:
         body = response.json()
     except (ValueError, json.JSONDecodeError):
         return
+    if "error" in body:
+        response.status_code = 502
+        return
     choices = body.get("choices")
-    if not isinstance(choices, list):
+    if not isinstance(choices, list) or len(choices) == 0:
+        response.status_code = 502
         return
     changed = False
     for choice in choices:
@@ -77,6 +86,7 @@ def validate_retryable_response(response: httpx.Response) -> None:
     Permanent 4xx (401/403/400) pass through untouched — no wasted retries on
     bad-key / bad-request errors.
     """
+    _fix_openrouter_error_finish_reason(response)
     if response.status_code in RETRYABLE_STATUS_CODES:
         response.raise_for_status()
 
