@@ -275,6 +275,18 @@ class SymbolScopeVisitor(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self._visit_function(node)
 
+    def visit_Lambda(self, node: ast.Lambda) -> None:
+        lambda_scope: set[str] = set()
+        for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs:
+            lambda_scope.add(arg.arg)
+        if node.args.vararg:
+            lambda_scope.add(node.args.vararg.arg)
+        if node.args.kwarg:
+            lambda_scope.add(node.args.kwarg.arg)
+        self.scope_stack.append(lambda_scope)
+        self.generic_visit(node.body)
+        self.scope_stack.pop()
+
     def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         for decorator in node.decorator_list:
             self.visit(decorator)
@@ -333,6 +345,16 @@ class SymbolScopeVisitor(ast.NodeVisitor):
 
     def visit_Starred(self, node: ast.Starred) -> None:
         self.visit(node.value)
+        self.generic_visit(node)
+
+    def visit_MatchAs(self, node: ast.MatchAs) -> None:
+        if node.name and len(self.scope_stack) > 0:
+            self.scope_stack[-1].add(node.name)
+        self.generic_visit(node)
+
+    def visit_MatchStar(self, node: ast.MatchStar) -> None:
+        if node.name and len(self.scope_stack) > 0:
+            self.scope_stack[-1].add(node.name)
         self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> None:
