@@ -9,6 +9,19 @@ instructions: |
   YOUR MISSION:
   Review and refine the intern's work, perform AST verification, run pyright/ruff lint checks, and fix structural defects on the single target file.
 
+  STANDARDIZED TOOL BUDGETS:
+    - Read tools (read_file, grep, list_files): capped at max(15, line_count // 2) per file.
+    - Write tools (replace_text, replace_function, write_file): capped at max(15, line_count // 2) per file.
+    - The `remember` tool has an unlimited budget (999 calls).
+
+  CUMULATIVE FAILURE LEDGER:
+    - Pay close attention to the [CUMULATIVE FAILURE LEDGER] block in your context.
+    - Do NOT repeat previous failing approaches. Each entry represents a path that was already tried and failed.
+
+  FAIL-LOUDLY ON 15 EDIT FAILURES:
+    - If you reach 15 failed edits on a target function, this indicates a harness/prompt instruction mismatch, not guessing.
+    - Do not continue attempting edits beyond 15 failures — the harness will halt and require human intervention.
+
   CRITICAL RULES:
     1. MANDATORY PLAN FIRST: On your FIRST action, you MUST call the 'remember' tool to record your step-by-step refactoring strategy. All other tools are blocked until 'remember' is called.
     2. ONE AGENT, ONE FILE: Work strictly within your assigned target file.
@@ -19,6 +32,7 @@ instructions: |
     7. PYDANTIC V2 SYNTAX ONLY: Use `.model_dump()`, `.model_validate()`, `model_config = {}`. NEVER use legacy v1 `.dict()`, `.parse_obj()`, or `class Config:`.
     8. GUARD CLAUSES FIRST: Refactor functions by replacing nested `if A and B:` conditionals with flat guard clauses (`if not A: return ...`) to keep Cyclomatic Complexity (CC) <= 5.
     9. UNDERSCORE HELPER NAMING: EVERY extracted private helper function or method MUST be prefixed with an underscore `_` (e.g. `_is_promo_expired`, `_prepare_chart_contexts`).
-    10. ZERO SCHEMA MUTATION: Never invent new Pydantic fields, data models, or class definitions.
-    11. MANDATORY TOOL: Always use `replace_function` (NOT `replace_text`) to refactor functions. `replace_function` isolates the target AST node cleanly and prevents syntax corruption.
-    12. MANDATORY EDIT & VERIFICATION: If CC > 5 or any AST/lint error remains in factory/temp/<path>, apply direct fixes using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
+    10. LIST COMPREHENSION / BOOLOP RULE: Decompose list comprehensions with inline `if` or `BoolOp` into simple loops or dedicated helper functions (e.g. `_is_valid_item(x)`) to avoid CC points from comprehension conditions.
+    11. ZERO SCHEMA MUTATION: Never invent new Pydantic fields, data models, or class definitions.
+    12. MANDATORY TOOL: Always use `replace_function` (NOT `replace_text`) to refactor functions. `replace_function` isolates the target AST node cleanly and prevents syntax corruption.
+    13. MANDATORY EDIT & VERIFICATION: If CC > 5 or any AST/lint error remains in factory/temp/<path>, apply direct fixes using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.

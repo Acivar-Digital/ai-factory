@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from typing import TypedDict
 
-from factory.infra.control import REPO_ROOT, TEMP_DIR
+from factory.infra.control import REPO_ROOT, TEMP_DIR, compact_model
 from factory.common.operator import log_operator
 from factory.infra.tools import get_file_symbols
 from factory.infra.models import DraftPlan
@@ -132,13 +132,18 @@ def _stage_copies(file_paths: list[str], staged: list[str]) -> list[tuple[str, s
         modes.append((real, mode))
         try:
             target_root = Path(os.environ.get("TARGET_REPO") or REPO_ROOT)
-            wt_src = TEMP_DIR / "working_tree" / real
+            clean_rel = real
+            for pfx in ("factory/temp/", "temp/"):
+                if clean_rel.startswith(pfx):
+                    clean_rel = clean_rel[len(pfx):]
+                    break
+            wt_src = TEMP_DIR / "working_tree" / clean_rel
             if wt_src.exists():
                 src = wt_src
-            elif (target_root / real).exists():
-                src = target_root / real
+            elif (target_root / clean_rel).exists():
+                src = target_root / clean_rel
             else:
-                src = REPO_ROOT / real
+                src = REPO_ROOT / clean_rel
             dst = Path(mirror)
             dst.parent.mkdir(parents=True, exist_ok=True)
             content = src.read_text(encoding="utf-8")
@@ -357,6 +362,30 @@ def _quarantine_coder_artifacts(bd: str) -> None:
             path.rename(quar / path.name)
         except Exception as exc:
             log_operator(f"[QUARANTINE] failed to move {path.name}: {exc!r}", level="WARNING")
+
+
+def calculate_tokens(text: str) -> int:
+    return len(text) // 4
+
+
+async def compact_context_if_needed(prompt_text: str, model=None) -> str:
+    token_count = calculate_tokens(prompt_text)
+    if token_count > 100_000:
+        from pydantic_ai import Agent
+        from pydantic_ai.settings import ModelSettings
+        summarizer_model = model if model is not None else compact_model
+        summary_agent = Agent(
+            summarizer_model,
+            output_type=str,
+            model_settings=ModelSettings(parallel_tool_calls=False),
+        )
+        summary = await summary_agent.run(
+            "Summarize the following context concisely into an execution summary. "
+            "Include key decisions, file changes, and remaining action items. "
+            "Omit verbatim file contents unless they contain critical details."
+        )
+        return f"[COMPACTED CONTEXT SUMMARY]\n{summary.output}\n\n{prompt_text}"
+    return prompt_text
 
 
 def _dep_pointers_for(file_paths: list[str]) -> list[str]:
