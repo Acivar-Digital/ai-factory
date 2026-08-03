@@ -42,12 +42,12 @@
     },
     "compaction": {
       "hidden": true,
-      "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free"
+      "model": "literouter/openrouter/poolside/laguna-xs-2.1:free"
     },
     "runner": {
       "mode": "subagent",
       "description": "Restricted pipeline runner that can ONLY execute runner.py and write to jobids.json",
-      "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free",
+      "model": "literouter/openrouter/poolside/laguna-xs-2.1:free",
       "permissions": [
         {
           "action": "edit",
@@ -65,11 +65,6 @@
           "effect": "deny"
         },
         {
-          "action": "edit",
-          "resource": "/home/yapilwsl/arthityap/ai-factory/docs/21_Factory_Workflow_jobids.json",
-          "effect": "allow"
-        },
-        {
           "action": "shell",
           "resource": "*",
           "effect": "deny"
@@ -78,6 +73,16 @@
           "action": "shell",
           "resource": "*runner.py*",
           "effect": "allow"
+        },
+        {
+          "action": "edit",
+          "resource": "**/21_Factory_Workflow_jobids.json",
+          "effect": "allow"
+        },
+        {
+          "action": "write",
+          "resource": "**/21_Factory_Workflow_jobids.json",
+          "effect": "allow"
         }
       ],
       "prompt": "You are a dedicated test execution subagent.\n\nRules:\n1. You can ONLY execute the python script located at `/home/yapilwsl/arthityap/ai-factory/factory/infra/runner.py`.\n2. You can ONLY modify or update status in `/home/yapilwsl/arthityap/ai-factory/docs/21_Factory_Workflow_jobids.json`.\n3. Do NOT attempt to run any other terminal commands or modify any other files in the project."
@@ -85,7 +90,7 @@
     "coder": {
       "mode": "subagent",
       "description": "Restricted harness editing subagent. Can edit project files but is strictly forbidden from running runner.py.",
-      "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free",
+      "model": "literouter/openrouter/poolside/laguna-xs-2.1:free",
       "permissions": [
         {
           "action": "shell",
