@@ -1,6 +1,6 @@
 """Pre-LLM gate for the Orchestrator.
 
-The conductor (A8) calls :func:`run_gate` BEFORE LLM supervisors ever see a
+The conductor (A8) calls :func:`run_gate` BEFORE LLM reviewers ever see a
 coder's output. It enforces two cheap, deterministic quality gates:
 
 1. ``ruff check --fix`` on every changed file (style/lint hygiene).
@@ -47,6 +47,36 @@ def _run(cmd: tuple[str, ...], paths: list[str]) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout or "", proc.stderr or ""
 
 
+def _collect_stems(changed_files: list[str]) -> set[str]:
+    """Return module stems from changed files for test matching."""
+    stems: set[str] = set()
+    for f in changed_files:
+        base = os.path.basename(f)
+        if base == "__init__.py":
+            stems.add(os.path.basename(os.path.dirname(f)))
+            continue
+        stem, ext = os.path.splitext(base)
+        if ext == ".py":
+            stems.add(stem)
+    return stems
+
+
+def _is_matching_test(name: str, stems: set[str]) -> bool:
+    """Return True when *name* is a test file whose stem matches *stems*."""
+    stem, ext = os.path.splitext(name)
+    return ext == ".py" and stem.startswith("test_") and stem[5:] in stems
+
+
+def _find_matching_tests(tests_root: str, stems: set[str]) -> list[str]:
+    """Walk *tests_root* and collect test files targeting *stems*."""
+    matched: list[str] = []
+    for root, _dirs, files in os.walk(tests_root):
+        for name in files:
+            if _is_matching_test(name, stems):
+                matched.append(os.path.join(root, name))
+    return sorted(set(matched))
+
+
 def _affected_tests(changed_files: list[str]) -> list[str]:
     """Find test files that target the touched modules.
 
@@ -60,31 +90,10 @@ def _affected_tests(changed_files: list[str]) -> list[str]:
     tests_root = os.path.normpath(TESTS_DIR)
     if not os.path.isdir(tests_root):
         return []
-
-    stems: set[str] = set()
-    for f in changed_files:
-        base = os.path.basename(f)
-        if base == "__init__.py":
-            # package-wide init change: exercise its sibling tests only
-            pkg = os.path.basename(os.path.dirname(f))
-            stems.add(pkg)
-            continue
-        stem, ext = os.path.splitext(base)
-        if ext == ".py":
-            stems.add(stem)
-
+    stems = _collect_stems(changed_files)
     if not stems:
         return []
-
-    matched: list[str] = []
-    for root, _dirs, files in os.walk(tests_root):
-        for name in files:
-            stem, ext = os.path.splitext(name)
-            if ext != ".py":
-                continue
-            if stem.startswith("test_") and stem[5:] in stems:
-                matched.append(os.path.join(root, name))
-    return sorted(set(matched))
+    return _find_matching_tests(tests_root, stems)
 
 
 def _run_ruff(changed_files: list[str]) -> tuple[bool, str]:

@@ -25,6 +25,7 @@ Tools exposed to the LLM:
 import ast
 import asyncio
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -50,10 +51,10 @@ _codebase_dir = str(Path(__file__).resolve().parent)
 if _codebase_dir not in sys.path:
     sys.path.insert(0, _codebase_dir)
 
-from dotenv import load_dotenv
-from fastmcp import FastMCP
-from indexer_core import index_single_file, remove_single_file
-from config import STANDARD_DIRS
+from dotenv import load_dotenv  # noqa: E402
+from fastmcp import FastMCP  # noqa: E402
+from indexer_core import index_single_file, remove_single_file  # noqa: E402
+from config import STANDARD_DIRS  # noqa: E402
 
 try:
     from mcp_watcher import run_preflight, start_embedded_watcher
@@ -2010,7 +2011,7 @@ def index_repository(
     include_dirs = [f"{repo_name}/{d}" for d in STANDARD_DIRS]
 
     async def _run_index():
-        from indexer_local import embed_with_retry as emb_fn
+        from indexer_local import embed_with_retry as emb_fn, process_file, _get_embedding_model, Filter, FieldCondition, MatchAny, PointStruct, VectorParams, VECTOR_SIZE, Distance
         client = _get_qdrant_client()
         existing = [c.name for c in client.get_collections().collections]
         if reset and collection in existing:
@@ -2018,7 +2019,7 @@ def index_repository(
             existing = []
             try:
                 hash_cache_path.unlink()
-            except:
+            except Exception:
                 pass
         if collection not in existing:
             client.create_collection(
@@ -2190,6 +2191,7 @@ def get_collection_stats_resource(collection: str):
 @mcp.prompt()
 def codebase_query(collection: str, question: str, search_limit: int = 5):
     """Generate a prompt for codebase Q/A with semantic search."""
+    from indexer_local import search_codebase
     result = search_codebase(query=question, collection=collection, limit=search_limit, min_score=0.0)
     if result.get("success") and result.get("results"):
         parts = []

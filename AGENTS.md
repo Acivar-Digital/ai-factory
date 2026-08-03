@@ -3,7 +3,7 @@
 # AI-Factory — What This Repo Is
 
 **Deterministic orchestrator for multi-agent code generation pipelines.** Spawns LLM agents
-(planner, coder, supervisor, red-team, ops) in a phase pipeline. The conductor is a
+in a 3-tier phase pipeline (intern, engineer, senior). The conductor is a
 deterministic Python script — NO LLM orchestrator, NO delegation of orchestration decisions.
 
 ## How to Understand This Repo Quickly
@@ -147,7 +147,7 @@ This prevents "tool thrashing" (endlessly looping on discovery tools without a p
 
 - **Decision Log**: Persist via `bd remember`.
 - **Skill**: Load `ai-factory` skill for full repo context (`b skill ai-factory`).
-- **Status/Loop-Back** (`factory/infra/exchange.py`: `loop_back` logic line 216-230; `pipeline.py`: gate FAIL status update line 846-847): When `red_team` or `supervisor_review` blocks, `STATUS.md` shows `current = "coder"` with `(BACK TO CODER)`. See `ai-factory` skill (`SKILL.md`) and `CHANGELOG.md` 2026-07-22 Status Reflection entry.
+- **Status/Loop-Back**: Tier handovers and diagnostic propagation across tiers (intern -> engineer -> senior) update pipeline state and diagnostic logs. See `ai-factory` skill (`SKILL.md`).
 - **Memories**: Search with `bd memories <keyword>` before asking questions.
 
 ## USER DIRECTIVE (PERSISTED 2026-07-22)
@@ -160,6 +160,6 @@ This prevents "tool thrashing" (endlessly looping on discovery tools without a p
 ## HOW TO CONTINUE (IMPERATIVE — 2026-07-22)
 
 1. Read `factory/prompt/user_prompt.md` frontmatter lines 7-8 (`start_phase`, `stop_phase`).
-2. Change phases to continue pipeline: `start_phase: coder`, `stop_phase: ops` (or whichever gate is needed).
+2. Change phases to continue pipeline: `start_phase: intern`, `stop_phase: senior` (or whichever tier is needed).
 3. Confirm before any edit. The user must specify exact file and exact edit.
 4. DO NOT TOUCH OTHER REPOS. Work stays in AI-FACTORY (`/home/yapilwsl/arthityap/ai-factory/`). Target repo (`baziforecaster`) is ONLY accessed via `TARGET_REPO` in user_prompt.md. No direct edits to target repo files unless exact file + exact edit given.

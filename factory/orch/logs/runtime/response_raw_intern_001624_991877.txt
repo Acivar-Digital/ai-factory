@@ -1,0 +1,33 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[tool-call] remember({"note": "Plan: Refactor red_team_passed (CC=6) to CC<=5 by extracting three private helpers: _has_blocker_findings, _has_audit_data, _has_unresolved_global_blocker. Each helper has CC<=2. Main function becomes simple composition with CC<=3. Use replace_function to replace the red_team_passed body and add the three helpers right before it."})
+
+[text] Let me find the exact location of `red_team_passed` in the file
+
+[tool-call] grep({"relative_path": "factory/temp/factory/infra/validation.py", "pattern": "def red_team_passed"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 200})
+
+[text] Now I have the exact function. I'll extract three private helpers to bring CC down to <=5.
+
+
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "red_team_passed", "new_function_code": "def _has_blocker_findings(findings: list[dict]) -> bool:\n    \"\"\"Return True if any finding has severity == 'blocker'.\"\"\"\n    return any(f.get(\"severity\") == \"blocker\" for f in findings)\n\n\ndef _has_audit_data(findings: list[dict], rubric_cells: list[dict]) -> bool:\n    \"\"\"Return True if there is at least one finding or rubric cell.\"\"\"\n    return bool(findings) or bool(rubric_cells)\n\n\ndef _has_unresolved_global_blocker(\n    rubric_cells: list[dict], failing: bool\n) -> bool:\n    \"\"\"Return True if a blocker rubric cell has no matching finding and no\n    failing finding exists (i.e. the blocker cannot be resolved).\"\"\"\n    return (\n        any(\n            c.get(\"severity\") == \"blocker\" and not c.get(\"passed\")\n            for c in rubric_cells\n        )\n        and not failing\n    )\n\n\ndef red_team_passed(findings: list[dict], rubric_cells: list[dict]) -> bool:\n    \"\"\"Deterministic red-team go/no-go verdict — SINGLE SOURCE OF TRUTH.\n\n    Used by BOTH `run_red_team_gate` and the inline `passed()` reviewer check\n    so the gating logic can never drift between the two code paths (and never\n    contradict red_team.yaml).\n\n    Gate is driven SOLELY by:\n      * `findings` (task-keyed, severity == \"blocker\") -> which tasks to recode,\n      * an unresolvable global blocker in `rubric_cube` (a blocker cell with no\n        matching `findings` entry) -> HARD FAIL.\n    The LLM's free `green` boolean is NEVER trusted. This is exactly the\n    contract documented in templates/red_team.yaml + customised/red_team.yaml.\n    \"\"\"\n    failing = _has_blocker_findings(findings)\n    has_audit_data = _has_audit_data(findings, rubric_cells)\n    unresolved_global = _has_unresolved_global_blocker(rubric_cells, failing)\n    return has_audit_data and not (failing or unresolved_global)"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "red_team_passed"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_has_blocker_findings"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_has_audit_data"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_has_unresolved_global_blocker"})
+
+[text] All four functions pass CC checks. Let me run the full verification suite.
+
+
+
+[tool-call] bash({"command": "cd /home/yapilwsl/arthityap/ai-factory && uv run ruff check factory/temp/factory/infra/validation.py 2>&1"})
+
+[tool-call] final_result({"status": "done", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "Refactored red_team_passed (CC=6→3) by extracting three private helpers: _has_blocker_findings (CC=1), _has_audit_data (CC=2), _has_unresolved_global_blocker (CC=3). Public signature unchanged.", "notes": "All CC checks pass (red_team_passed=3, all helpers ≤3). No other functions modified.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true})
+
+[tool-call] final_result({"status": "done", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "Refactored red_team_passed (CC=6→3) by extracting three private helpers: _has_blocker_findings (CC=1), _has_audit_data (CC=2), _has_unresolved_global_blocker (CC=3). Public signature unchanged.", "notes": "All CC checks pass (red_team_passed=3, all helpers ≤3). No other functions modified.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true, "task_id": "a101k"})

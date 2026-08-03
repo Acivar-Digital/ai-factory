@@ -9,11 +9,9 @@ Mirrors the harness's per-role execution into a clean, role-organised tree:
       workplan/  <role>/<role>.json      (parsed Pydantic output)
 
 Role -> folder mapping (matches the requested artefact layout):
-    planner            -> planner
-    supervisor_plan    -> planner_sup
-    coder              -> coder
-    supervisor_review  -> coder_sup
-    red_team           -> red_team
+     intern           -> intern
+     engineer         -> engineer
+     senior           -> senior
 
 `ops` is intentionally excluded (not in ROLE_FOLDER).
 

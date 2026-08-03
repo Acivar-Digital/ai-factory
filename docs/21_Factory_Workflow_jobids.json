@@ -804,6 +804,48 @@
           "detail": "CC=9 exceeds threshold of 5. Needs helper extraction."
         }
       }
+    },
+    {
+      "job_id": "023",
+      "timestamp_start": "2026-08-03T08:15:00Z",
+      "timestamp_start_sgt": "2026-08-03 16:15:00 SGT",
+      "harness_changes_applied": [],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [],
+        "scope": []
+      },
+      "timestamp_end": "2026-08-03T08:15:16Z",
+      "timestamp_end_sgt": "2026-08-03 16:15:16 SGT",
+      "status": "FAILED",
+      "failing_tier": "intern",
+      "root_cause": "[HALT] intern tier attempt 1 failed verification: [verify_edit] intern: FAIL — factory/temp/factory/infra/validation.py — function '_blocker_findings_from_risks' has CC=9 (target CC <= 5). The intern tier's refactoring of red_team_passed (extracting _has_blocker_finding and _has_unresolved_global_blocker helpers to reduce CC from 6 to 5) passed ruff/pyright/exec checks, but the subsequent verification step detected that _blocker_findings_from_risks still has CC=9, exceeding the CC<=5 threshold. The runner halted before reaching engineer or senior tiers.",
+      "ast_verification_summary": {},
+      "improvements_needed": [
+        "Extract helpers from _blocker_findings_from_risks (CC=9) to bring CC<=5 — split the function into smaller helpers that each check a subset of the rubric cell logic",
+        "Also address _feedback_from_review_findings (CC=10) and red_team_passed (CC=6) which remain above threshold",
+        "Increase edit tool budget or implement incremental refactoring to allow more edits per job attempt",
+        "Re-run runner.py after applying the above refactorings"
+      ],
+      "target_functions_status": {
+        "red_team_passed": {
+          "status": "FAILED",
+          "current_cc": 6,
+          "detail": "CC=6 exceeds threshold of 5. Needs helper extraction (attempted in this run but did not complete)."
+        },
+        "_feedback_from_review_findings": {
+          "status": "FAILED",
+          "current_cc": 10,
+          "detail": "CC=10 exceeds threshold of 5. Needs helper extraction."
+        },
+        "_blocker_findings_from_risks": {
+          "status": "FAILED",
+          "current_cc": 9,
+          "detail": "CC=9 exceeds threshold of 5. Needs helper extraction. Verification caught this as the blocking issue."
+        }
+      }
     }
   ]
 }

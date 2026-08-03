@@ -1,0 +1,7 @@
+{
+  "locked_functions": [
+    "red_team_passed"
+  ],
+  "staged_path": "factory/temp/factory/infra/validation.py",
+  "function_name": "red_team_passed"
+}

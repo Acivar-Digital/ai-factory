@@ -538,26 +538,13 @@ class ControlSheet(BaseModel):
 
 
 def load_control_sheet() -> ControlSheet:
-    return ControlSheet(
-        models={
-            "planner_model": gemini_3_1_pro_low,
-            "supervisor_plan_model" : gemini_3_1_pro_low,
-            "supervisor_review_model": gemini_3_1_pro_low,
-            "coder_model": gemini_3_1_pro_low,
-            "red_team_model": gemini_3_1_pro_low,
-            "ops_model": laguna_xs,
-            "compact_model": gemini_3_5_flash_extra_low,
-            "codebase_model": gemini_3_5_flash_extra_low,
-            "healer_model" : gemini_3_5_flash_extra_low,
-            "intern_model" : laguna_s,
-            "engineer_model" : laguna_s,
-            "senior_model" : laguna_s,
-            "compact_model" : laguna_s,
-              
-              
-
-        }
-    )
+    return ControlSheet(models={
+        "codebase_model": gemini_3_5_flash_extra_low,
+        "intern_model": laguna_s,
+        "engineer_model": laguna_s,
+        "senior_model": laguna_s,
+        "compact_model": laguna_s,
+    })
 
 
 CONTROL_SHEET = load_control_sheet()

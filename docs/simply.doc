@@ -11,14 +11,14 @@
 - This simplified architecture will be built on the new `main` branch.
 
 ## 2. The Human-Driven DAG
-- The AI `planner` agent is entirely deleted.
-- The human user assumes the role of the planner. The human will write a JSON file (e.g., `user_plan.json`) that maps exactly **one file to exactly one prompt**.
+- The AI planning agent is entirely deleted.
+- The human user assumes the planning role. The human will write a JSON file (e.g., `user_plan.json`) that maps exactly **one file to exactly one prompt**.
   - Example: `[{"file": "src/main.py", "prompt": "Add retry loop"}]`
 
 ## 3. Parallel Pipeline (One Intern, One Boss, One File)
 - The orchestrator (`runner.py` / `pipeline.py`) reads the human's JSON file.
 - For every file in the JSON, it spawns an isolated, parallel, two-step pipeline.
-- The `red-team`, `ops`, and `loop_back` rejection mechanisms are completely removed.
+- The adversarial audit, `ops`, and `loop_back` rejection mechanisms are completely removed.
 
 ### Phase 1: The Intern (Builder)
 - **Role**: Makes edits to their specific file based on the prompt.

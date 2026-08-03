@@ -34,7 +34,7 @@ from factory.infra.exchange import (
 from factory.infra.output_sanitizer import clean_role_output, extract_model_json, extract_tool_call_payload
 from factory.infra.tools import (
     _DISCOVERY_TOOLS, _TOOL_BY_NAME, DEFAULT_TOOL_BUDGET, ROLE_TOOL_BUDGET,
-    assert_planner_emitted, build_skill_spec, guard_tools,
+    build_skill_spec, guard_tools,
     pydantic_ai_default_block, wrap_injected_context, set_current_agent, set_current_role, log_response_raw,
 )
 
@@ -573,18 +573,6 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
         print(f"[WARN] eval logging failed for role={role!r}: {log_exc!r}", flush=True)
 
     persist_role(role, result, agent_id=agent_id)
-
-    # baziforecaster-4mn8 (M11): structural final_result guard for planner-family
-    # roles. If the planner burned its tool budget (GuardToolset.exhausted) yet
-    # emitted no structured output, it was looping research calls and never
-    # produced a plan — HALT loudly instead of proceeding on a None plan (the
-    # q9lt failure mode). assert_planner_emitted raises RuntimeError if so.
-    if role in ("intern", "engineer", "senior") and guard is not None:
-        assert_planner_emitted(
-            getattr(guard, "exhausted", False),
-            bool(getattr(result, "output", None)),
-            role,
-        )
 
     # P1 ugvt (M4): SINK-2 — store this role's summary for downstream phases.
     # Compact markdown render of the output (not raw JSON) to save cross-phase

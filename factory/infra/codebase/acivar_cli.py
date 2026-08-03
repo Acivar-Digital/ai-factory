@@ -25,7 +25,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from graph_store import (
+from graph_store import (  # noqa: E402
     build_graph,
     check_freshness,
     get_impact,

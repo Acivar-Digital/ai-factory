@@ -12,7 +12,6 @@
 - [ ] `tests/test_batch_read_ergonomics.py`
 - [ ] `tests/test_context_injection.py`
 - [ ] `tests/test_gates.py`
-- [ ] `tests/test_new_modules.py`
-- [ ] `tests/test_red_team_contract.py`
+ - [ ] `tests/test_new_modules.py`
 - [ ] `tests/test_spawn_all_halt.py`
 - [ ] `tests/test_timeout_fire.py`

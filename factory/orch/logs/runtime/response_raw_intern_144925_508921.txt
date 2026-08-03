@@ -1,0 +1,1 @@
+[tool-call] final_result({"task_id": "unknown", "status": "blocked", "files_changed": [], "diff_summary": "No task was specified to work on.", "notes": "The user's request lacks a specific task or problem to solve. I was asked to \"return your best answer now\" but no prior task context was provided in the conversation. I am BLOCKED due to insufficient information to proceed."})

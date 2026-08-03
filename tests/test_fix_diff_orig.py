@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from factory.tools import guardrail_check as gc
 from factory.infra import exchange
-from factory.infra import pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -156,18 +155,3 @@ def test_render_upfront_diffs_mixed():
     assert "coder03" in result
     assert "coder02" not in result
 
-
-# ---------------------------------------------------------------------------
-# pipeline wiring
-# ---------------------------------------------------------------------------
-def test_pipeline_imports_render_upfront_diffs():
-    """pipeline module must import _render_upfront_diffs from exchange."""
-    assert hasattr(pipeline, "_render_upfront_diffs")
-    assert pipeline._render_upfront_diffs is exchange._render_upfront_diffs
-
-
-def test_pipeline_source_uses_render_upfront_diffs():
-    """The pipeline source must reference _render_upfront_diffs in both gates."""
-    src = Path(pipeline.__file__).read_text(encoding="utf-8")
-    # Must appear in run_code_review_gate and run_red_team_gate
-    assert src.count("_render_upfront_diffs(batch)") >= 2

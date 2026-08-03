@@ -1,0 +1,15 @@
+{
+  "task_id": "reduce-cc-validation-red_team_passed",
+  "status": "blocked",
+  "files_changed": [
+    "factory/temp/factory/infra/validation.py"
+  ],
+  "diff_summary": "Attempted to refactor red_team_passed by extracting helpers but edit verification failed - helpers were not actually inserted into the file despite multiple attempts",
+  "notes": "The replace_text and replace_function edits failed because the helper functions (_has_blocker_findings, _has_audit_data, _has_unresolved_global_blocker) were not successfully inserted before red_team_passed. The file still contains the original red_team_passed with CC=6. Need to verify the actual file content and ensure helpers are properly added.",
+  "ruff_ok": true,
+  "pyright_ok": true,
+  "exec_ok": true,
+  "verdict_errors": "Helper functions not inserted into file; red_team_passed still has CC=6",
+  "verdict_diff": "",
+  "dep_pointers": []
+}

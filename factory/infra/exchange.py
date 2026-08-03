@@ -89,7 +89,7 @@ def _render_verdict_block(batch: Any) -> str:
 def _render_upfront_diffs(batch: Any) -> str:
     """Render ONLY the verdict_diff strings from a TaskBatch into a highly
     visible block, placed at the absolute start of the reviewer's brief so the
-    Code Supervisor and Red-Team agents see exactly what code changed right at
+    senior review agents see exactly what code changed right at
     the beginning of their prompt.
     """
     if batch is None:
@@ -231,10 +231,10 @@ def update_status_board(history: list[tuple[str, str]], current_role: str | None
     """
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     # Fold pre-completed (skipped) phases into DONE so a `--from` continuation
-    # run shows the true state instead of 0/5 with planner/supervisor_plan as
-    # spurious TODO.
+    #      run shows the true state instead of 0/5 with intern/engineer as
+     # spurious TODO.
     done = list(dict.fromkeys(runtime._SKIPPED_PHASES + [r for r, _ in history]))
-    # When a gate blocks (red_team/supervisor_review FAIL with rerun needed),
+    # When a gate blocks (senior review cycle FAIL with rerun needed),
     # show loop-back to coder so status board reflects what's going on.
     loop_back = current_role in ("senior", "engineer") and any(
         "FAIL" in (v if isinstance(v, str) else str(v)) for r, v in history[-3:] if r == current_role

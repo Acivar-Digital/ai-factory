@@ -17,12 +17,12 @@ from factory.infra.models import DraftPlan
 # hold the FULL target file in INPUT context to edit precisely, but injecting an
 # unbounded file risks blowing the 200K budget. Per-task hard budget: a single
 # task's file_paths are capped at TASK_TOKEN_THRESHOLD tokens; over-budget tasks
-# fall to Tier B (map+slice) or are force-replanned by the planner.
+# fall to Tier B (map+slice) or are force-replanned by the orchestrator.
 TASK_TOKEN_THRESHOLD = 100_000
 
 # Tier-B auto-shrink does NOT use the raw file; it uses a structural map
 # (get_file_symbols) + a focus slice. If the SLICED content still exceeds this,
-# the task is halted and sent back to the planner to SPLIT (last resort).
+# the task is halted and sent back to the orchestrator to SPLIT (last resort).
 TIER_B_SLICE_THRESHOLD = 100_000
 
 
@@ -72,7 +72,7 @@ def estimate_task_tokens(file_paths: list[str]) -> _TokenEstimate:
 
     Returns ``{"total": <int>, "per_file": {<path>: <int>}}``. Files that are
     missing or unreadable contribute 0 (fail-loudly is NOT wanted here — a
-    missing file is the planner's problem, surfaced later by the ACL). Cheap and
+    missing file is the task spec's problem, surfaced later by the ACL). Cheap and
     deterministic: runs before any coder spawns so an over-scoped task is caught
     before an expensive LLM call. The encoding is cached across calls.
     """
@@ -120,7 +120,7 @@ def _stage_copies(file_paths: list[str], staged: list[str]) -> list[tuple[str, s
     The staging copy is the coder's EVICTION-EXEMPT read source: reads there
     return real content (the live-tree read would be evicted to ``File read:
     <path>`` by the eviction transform for large files). The live tree is never
-    mutated. Copies are best-effort — a missing source is the planner's problem
+    mutated. Copies are best-effort — a missing source is the task spec's problem
     and is surfaced later by the ACL, so failures are non-fatal here.
 
     Returns a list of ``(real_repo_path, edit_mode)`` pairs so the caller can
@@ -471,9 +471,9 @@ def stage_workspace_from_draft(draft: DraftPlan, bd: str) -> None:
 
 
 def _real_source_paths(file_paths: list[str]) -> list[str]:
-    """Reduce Planner-claimed file_paths to REAL src2/ source files.
+    """Reduce task-spec-claimed file_paths to REAL src2/ source files.
 
-    The Planner is reasoning-only and cannot write files; its file_paths
+    The task spec is reasoning-only and cannot write files; its file_paths
     claims routinely include derived/staging/hallucinated paths (e.g.
     ``factory/temp/src2/.../unified_patch.py``). Only an existing
     repo-relative ``src2/`` file can be the target of a concurrent-edit race,

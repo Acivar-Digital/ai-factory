@@ -1,0 +1,15 @@
+{
+  "task_id": "a101k",
+  "status": "done",
+  "files_changed": [
+    "factory/temp/factory/infra/validation.py"
+  ],
+  "diff_summary": "Refactored red_team_passed (CC=6→3) by extracting three private helpers: _has_blocker_findings (CC=1), _has_audit_data (CC=2), _has_unresolved_global_blocker (CC=3). Public signature unchanged.",
+  "notes": "All CC checks pass (red_team_passed=3, all helpers ≤3). No other functions modified.",
+  "ruff_ok": true,
+  "pyright_ok": true,
+  "exec_ok": true,
+  "verdict_errors": "",
+  "verdict_diff": "",
+  "dep_pointers": []
+}

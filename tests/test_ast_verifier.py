@@ -211,8 +211,8 @@ class TestVirtualASTBufferInjectHelper:
         buf = VirtualASTBuffer(source, "test.py")
         new_src = buf.inject_helper("def helper():\n    pass\n", anchor_function="bar")
         lines = new_src.splitlines()
-        helper_idx = next(i for i, l in enumerate(lines) if "def helper" in l)
-        bar_idx = next(i for i, l in enumerate(lines) if "def bar" in l)
+        helper_idx = next(i for i, line in enumerate(lines) if "def helper" in line)
+        bar_idx = next(i for i, line in enumerate(lines) if "def bar" in line)
         assert helper_idx < bar_idx
 
     def test_appends_when_no_anchor(self):

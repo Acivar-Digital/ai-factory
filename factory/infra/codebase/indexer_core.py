@@ -30,7 +30,7 @@ if EMBEDDING_MODE != "local":
         f"fix the deployment or start the local TEI server."
     )
 
-from indexer_local import embed_with_retry, process_file
+from indexer_local import embed_with_retry, process_file  # noqa: E402
 
 def _get_client() -> QdrantClient:
     return QdrantClient(url=QDRANT_URL)

@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 try:
-    from .config import PROJECT_ROOT, get_repo_root
+    from .config import get_repo_root
 except ImportError:
     from config import get_repo_root
 

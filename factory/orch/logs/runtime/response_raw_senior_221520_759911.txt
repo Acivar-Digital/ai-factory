@@ -1,0 +1,45 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[tool-call] remember({"note": "Audit plan for check_plan_invariants in factory/temp/factory/infra/validation.py:\n\n1. The current file already shows check_plan_invariants refactored with 3 helpers (_helper_check_plan_invariants_guard, _helper_check_plan_invariants_collect_tasks, _helper_check_plan_invariants_loop). The function body matches the target AST node from the Surgical Context Sandwich.\n2. Need to verify: CC <= 5, ruff passes, find_cc_nested.py passes.\n3. If any check fails, apply targeted edits to fix.\n4. The file is at factory/temp/factory/infra/validation.py (staged copy in factory/temp/)."})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 50})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 50, "end_line": 120})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 120, "end_line": 180})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 180, "end_line": 278})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 100})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 180})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 100})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "check_plan_invariants"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_helper_check_plan_invariants_guard"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_helper_check_plan_invariants_collect_tasks"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_helper_check_plan_invariants_loop"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 160})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 160, "end_line": 220})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 160})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 160})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 160})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_helper_check_plan_invariants_loop"})
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_helper_check_plan_invariants_loop", "new_code": "def _helper_check_plan_invariants_loop(tasks: list, seen: set[str], violations: list[str]) -> None:\n    for t in tasks:\n        _helper_check_plan_invariants_task(t, seen, violations)\n\ndef _helper_check_plan_invariants_task(t, seen: set[str], violations: list[str]) -> None:\n    if len(t.files) != 1:\n        violations.append(f'coder task {t.id} lists {len(t.files)} files (expected exactly 1).')\n        return\n    if t.files[0] in seen:\n        violations.append(f'coder task {t.id} file {t.files[0]} is duplicated.')\n        return\n    seen.add(t.files[0])"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 130})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 130, "end_line": 180})
+
+[tool-call] final_result({"task_id": "epic-cc-reduction-ledger", "status": "blocked", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "check_plan_invariants refactored with 3 helpers; _helper_check_plan_invariants_loop has CC=6, needs extraction of _helper_check_plan_invariants_task to bring CC to <=5.", "notes": "The _helper_check_plan_invariants_loop function has CC=6 (exceeds the <=5 target). It contains a for loop with two nested if branches. Need to extract the per-task logic into a private helper _helper_check_plan_invariants_task to reduce CC. The edit tool budget was exhausted before applying the fix. Must use replace_text to fix the loop function by extracting the inner task-check logic into a helper.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true, "verdict_errors": "_helper_check_plan_invariants_loop has CC=6 (target <=5). Need to extract per-task logic into a helper.", "verdict_diff": "Extract task-checking logic from _helper_check_plan_invariants_loop into _helper_check_plan_invariants_task helper.", "dep_pointers": []})

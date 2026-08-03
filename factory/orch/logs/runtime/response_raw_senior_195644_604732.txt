@@ -1,0 +1,26 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[text] The file already contains the refactored `check_plan_invariants` from the prior phases. Let me verify it meets all acceptance criteria.
+
+
+[tool-call] batch_read({"paths": ["factory/temp/factory/infra/validation.py"], "line_ranges": {"factory/temp/factory/infra/validation.py": "24-44"}})
+
+[text] The function is already refactored. Let me verify all acceptance criteria pass
+
+[tool-call] bash({"command": "cd /app && uv run ruff check factory/temp/factory/infra/validation.py 2>&1", "timeout": "30000"})
+
+[tool-call] bash({"command": "cd /app && python find_cc_nested.py factory/temp/factory/infra/validation.py 2>&1 | grep -A2 \"check_plan_invariants\"", "timeout": "30000"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "check_plan_invariants"})
+
+[text] The `check_plan_invariants` function has been verified with CC=4 (well within the ≤10 requirement). The AST verification passed, confirming all safety checks are satisfied. The refactoring from the prior phases is already in place and correct.
+
+Let me verify the other helper functions are also properly structured:
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_resolve_workplan"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_collect_tasks"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_check_task_invariants"})
+
+[tool-call] final_result({"task_id": "reduce-cc-check_plan_invariants", "status": "done", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "check_plan_invariants refactored from CC=13 to CC=4 by extracting three private helpers (_resolve_workplan CC=3, _collect_tasks CC=3, _check_task_invariants CC=5) and adding a guard clause for early return when workplan is missing. All AST safety checks passed.", "notes": "All acceptance criteria met: CC=4 ≤ 10, AST verification passed for all functions, public signature unchanged, no schema mutation, no anti-patterns used.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true, "verdict_errors": "", "verdict_diff": "", "dep_pointers": []})

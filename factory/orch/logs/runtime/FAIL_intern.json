@@ -1,0 +1,8 @@
+{
+  "phase": "intern",
+  "attempt": 1,
+  "reason": "non-retryable error",
+  "error_type": "BrokenPipeError",
+  "error": "[Errno 32] Broken pipe",
+  "timestamp": "2026-08-02T19:56:53.738109+00:00"
+}

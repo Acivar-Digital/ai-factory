@@ -102,7 +102,7 @@ async def test_intercepted_request_enrichment(monkeypatch):
 
 def test_templates_parsing():
     templates_dir = Path(__file__).resolve().parents[1] / "factory" / "infra" / "agents"
-    template_files = ["planner.yaml", "supervisor_plan.yaml", "supervisor_review.yaml", "red_team.yaml", "coder.yaml"]
+    template_files = ["intern.yaml", "engineer.yaml", "senior.yaml"]
     for tf in template_files:
         path = templates_dir / tf
         assert path.exists(), f"Template {tf} does not exist"

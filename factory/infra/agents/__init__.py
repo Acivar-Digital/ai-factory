@@ -1,17 +1,10 @@
-"""Agent implementations — one module per role, colocated with YAML templates."""
-from factory.infra.agents.planner import build_planner_spec
-from factory.infra.agents.coder import build_coder_spec
-from factory.infra.agents.supervisor import build_supervisor_plan_spec, build_supervisor_review_spec
-from factory.infra.agents.red_team import build_red_team_spec
-from factory.infra.agents.ops import build_ops_spec
-from factory.infra.agents.healer import build_healer_spec
+"""Agent role templates for the intern -> engineer -> senior pipeline.
 
-__all__ = [
-    "build_planner_spec",
-    "build_coder_spec",
-    "build_supervisor_plan_spec",
-    "build_supervisor_review_spec",
-    "build_red_team_spec",
-    "build_ops_spec",
-    "build_healer_spec",
-]
+Only these three roles are live (see ``factory.infra.control.SKILL_MAP``).
+Each role's frozen SkillSpec is built from its colocated YAML template by
+``factory.infra.tools.build_skill_spec``; intern/engineer/senior have no
+per-role Python modules (they use the YAML fallback path), so there is
+nothing to import at module level — the three role names are the package's
+public surface.
+"""
+__all__ = ["intern", "engineer", "senior"]
