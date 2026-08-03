@@ -3,7 +3,7 @@ import json
 import argparse
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[3]))
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 sys.path.append("/home/yapilwsl/arthityap/infra/codebase")
 
 from infra.codebase.mcp_codebase import get_collection_stats_tool
