@@ -27,7 +27,7 @@ from factory.infra.control import CODER_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI
 from factory.infra.tools_const import _BATCH_READ_DEFAULT_HEAD, _BATCH_READ_NO_PATHS
 from factory.infra.tools_file import _parse_range, batch_read, delete_file, normalize_read_path, read_file, rename_file, write_file
 from factory.infra.tools_memory import remember
-from factory.infra.tools_shell import add_constant, add_import, move_symbol, replace_function, replace_text, verify_edit, _auto_remember
+from factory.infra.tools_shell import add_constant, add_import, move_symbol, replace_function, replace_text, verify_edit
 
 UNTRUSTED_OPEN = '<<<UNTRUSTED_USER_TASK>>>'
 UNTRUSTED_CLOSE = '<<<END_UNTRUSTED_USER_TASK>>>'
@@ -147,9 +147,10 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         if role == 'senior' and name in _SENIOR_BLOCKED:
             return _SENIOR_GUARD_MSG
         if name in _MODIFY_TOOLS and not self._has_planned:
-            rel_path = tool_args.get('relative_path') or tool_args.get('path') or 'unknown'
-            _auto_remember(f"[auto-plan] Executing {name} on {rel_path}")
-            self._has_planned = True
+            self._plan_nudges += 1
+            if self._plan_nudges >= 3:
+                raise RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")
+            return "SYSTEM ERROR: You MUST call the 'remember' tool to record your step-by-step plan BEFORE using modification tools (replace_function, replace_text, write_file, add_constant, add_import, move_symbol, delete_file, rename_file)."
         if name == 'remember':
             self._has_planned = True
             self._remember_used += 1
@@ -429,3 +430,8 @@ def wrap_with_acl(func, allowed_paths: list[str], deny_only: bool=False):
     wrapper.__signature__ = sig
     wrapper.__doc__ = func.__doc__
     return wrapper
+
+
+def assert_planner_emitted(budget_exhausted: bool, produced_output: bool, role: str) -> None:
+    if budget_exhausted and not produced_output:
+        raise RuntimeError(f"[{role.upper()}] tool budget exhausted without a final_result — HALT")

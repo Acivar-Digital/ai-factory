@@ -21,6 +21,36 @@ MAX_RETRIES = 3
 PLAN_INVARIANT_RETRIES = 5   # 01_fix: max intern/engineer retries before HALT
 
 
+def _extract_workplan(plan):
+    workplan = getattr(plan, "workplan", None)
+    if workplan:
+        return workplan
+    strategy = getattr(plan, "strategy", None)
+    if strategy:
+        return getattr(strategy, "parallelisable_workplan", None)
+    return None
+
+
+def _collect_plan_tasks(workplan) -> list:
+    if not workplan:
+        return []
+    groups = getattr(workplan, "groups", []) or []
+    tasks = []
+    for group in groups:
+        tasks.extend(getattr(group, "tasks", []) or [])
+    return tasks
+
+
+def _validate_task_file_paths(task, seen: set[str], violations: list[str]) -> None:
+    fps = getattr(task, "file_paths", None) or []
+    if len(fps) != 1:
+        violations.append(f"task {getattr(task, 'id', '?')} lists {len(fps)} files (exactly 1 required)")
+    for fp in fps:
+        if fp in seen:
+            violations.append(f"file collision: {fp} in multiple tasks")
+        seen.add(fp)
+
+
 def check_plan_invariants(plan) -> list[str]:
     """Return violation strings (empty list = plan OK).
 
@@ -28,32 +58,13 @@ def check_plan_invariants(plan) -> list[str]:
     across all tasks. Runs on output from both intern and engineer phases.
     """
     violations: list[str] = []
-    seen: set[str] = set()
-
-    # Try to find the workplan groups
-    workplan = getattr(plan, "workplan", None)
-    if not workplan:
-        strategy = getattr(plan, "strategy", None)
-        if strategy:
-            workplan = getattr(strategy, "parallelisable_workplan", None)
-
-    groups = getattr(workplan, "groups", []) if workplan else []
-
+    workplan = _extract_workplan(plan)
     if not workplan:
         violations.append("workplan or strategy.parallelisable_workplan is missing or null.")
 
-    tasks = []
-    for group in groups or []:
-        tasks.extend(getattr(group, "tasks", []) or [])
-
-    for task in tasks:
-        fps = getattr(task, "file_paths", None) or []
-        if len(fps) != 1:
-            violations.append(f"task {getattr(task, 'id', '?')} lists {len(fps)} files (exactly 1 required)")
-        for fp in fps:
-            if fp in seen:
-                violations.append(f"file collision: {fp} in multiple tasks")
-            seen.add(fp)
+    seen: set[str] = set()
+    for task in _collect_plan_tasks(workplan):
+        _validate_task_file_paths(task, seen, violations)
     return violations
 
 
@@ -123,6 +134,21 @@ def _process_group_deps(
         stack.append(dep)
 
 
+def _has_unresolved_rubric_blocker(rubric_cells: list[dict]) -> bool:
+    for c in rubric_cells:
+        if c.get("severity") == "blocker":
+            if not c.get("passed"):
+                return True
+    return False
+
+
+def _has_finding_blocker(findings: list[dict]) -> bool:
+    for f in findings:
+        if f.get("severity") == "blocker":
+            return True
+    return False
+
+
 def security_checks_passed(findings: list[dict], rubric_cells: list[dict]) -> bool:
     """Deterministic security audit go/no-go verdict — SINGLE SOURCE OF TRUTH.
 
@@ -136,13 +162,38 @@ def security_checks_passed(findings: list[dict], rubric_cells: list[dict]) -> bo
     The LLM's free `green` boolean is NEVER trusted. This is exactly the
     contract documented in templates/senior.yaml + customised/senior.yaml.
     """
-    failing = any(f.get("severity") == "blocker" for f in findings)
-    has_audit_data = bool(findings) or bool(rubric_cells)
-    unresolved_global = (
-        any(c.get("severity") == "blocker" and not c.get("passed") for c in rubric_cells)
-        and not failing
-    )
-    return has_audit_data and not (failing or unresolved_global)
+    if not findings:
+        if not rubric_cells:
+            return False
+    if _has_finding_blocker(findings):
+        return False
+    if _has_unresolved_rubric_blocker(rubric_cells):
+        return False
+    return True
+
+
+def _render_finding_parts(f, prefix: str = "") -> list[str]:
+    sev = getattr(f, "severity", "blocker")
+    msg = getattr(f, "message", "")
+    header = f"- [{prefix}{sev}] {msg}" if prefix else f"- [{sev}] {msg}"
+    parts = [header]
+    if getattr(f, "file", None):
+        parts.append(f"  file: {f.file}")
+    if getattr(f, "line", None) is not None:
+        parts.append(f"  line: {f.line}")
+    if getattr(f, "suggestion", None):
+        parts.append(f"  fix: {f.suggestion}")
+    return parts
+
+
+def _process_finding_for_feedback(f, out: dict[str, list[str]], prefix: str = "") -> None:
+    if getattr(f, "severity", None) != "blocker":
+        return
+    tid = getattr(f, "task_id", None)
+    if not tid:
+        return
+    parts = _render_finding_parts(f, prefix=prefix)
+    out.setdefault(tid, []).append("\n".join(parts))
 
 
 def _feedback_from_review_findings(review: "CodePassed") -> dict[str, str]:
@@ -151,21 +202,7 @@ def _feedback_from_review_findings(review: "CodePassed") -> dict[str, str]:
     out: dict[str, list[str]] = {}
     findings = getattr(review, "findings", None) or []
     for f in findings:
-        if getattr(f, "severity", None) != "blocker":
-            continue
-        tid = getattr(f, "task_id", None)
-        if not tid:
-            continue
-        parts = [
-            f"- [{getattr(f, 'severity', 'blocker')}] {getattr(f, 'message', '')}",
-        ]
-        if getattr(f, "file", None):
-            parts.append(f"  file: {f.file}")
-        if getattr(f, "line", None) is not None:
-            parts.append(f"  line: {f.line}")
-        if getattr(f, "suggestion", None):
-            parts.append(f"  fix: {f.suggestion}")
-        out.setdefault(tid, []).append("\n".join(parts))
+        _process_finding_for_feedback(f, out)
     traceback_route = getattr(review, "traceback_route", None)
     if traceback_route:
         for tid, lines in out.items():
@@ -173,42 +210,68 @@ def _feedback_from_review_findings(review: "CodePassed") -> dict[str, str]:
     return {tid: "\n".join(blocks) for tid, blocks in out.items()}
 
 
+def _process_risk_for_feedback(r, out: dict[str, list[str]]) -> None:
+    if getattr(r, "severity", None) not in ("Critical", "High"):
+        return
+    tid = getattr(r, "task_id", None)
+    if not tid:
+        return
+    if tid in out:
+        return
+    block = f"- [SENIOR {getattr(r, 'severity', 'risk')}] {getattr(r, 'description', '')}"
+    if getattr(r, "mitigation", None):
+        block += f"\n  fix: {r.mitigation}"
+    out.setdefault(tid, []).append(block)
+
+
 def _feedback_from_audit(
-    findings: list["ReviewFinding"],     audit: "AuditResult"
+    findings: list["ReviewFinding"], audit: "AuditResult"
 ) -> dict[str, str]:
     """R1 (baziforecaster-nw9ov): render security audit findings + risks into a
     task_id -> prior-feedback text map for the rerun coder brief."""
     out: dict[str, list[str]] = {}
     for f in findings:
-        if getattr(f, "severity", None) != "blocker":
-            continue
-        tid = getattr(f, "task_id", None)
-        if not tid:
-            continue
-        parts = [f"- [SENIOR {getattr(f, 'severity', 'blocker')}] {getattr(f, 'message', '')}"]
-        if getattr(f, "file", None):
-            parts.append(f"  file: {f.file}")
-        if getattr(f, "line", None) is not None:
-            parts.append(f"  line: {f.line}")
-        if getattr(f, "suggestion", None):
-            parts.append(f"  fix: {f.suggestion}")
-        out.setdefault(tid, []).append("\n".join(parts))
-    # Also surface Critical/High risks that named a task (already promoted to
-    # findings above, but include raw risk context for completeness).
+        _process_finding_for_feedback(f, out, prefix="SENIOR ")
     risks = getattr(audit, "risks", None) or []
     for r in risks:
-        if getattr(r, "severity", None) not in ("Critical", "High"):
-            continue
-        tid = getattr(r, "task_id", None)
-        if not tid or tid in out:
-            continue
-        block = (
-            f"- [SENIOR {getattr(r, 'severity', 'risk')}] {getattr(r, 'description', '')}"
-        )
-        if getattr(r, "mitigation", None):
-            block += f"\n  fix: {r.mitigation}"
-        out.setdefault(tid, []).append(block)
+        _process_risk_for_feedback(r, out)
     return {tid: "\n".join(blocks) for tid, blocks in out.items()}
+
+
+def _is_high_severity_risk(severity: str) -> bool:
+    return severity in {"Critical", "High"}
+
+
+def _resolve_risk_component(r) -> str:
+    return r.component or r.task_id or "<anonymous>"
+
+
+def _process_risk_to_finding(
+    r,
+    known_task_ids: set[str],
+    have: set[str],
+    augmented: list,
+    unresolved_global: list[str],
+) -> None:
+    if not _is_high_severity_risk(r.severity):
+        return
+    tid = r.task_id
+    if not tid or tid not in known_task_ids:
+        unresolved_global.append(_resolve_risk_component(r))
+        return
+    if tid in have:
+        return
+    augmented.append(
+        ReviewFinding(
+            task_id=tid,
+            severity="blocker",
+            file=r.component,
+            line=None,
+            message=f"[auto-derived from {r.severity} risk] {r.description}",
+            suggestion=r.mitigation,
+        )
+    )
+    have.add(tid)
 
 
 def _blocker_findings_from_risks(
@@ -234,22 +297,6 @@ def _blocker_findings_from_risks(
     augmented = list(findings)
     unresolved_global: list[str] = []
     for r in risks:
-        if r.severity not in ("Critical", "High"):
-            continue
-        if not r.task_id or r.task_id not in known_task_ids:
-            unresolved_global.append(r.component or r.task_id or "<anonymous>")
-            continue
-        if r.task_id in have:
-            continue
-        augmented.append(
-            ReviewFinding(
-                task_id=r.task_id,
-                severity="blocker",
-                file=r.component,
-                line=None,
-                message=f"[auto-derived from {r.severity} risk] {r.description}",
-                suggestion=r.mitigation,
-            )
-        )
-        have.add(r.task_id)
+        _process_risk_to_finding(r, known_task_ids, have, augmented, unresolved_global)
     return augmented, unresolved_global
+

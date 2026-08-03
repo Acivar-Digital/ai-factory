@@ -61,14 +61,15 @@ def _make_guard(budget: int = 100) -> GuardToolset:
     return gt
 
 
-async def test_modify_tool_auto_plans_before_planning() -> None:
+async def test_modify_tool_blocked_before_planning() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
         "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
     )
-    assert "SYSTEM ERROR" not in res
-    assert gt._has_planned is True
-    assert ("write_file", {"relative_path": "x.py", "content": "..."}) in gt.wrapped.calls  # tool WAS executed
+    assert "SYSTEM ERROR" in res
+    assert gt._has_planned is False
+    assert gt._plan_nudges == 1
+    assert ("write_file", {"relative_path": "x.py", "content": "..."}) not in gt.wrapped.calls
 
 
 async def test_read_file_allowed_before_planning() -> None:
@@ -115,20 +116,23 @@ async def test_non_exempt_tool_allowed_after_planning() -> None:
     assert ("batch_read", {"paths": ["a.py"]}) in gt.wrapped.calls  # tool WAS executed
 
 
-async def test_three_strikes_no_longer_halts() -> None:
+async def test_three_strikes_halts_with_runtime_error() -> None:
     gt = _make_guard()
-    for i in range(3):
-        res = await gt.call_tool(
-            "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
-        )
-        assert "SYSTEM ERROR" not in res
-        assert gt._has_planned is True
+    res1 = await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
+    assert "SYSTEM ERROR" in res1
+    res2 = await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
+    assert "SYSTEM ERROR" in res2
+    try:
+        await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
+        assert False, "Should have raised RuntimeError"
+    except RuntimeError as e:
+        assert "[HALT]" in str(e)
 
 
-async def test_plan_nudges_not_incremented_for_modify_tools() -> None:
+async def test_plan_nudges_incremented_for_modify_tools() -> None:
     gt = _make_guard()
     await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
-    assert gt._plan_nudges == 0
+    assert gt._plan_nudges == 1
 
 
 async def test_final_result_exempt_does_not_increment_nudges() -> None:
@@ -145,23 +149,23 @@ async def test_keep_memory_exempt_does_not_increment_nudges() -> None:
     assert gt._has_planned is False
 
 
-async def test_write_file_auto_plans_and_executes() -> None:
+async def test_write_file_blocked_before_planning() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
         "write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool()
     )
-    assert "SYSTEM ERROR" not in res
-    assert len(gt.wrapped.calls) == 1
+    assert "SYSTEM ERROR" in res
+    assert len(gt.wrapped.calls) == 0
 
 
-async def test_replace_text_auto_plans_and_executes() -> None:
+async def test_replace_text_blocked_before_planning() -> None:
     gt = _make_guard()
     res = await gt.call_tool(
         "replace_text", {"relative_path": "x.py", "old": "a", "new": "b"},
         None, _FakeTool(),
     )
-    assert "SYSTEM ERROR" not in res
-    assert len(gt.wrapped.calls) == 1
+    assert "SYSTEM ERROR" in res
+    assert len(gt.wrapped.calls) == 0
 
 
 async def test_has_planned_and_plan_nudges_initialized_in_post_init() -> None:
