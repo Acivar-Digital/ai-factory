@@ -13,7 +13,7 @@ from factory.common.operator import log_operator
 from factory.infra.tools import get_file_symbols
 from factory.infra.models import DraftPlan
 
-# Size-aware context injection (epic baziforecaster-gx30p). A coder agent must
+# Size-aware context injection (epic baziforecaster-gx30p). An intern agent must
 # hold the FULL target file in INPUT context to edit precisely, but injecting an
 # unbounded file risks blowing the 200K budget. Per-task hard budget: a single
 # task's file_paths are capped at TASK_TOKEN_THRESHOLD tokens; over-budget tasks
@@ -73,7 +73,7 @@ def estimate_task_tokens(file_paths: list[str]) -> _TokenEstimate:
     Returns ``{"total": <int>, "per_file": {<path>: <int>}}``. Files that are
     missing or unreadable contribute 0 (fail-loudly is NOT wanted here — a
     missing file is the task spec's problem, surfaced later by the ACL). Cheap and
-    deterministic: runs before any coder spawns so an over-scoped task is caught
+    deterministic: runs before any intern spawns so an over-scoped task is caught
     before an expensive LLM call. The encoding is cached across calls.
     """
     per_file: dict[str, int] = {}
@@ -100,10 +100,10 @@ def task_context_tier(file_paths: list[str]) -> str:
 def _edit_mode_for(real_repo_path: str) -> str:
     """Return 'FULL WRITE' for a new/empty live file, else 'SURGICAL'.
 
-    A coder can only do surgical edits on a file that already exists with
+    An intern can only do surgical edits on a file that already exists with
     content; a brand-new or empty file must be written whole (write_file).
     This predicate is the single source of truth for the per-file EDIT MODE
-    block injected into the coder brief (replaces the old hardcoded
+    block injected into the intern brief (replaces the old hardcoded
     "write your FULL proposed replacement" instruction that caused the
     eviction-driven `blocked` failure).
     """
@@ -117,14 +117,14 @@ def _edit_mode_for(real_repo_path: str) -> str:
 def _stage_copies(file_paths: list[str], staged: list[str]) -> list[tuple[str, str]]:
     """fzqa2: copy each live file into its temp/ staging mirror (PROPOSE-ONLY).
 
-    The staging copy is the coder's EVICTION-EXEMPT read source: reads there
+    The staging copy is the intern's EVICTION-EXEMPT read source: reads there
     return real content (the live-tree read would be evicted to ``File read:
     <path>`` by the eviction transform for large files). The live tree is never
     mutated. Copies are best-effort — a missing source is the task spec's problem
     and is surfaced later by the ACL, so failures are non-fatal here.
 
     Returns a list of ``(real_repo_path, edit_mode)`` pairs so the caller can
-    inject a per-file EDIT MODE block into the coder brief.
+    inject a per-file EDIT MODE block into the intern brief.
     """
     modes: list[tuple[str, str]] = []
     for real, mirror in zip(file_paths, staged):
@@ -198,12 +198,12 @@ def stage_paths(paths: list[str]) -> list[str]:
 
 
 def _edit_mode_block(modes: list[tuple[str, str]], staged: list[str]) -> str:
-    """Inject a per-file EDIT MODE block into the coder brief.
+    """Inject a per-file EDIT MODE block into the intern brief.
 
     Replaces the old hardcoded "write your FULL proposed replacement" rule that
-    forced the coder to reproduce the entire file (and, combined with read_file
+    forced the intern to reproduce the entire file (and, combined with read_file
     eviction, produced the eviction-driven `blocked` failure). The harness knows
-    per file whether the live source exists with content; it tells the coder to
+    per file whether the live source exists with content; it tells the intern to
     edit SURGICALLY (replace_text / replace_function on the staging copy) for
     existing files and to FULL WRITE only genuinely new/empty files.
     """
@@ -239,8 +239,8 @@ def _build_tier_b_map(file_paths: list[str]) -> str:
     """qkm3p: structural map for Tier-B injection.
 
     Returns a markdown block with each file's symbols + signatures (via
-    ``get_file_symbols``) so the coder knows the structure WITHOUT the full file
-    in its context. The coder then reads precise slices from the eviction-exempt
+    ``get_file_symbols``) so the intern knows the structure WITHOUT the full file
+    in its context. The intern then reads precise slices from the eviction-exempt
     staging copies. Returns ``""`` on empty input.
     """
     if not file_paths:
@@ -263,10 +263,10 @@ def _build_tier_b_map(file_paths: list[str]) -> str:
 
 
 def _write_harness_patches(task_id: str, files_changed: list[str], bd: str) -> tuple[list[str], int]:
-    """Generate git-apply-compatible unified diffs for a coder task (B1–B7).
+    """Generate git-apply-compatible unified diffs for an intern task (B1–B7).
 
-    Diffs each coder-edited staging copy against its captured .orig baseline.
-    The coder must NOT hand-write diffs (they come out synthetic/corrupt).
+    Diffs each intern-edited staging copy against its captured .orig baseline.
+    The intern must NOT hand-write diffs (they come out synthetic/corrupt).
     Returns the list of written patch paths and the count of real changes.
     """
     written: list[str] = []
@@ -333,8 +333,8 @@ def staged_zero_diff(fp: str) -> bool | None:
     return None
 
 
-def _quarantine_coder_artifacts(bd: str) -> None:
-    """B7: move coder-authored deliverable artifacts out of temp/ (keep harness output)."""
+def _quarantine_intern_artifacts(bd: str) -> None:
+    """B7: move intern-authored deliverable artifacts out of temp/ (keep harness output)."""
     quar = TEMP_DIR / "quarantine"
     quar.mkdir(parents=True, exist_ok=True)
     # KEEP (never move): staging copies, harness patches, exchange, facts, ruff cache.
@@ -346,15 +346,15 @@ def _quarantine_coder_artifacts(bd: str) -> None:
         # Harness-generated patches live under temp/src2/ OR are named patch_<stem>.diff
         # written by _write_harness_patches. To avoid clobbering harness output, only
         # quarantine files that are NOT inside temp/src2/ AND not a patch_<stem>.diff
-        # the harness just wrote. Simplest safe rule: move everything coder-shaped that
+        # the harness just wrote. Simplest safe rule: move everything intern-shaped that
         # is NOT under temp/src2/ and NOT a patch_*.diff.
         if "src2" in path.parts:
             continue  # staging copies stay
         if path.name.startswith("patch_") and path.suffix == ".diff":
-            # Could be harness or coder. Harness writes FIRST (call order), so any
-            # patch_*.diff present was either harness-written or coder-written with
+            # Could be harness or intern. Harness writes FIRST (call order), so any
+            # patch_*.diff present was either harness-written or intern-written with
             # the same name. To be safe: leave patch_*.diff alone (harness output is
-            # authoritative; coder's same-named file was overwritten by the harness
+            # authoritative; intern's same-named file was overwritten by the harness
             # write in _write_harness_patches). Only quarantine stray non-patch_*.diff
             # and *_patch.py.
             continue
