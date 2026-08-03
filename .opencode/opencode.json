@@ -36,7 +36,7 @@
         "edit": false,
         "delegate_task": true,
         "read_repository_map": true,
-        "run_test_suite": true,
+        "run_test_suite": false,
         "complete_user_task": true
       }
     },
