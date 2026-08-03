@@ -129,7 +129,7 @@ def rollback_node(files_changed: list[str]) -> None:
                 f"Underlying error: {exc}"
             ) from exc
 
-    # 2. Remove NEW untracked files the coder created (scoped to files_changed).
+    # 2. Remove NEW untracked files the intern created (scoped to files_changed).
     if new_targets:
         try:
             _run(["git", "clean", "-fd", "--", *new_targets])
@@ -141,8 +141,8 @@ def rollback_node(files_changed: list[str]) -> None:
             ) from exc
 
         # Fallback: `git clean -fd` cannot remove *gitignored* new files (e.g. a
-        # file the coder created under an ignored tree). These are scoped,
-        # coder-created files we KNOW are in `files_changed`, so remove any that
+        # file the intern created under an ignored tree). These are scoped,
+        # intern-created files we KNOW are in `files_changed`, so remove any that
         # still exist on disk directly. This closes the scoped-rollback gap
         # without the blast radius of `git clean -fdx` (which would purge all
         # ignored build artifacts in the repo). Fail Loudly if unlink fails.

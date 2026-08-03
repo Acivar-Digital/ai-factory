@@ -1,11 +1,11 @@
 {
   "bd_id": "factory-run",
   "run_dir": "/home/yapilwsl/arthityap/ai-factory/factory/orch/reports/run_20260801T123443_factory-run",
-  "current_phase": "red_team",
+  "current_phase": "senior_audit",
   "phase_attempts": {
-    "supervisor_plan": 1,
-    "supervisor_review": 1,
-    "red_team": 1
+    "engineer_plan": 1,
+    "engineer_review": 1,
+    "senior_audit": 1
   },
   "phase_reexec": 0,
   "tasks": {},
@@ -58,14 +58,14 @@
           "severity": "blocker",
           "passed": true,
           "evidence": "Review the 5 functions using find_cc_nested.py to ensure the max CC is 5.",
-          "coder_idents": []
+          "intern_idents": []
         }
       ]
     },
-    "summary": "Refactor 5 specified functions across agents.py, forecast_store.py, and billing.py to reduce cyclomatic complexity to ≤5 using helper extraction, early returns, and match blocks. Coders are divided per file for concurrency.",
+    "summary": "Refactor 5 specified functions across agents.py, forecast_store.py, and billing.py to reduce cyclomatic complexity to ≤5 using helper extraction, early returns, and match blocks. Interns are divided per file for concurrency.",
     "subtasks": [
       {
-        "id": "coder01",
+        "id": "intern01",
         "title": "Reduce CC in agents.py",
         "file_paths": [
           "src2/agents.py"
@@ -81,7 +81,7 @@
         ]
       },
       {
-        "id": "coder02",
+        "id": "intern02",
         "title": "Reduce CC in forecast_store.py",
         "file_paths": [
           "src2/forecast_store.py"
@@ -97,7 +97,7 @@
         ]
       },
       {
-        "id": "coder03",
+        "id": "intern03",
         "title": "Reduce CC in billing.py",
         "file_paths": [
           "src2/billing.py"
@@ -119,18 +119,18 @@
       "Potential to accidentally increase CC of a helper function above 3."
     ],
     "strategy": {
-      "how_to_fix": "Apply guard clauses for early returns, extract complex iterations into private private helpers (CC≤3), replace `isinstance` branches with `match/case` where applicable, and maintain O(1) dict lookups. Allocate coders per file to ensure disjoint fixes.",
+      "how_to_fix": "Apply guard clauses for early returns, extract complex iterations into private private helpers (CC≤3), replace `isinstance` branches with `match/case` where applicable, and maintain O(1) dict lookups. Allocate interns per file to ensure disjoint fixes.",
       "tool_preference": [
         {
-          "task_id": "coder01",
+          "task_id": "intern01",
           "preference": "AST-edit"
         },
         {
-          "task_id": "coder02",
+          "task_id": "intern02",
           "preference": "AST-edit"
         },
         {
-          "task_id": "coder03",
+          "task_id": "intern03",
           "preference": "AST-edit"
         }
       ],
@@ -141,7 +141,7 @@
             "depends_on": [],
             "tasks": [
               {
-                "id": "coder01",
+                "id": "intern01",
                 "title": "Reduce CC in agents.py",
                 "file_paths": [
                   "src2/agents.py"
@@ -159,7 +159,7 @@
                 "notes": "Ensure 0 unrequested refactoring."
               },
               {
-                "id": "coder02",
+                "id": "intern02",
                 "title": "Reduce CC in forecast_store.py",
                 "file_paths": [
                   "src2/forecast_store.py"
@@ -177,7 +177,7 @@
                 "notes": "Preserve O(1) lookups and respect no silent exceptions."
               },
               {
-                "id": "coder03",
+                "id": "intern03",
                 "title": "Reduce CC in billing.py",
                 "file_paths": [
                   "src2/billing.py"
@@ -206,17 +206,17 @@
   "audit": {
     "evaluations": [
       {
-        "item_id": "coder01",
+        "item_id": "intern01",
         "approved": "No",
         "comments": "Task blocked. The edited file /temp/src2/agents.py failed schema validation during runtime load. Fix schema definitions."
       },
       {
-        "item_id": "coder02",
+        "item_id": "intern02",
         "approved": "No",
         "comments": "Task blocked. The required target file src2/forecast_store.py is missing or could not be found."
       },
       {
-        "item_id": "coder03",
+        "item_id": "intern03",
         "approved": "No",
         "comments": "Task blocked. The edited file /temp/src2/billing.py failed schema validation during runtime load. Fix schema definitions."
       }

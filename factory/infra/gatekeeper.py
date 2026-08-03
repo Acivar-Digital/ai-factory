@@ -1,7 +1,7 @@
 """Pre-LLM gate for the Orchestrator.
 
 The conductor (A8) calls :func:`run_gate` BEFORE LLM reviewers ever see a
-coder's output. It enforces two cheap, deterministic quality gates:
+intern's output. It enforces two cheap, deterministic quality gates:
 
 1. ``ruff check --fix`` on every changed file (style/lint hygiene).
 2. ``pytest`` on the test files that actually exercise the touched modules —
@@ -151,8 +151,8 @@ def run_gate(changed_files: list[str]) -> tuple[bool, str]:
     return passed, report
 
 
-def feedback_to_coder(report: str) -> str:
-    """Format a failing gate report for the conductor to feed back to coder."""
+def feedback_to_intern(report: str) -> str:
+    """Format a failing gate report for the conductor to feed back to intern."""
     return f"Your code failed the gate. Fix it:\n{report}"
 
 

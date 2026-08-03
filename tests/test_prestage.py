@@ -48,7 +48,7 @@ def test_stage_workspace_from_draft(tmp_path, monkeypatch):
 
     # Define DraftPlan with subtasks referencing existing files and new deliverables
     subtask = SubTaskBrief(
-        id="coder01",
+        id="intern01",
         title="Edit test module",
         file_paths=["src2/engine/module_test.py", "factory/temp/patch_test.diff"],
         instruction="Do something",
@@ -71,7 +71,7 @@ def test_stage_workspace_from_draft(tmp_path, monkeypatch):
         risks=[],
         strategy=Strategy(
             how_to_fix="x",
-            tool_preference=[{"task_id": "coder01", "preference": "AST-edit"}],
+            tool_preference=[{"task_id": "intern01", "preference": "AST-edit"}],
             parallelisable_workplan=ParallelisableWorkplan.model_construct(
                 groups=[
                     WorkGroup.model_construct(
@@ -79,7 +79,7 @@ def test_stage_workspace_from_draft(tmp_path, monkeypatch):
                         depends_on=[],
                         tasks=[
                             ApprovedTask.model_construct(
-                                id="coder01",
+                                id="intern01",
                                 title="Edit test module",
                                 file_paths=["src2/engine/module_test.py", "factory/temp/patch_test.diff"],
                                 instruction="Do something",

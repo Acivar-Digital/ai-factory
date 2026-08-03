@@ -2,7 +2,7 @@
 
 Incorporated from WIP/code_hygiene/scanners/kill_tries.py patterns.
 Detects try pyramids, deep nesting, cyclomatic complexity violations,
-and other control-flow anti-patterns before the coder touches a file.
+and other control-flow anti-patterns before the intern touches a file.
 """
 
 import ast

@@ -29,11 +29,11 @@ def test_staging_diff_gate_zero_diff(tmp_path, monkeypatch):
     monkeypatch.setattr("factory.infra.context.REPO_ROOT", tmp_path)
     monkeypatch.setattr("factory.infra.execution.REPO_ROOT", tmp_path)
     
-    # Mock coder returning 'done' but identical files
-    async def coder_fn(brief: str, task_id: str | None = None) -> str:
+    # Mock intern returning 'done' but identical files
+    async def intern_fn(brief: str, task_id: str | None = None) -> str:
         return json.dumps({
             "status": "done",
-            "task_id": "coder01",
+            "task_id": "intern01",
             "files_changed": ["src2/a.py"],
             "diff_summary": "No changes",
             "notes": "Done"
@@ -48,7 +48,7 @@ def test_staging_diff_gate_zero_diff(tmp_path, monkeypatch):
     # gating is an EXECUTE-phase concern, so assert it directly at
     # run_execute_phase (strict=True still hard-halts direct callers).
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
-        asyncio.run(run_execute_phase(plan, tmp_path / "run", asyncio.Semaphore(20), coder_fn))
+        asyncio.run(run_execute_phase(plan, tmp_path / "run", asyncio.Semaphore(20), intern_fn))
 
 
 def test_runtime_load_gate_fails(tmp_path, monkeypatch):
@@ -66,10 +66,10 @@ def test_runtime_load_gate_fails(tmp_path, monkeypatch):
     monkeypatch.setattr("factory.infra.context.REPO_ROOT", tmp_path)
     monkeypatch.setattr("factory.infra.execution.REPO_ROOT", tmp_path)
     
-    async def coder_fn(brief: str, task_id: str | None = None) -> str:
+    async def intern_fn(brief: str, task_id: str | None = None) -> str:
         return json.dumps({
             "status": "done",
-            "task_id": "coder01",
+            "task_id": "intern01",
             "files_changed": ["src2/a.py"],
             "diff_summary": "broken",
             "notes": "Done"
@@ -82,4 +82,4 @@ def test_runtime_load_gate_fails(tmp_path, monkeypatch):
     # gating is an EXECUTE-phase concern, so assert it directly at
     # run_execute_phase (strict=True still hard-halts direct callers).
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
-        asyncio.run(run_execute_phase(plan, tmp_path / "run", asyncio.Semaphore(20), coder_fn))
+        asyncio.run(run_execute_phase(plan, tmp_path / "run", asyncio.Semaphore(20), intern_fn))

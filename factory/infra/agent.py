@@ -82,7 +82,7 @@ def build_role_agent(role: str) -> tuple[Agent, "object | None"]:
 
     Returns ``(agent, guard)`` where ``guard`` is the ``GuardToolset`` instance
     (or ``None`` for tool-less roles) so the caller can inspect ``guard.exhausted``
-    after a run (planner budget HALT, baziforecaster-4mn8).
+    after a run (intern budget HALT, baziforecaster-4mn8).
 
     Tools come from the role's frozen SkillSpec (customised/<role>.yaml
     tool_allow_list), resolved against the TOOL_REGISTRY — NOT a hardcoded
@@ -322,13 +322,13 @@ def _recover_role_output(
     return _SanitizedResult(output=obj, messages=prior_history)
 
 
-def _coder_agent_id(task_id: str | None) -> str | None:
-    """Pass-through coder agent id (ticket baziforecaster-tqpgf).
+def _intern_agent_id(task_id: str | None) -> str | None:
+    """Pass-through intern agent id (ticket baziforecaster-tqpgf).
 
-    Per grill-me 2026-07-18 (Q3/Q7): the planner OWNS coder naming and emits
-    ``ApprovedTask.id = coderNN``. That id IS the agent id, the
+    Per grill-me 2026-07-18 (Q3/Q7): the intern tier OWNS task naming and emits
+    ``ApprovedTask.id = internNN``. That id IS the agent id, the
     memory filename, and the status-board line — identical strings. No digit
-    mangling (the old ``coder34`` bug). Non-coder roles / missing ids return None.
+    mangling (the old ``intern34`` bug). Non-intern roles / missing ids return None.
     """
     if not task_id:
         return None
@@ -351,8 +351,8 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     if role not in ROLE_OUTPUT_TYPE:
         return f"[HALT] unknown role {role!r}"
 
-    # Bind the active role (+ agent id for coder isolation) so the `remember`
-    # tool writes to THIS agent's folder (per-coderN isolated memory, a101k).
+    # Bind the active role (+ agent id for intern isolation) so the `remember`
+    # tool writes to THIS agent's folder (per-internN isolated memory, a101k).
     set_current_role(role)
     agent_id = task_id or role
     set_current_agent(agent_id)
@@ -360,9 +360,9 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # Each agent receives ITS OWN history. We reconstruct the per-turn continuity
     # bridge as the role's `.md` twin (ticket baziforecaster-mb1k5) — the
     # token-cheap, visibility-assured re-injection source fed as `message_history`
-    # to ALL agents EVERY spawn, NOT the raw `.jsonl` replay. For the coder role
-    # with a derived `agent_id` this is the agent-isolated `coder/<agent_id>.md`
-    # (ticket a101k): each coder sees only its own work, no sibling leakage.
+    # to ALL agents EVERY spawn, NOT the raw `.jsonl` replay. For the intern role
+    # with a derived `agent_id` this is the agent-isolated `intern/<agent_id>.md`
+    # (ticket a101k): each intern sees only its own work, no sibling leakage.
     # Cold spawn (no twin yet) -> None -> no prepend.
     prior_history = None
 
@@ -370,9 +370,9 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # (other than the current role), inject a compact "PRIOR PHASE SUMMARIES"
     # block so this phase sees richer context than terse raw output. The user
     # task_spec (`brief`) stays the authoritative body; this is additive context.
-    # FIX (mhynr / 4lq5d): NEVER inject prior phase summaries into CODER roles.
-    # The coder must work ONLY from its per-task ApprovedTask brief (no shared
-    # cross-phase pollution) — each coder_N is a fresh agent with isolated
+    # FIX (mhynr / 4lq5d): NEVER inject prior phase summaries into INTERN roles.
+    # The intern must work ONLY from its per-task ApprovedTask brief (no shared
+    # cross-phase pollution) — each intern_N is a fresh agent with isolated
     # memory (ticket a101k) and must not receive the full ApprovedPlan.
     if PHASE_SUMMARIES and role != "intern":
         prior_block = "\n\n".join(
@@ -387,11 +387,11 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
                 + brief
             )
 
-    # Scope-driven auto-context (86rmw/xfqkf/y1oqi): planner AND supervisor_plan
+    # Scope-driven auto-context (86rmw/xfqkf/y1oqi): intern AND engineer_plan
     # receive the SAME scoped repo-map (folder tree + per-file symbols + KG)
     # built once in main() from the user prompt's `scope:` front-matter. This
     # replaces the old hand-written hardcoded DictMap block (task-specific,
-    # never derived from declared files, and not shared with supervisor_plan).
+    # never derived from declared files, and not shared with engineer_plan).
     if role in ("intern", "engineer", "senior") and SCOPE_CONTEXT:
         brief = (
             brief
@@ -529,7 +529,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
                     )
                 else:
                     obj["notes"] = (
-                        f"[Budget Fatal] coder exhausted its tool budget "
+                        f"[Budget Fatal] intern exhausted its tool budget "
                         f"and could not finish. {obj.get('notes', '')}"
                     )
             else:
@@ -540,7 +540,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
                     )
                 else:
                     obj["notes"] = (
-                        f"[Budget Edge] coder completed at budget limit. "
+                        f"[Budget Edge] intern completed at budget limit. "
                         f"{obj.get('notes', '')}"
                     )
             validated_json = json.dumps(obj)
@@ -548,7 +548,7 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
         except Exception:
             pass
 
-    # SA5-F2: per-task transcript for EVERY phase (especially coder/EXECUTE).
+    # SA5-F2: per-task transcript for EVERY phase (especially intern/EXECUTE).
     try:
         log_response_raw(
             phase="EXECUTE" if role == "intern" else role,
@@ -578,9 +578,9 @@ async def load_skill(role: str, brief: str, bd: str = "", task_id: str | None = 
     # Compact markdown render of the output (not raw JSON) to save cross-phase
     # tokens. Fail loudly if the store itself errors (it never should).
     # SKIP for intern: multiple concurrent interns race on PHASE_SUMMARIES["intern"]
-    # (last-writer-wins). The coder summary is handled by record_coder after all
+    # (last-writer-wins). The intern summary is handled by record_intern after all
     # concurrent tasks finish, and downstream phases use RAW_OUTPUTS / TaskBatch
-    # — not PHASE_SUMMARIES — for coder results.
+    # — not PHASE_SUMMARIES — for intern results.
     if role != "intern":
         try:
             PHASE_SUMMARIES[role] = _model_to_md(result.output)

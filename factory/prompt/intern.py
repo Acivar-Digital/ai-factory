@@ -1,6 +1,6 @@
 def get_behaviour_appendix(acceptance: str) -> str:
     return (
-        "=== EXPECTED CODER BEHAVIOUR (frozen contract) ===\n"
+        "=== EXPECTED INTERN BEHAVIOUR (frozen contract) ===\n"
         "- Implement ONLY this task; do not touch other tasks' files.\n"
         "- Satisfy EVERY acceptance_criteria line below verbatim; if a criterion "
         "is unachievable, return status 'blocked' with the reason — never fake it.\n"
@@ -19,7 +19,7 @@ def get_feedback_block(task_id: str, feedback: dict[str, str] | None, is_rerun: 
             "\n=== PRIOR FEEDBACK (why this task was reopened) ===\n"
             "You are FIXING a previously-failed attempt. The harness reopened "
             "this task based on the review/audit findings below. Address EVERY "
-            "point. Your own prior attempt context lives in your coder memory "
+            "point. Your own prior attempt context lives in your intern memory "
             "(compacted via keep_memory) — this block is the authoritative list "
             "of what changed.\n"
             f"{feedback[task_id]}\n"
@@ -28,7 +28,7 @@ def get_feedback_block(task_id: str, feedback: dict[str, str] | None, is_rerun: 
         return (
             "\n=== PRIOR FEEDBACK ===\n"
             "This task was reopened by the harness (rerun target) but no "
-            "structured findings were captured. Re-read your own coder memory "
+            "structured findings were captured. Re-read your own intern memory "
             "(keep_memory) and the staged files, and re-verify your prior "
             "attempt against the acceptance criteria.\n"
         )
@@ -45,7 +45,7 @@ def get_discipline_block() -> str:
         "- Code MUST pass `uv run ruff check` before being considered done.\n"
     )
 
-def build_coder_brief(
+def build_intern_brief(
     task_id: str,
     title: str,
     instruction: str,

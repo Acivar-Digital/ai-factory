@@ -17,7 +17,7 @@ from factory.infra._runtime import (
     RAW_OUTPUTS, PHASE_SUMMARIES, _PHASE_ORDER,
 )
 from factory.infra.agent import (
-    load_skill, _load_role_messages, _recover_role_output, _coder_agent_id,
+    load_skill, _load_role_messages, _recover_role_output, _intern_agent_id,
 )
 from factory.infra.control import (
     REPO_ROOT, TodoList, TodoItem,
@@ -361,11 +361,11 @@ async def do_role(
     prior: list[ExchangeTurn],
     state_dict: dict[str, Any]
 ) -> str:
-    """Run one role, seed the first coder pass, append to history + exchange."""
+    """Run one role, seed the first intern pass, append to history + exchange."""
     brief = state_dict["brief"]
     seeded = state_dict["seeded"]
     run_brief = brief
-    if role == "coder" and prior and not seeded:
+    if role == "intern" and prior and not seeded:
         run_brief = brief + "\n\n" + wrap_injected_context(
             format_exchange(prior), label="resumed_exchange"
         )
@@ -398,7 +398,7 @@ async def do_role(
     return out
 
 
-async def record_coder(
+async def record_intern(
     brief: str,
     bd: str,
     history: list[tuple[str, str]],
@@ -406,7 +406,7 @@ async def record_coder(
     state_dict: dict[str, Any],
     task_id: str | None = None
 ) -> str:
-    """Run the coder and record it in `history` (so the status board shows it)."""
+    """Run the intern and record it in `history` (so the status board shows it)."""
     seeded = state_dict["seeded"]
     run_brief = brief
     if prior and not seeded:
@@ -414,15 +414,15 @@ async def record_coder(
             format_exchange(prior), label="resumed_exchange"
         )
         state_dict["seeded"] = True
-    update_status_board(history, "coder", bd)
+    update_status_board(history, "intern", bd)
     try:
-        out = await load_skill("coder", run_brief, bd, task_id=task_id)
+        out = await load_skill("intern", run_brief, bd, task_id=task_id)
     except UnexpectedModelBehavior as e:
-        out = _recover_from_unexpected_behavior("coder", e, agent_id=_coder_agent_id(task_id))
-    out_md = PHASE_SUMMARIES.get("coder", out)
-    history.append(("coder", out_md))
-    PHASE_SUMMARIES["coder"] = out_md
-    update_status_board(history, "coder", bd)
+        out = _recover_from_unexpected_behavior("intern", e, agent_id=_intern_agent_id(task_id))
+    out_md = PHASE_SUMMARIES.get("intern", out)
+    history.append(("intern", out_md))
+    PHASE_SUMMARIES["intern"] = out_md
+    update_status_board(history, "intern", bd)
     return out
 
 
@@ -968,28 +968,28 @@ def _read_staged_paths() -> list[str]:
 
 
 def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool = False) -> ExecutablePlan:
-    """The coder MUST NOT run on a missing / malformed / failing approved plan."""
-    approved = RAW_OUTPUTS.get("supervisor_plan") or next(
-        (v for r, v in reversed(history) if r == "supervisor_plan"), None
+    """The intern MUST NOT run on a missing / malformed / failing approved plan."""
+    approved = RAW_OUTPUTS.get("engineer_plan") or next(
+        (v for r, v in reversed(history) if r == "engineer_plan"), None
     )
     if not approved:
         raise RuntimeError(
-            "[PLAN-GATE] HALT: no supervisor_plan output — planner/supervisor "
-            "chain produced no ApprovedPlan. Coder will NOT run."
+            "[PLAN-GATE] HALT: no engineer_plan output — intern/engineer "
+            "chain produced no ApprovedPlan. Intern will NOT run."
         )
     try:
         plan_eval = clean_role_output(approved, ApprovedPlan)
     except Exception as exc:
         raise RuntimeError(
-            f"[PLAN-GATE] HALT: supervisor_plan output was unparseable as "
-            f"ApprovedPlan ({exc!r}). Coder will NOT run."
+            f"[PLAN-GATE] HALT: engineer_plan output was unparseable as "
+            f"ApprovedPlan ({exc!r}). Intern will NOT run."
         ) from exc
     if plan_eval is None:
         raise RuntimeError(
-            "[PLAN-GATE] HALT: ApprovedPlan parsed to None. Coder will NOT run."
+            "[PLAN-GATE] HALT: ApprovedPlan parsed to None. Intern will NOT run."
         )
-    draft_json = RAW_OUTPUTS.get("planner") or next(
-        (v for r, v in reversed(history) if r == "planner"), None
+    draft_json = RAW_OUTPUTS.get("intern") or next(
+        (v for r, v in reversed(history) if r == "intern"), None
     )
     if not draft_json:
         raise RuntimeError("[PLAN-GATE] HALT: no DraftPlan found in history to merge.")
@@ -1013,7 +1013,7 @@ def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool =
 
     if not is_plan_approved:
         raise RuntimeError(
-            "[PLAN-GATE] HALT: supervisor_plan approved=False. Coder will NOT run."
+            "[PLAN-GATE] HALT: engineer_plan approved=False. Intern will NOT run."
         )
 
     draft_dict = json.loads(draft_json)
@@ -1034,16 +1034,16 @@ def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool =
 
     try:
         from factory.infra.artefacts import artefacts_dir
-        plan_file = artefacts_dir() / "workplan" / "planner" / "planner.json"
+        plan_file = artefacts_dir() / "workplan" / "intern" / "intern.json"
         plan_file.parent.mkdir(parents=True, exist_ok=True)
         from factory.tools.normalize_json_escapes import remap
         text = json.dumps(draft_dict, indent=2, ensure_ascii=False)
         normalized_text = remap(text)
         plan_file.write_text(normalized_text, encoding="utf-8")
     except Exception as e:
-        print(f"[WARN] Failed to write merged planner.json: {e}", flush=True)
+        print(f"[WARN] Failed to write merged intern.json: {e}", flush=True)
 
-    RAW_OUTPUTS["planner"] = json.dumps(draft_dict)
+    RAW_OUTPUTS["intern"] = json.dumps(draft_dict)
 
     merged_tasks = []
     for t in draft.subtasks:
@@ -1111,35 +1111,35 @@ def _assert_plan_gate_ok(history: list, bd: str, st: Any, is_forced_pass: bool =
     except Exception as exc:
         raise RuntimeError(
             f"[PLAN-GATE] HALT: ExecutablePlan validation failed ({exc!r}). "
-            f"Every ApprovedTask.id MUST be 'coder01', 'coder02', … unique. "
-            f"Coder will NOT run."
+            f"Every ApprovedTask.id MUST be 'intern01', 'intern02', … unique. "
+            f"Intern will NOT run."
         ) from exc
 
-    print("[PLAN-GATE] OK: supervisor_plan approved with 0 failed blockers.", flush=True)
+    print("[PLAN-GATE] OK: engineer_plan approved with 0 failed blockers.", flush=True)
     return exe_plan
 
 
 def _sync_state(st: Any) -> None:
     """Capture validated RAW_OUTPUTS into the durable OrchestratorState."""
-    draft_json = RAW_OUTPUTS.get("planner")
+    draft_json = RAW_OUTPUTS.get("intern")
     if draft_json:
         st.draft = DraftPlan.model_validate_json(draft_json)
-    approved_json = RAW_OUTPUTS.get("supervisor_plan")
+    approved_json = RAW_OUTPUTS.get("engineer_plan")
     if approved_json:
         st.approved = ApprovedPlan.model_validate_json(approved_json)
-    batch_json = RAW_OUTPUTS.get("coder")
+    batch_json = RAW_OUTPUTS.get("intern")
     if batch_json:
         try:
             st.batch = TaskBatch.model_validate_json(batch_json)
         except Exception:
             pass
-    code_passed_json = RAW_OUTPUTS.get("supervisor_review")
+    code_passed_json = RAW_OUTPUTS.get("senior_review")
     if code_passed_json:
         try:
             st.code_passed = CodePassed.model_validate_json(code_passed_json)
         except Exception:
             pass
-    audit_json = RAW_OUTPUTS.get("red_team")
+    audit_json = RAW_OUTPUTS.get("senior")
     if audit_json:
         try:
             st.audit = AuditResult.model_validate_json(audit_json)

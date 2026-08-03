@@ -17,7 +17,7 @@ def _workplan():
         groups=[
             models.WorkGroup(
                 id="g1",
-                tasks=[models.ApprovedTask(id="coder01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
+                tasks=[models.ApprovedTask(id="intern01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
             )
         ]
     )
@@ -45,18 +45,18 @@ def test_current_phase_default_is_phase_order_member():
 
 
 def test_rehydrate_contract_persists_and_resumes(tmp_path):
-    # Simulate a --stop-after planner run: capture draft + approved, save.
+    # Simulate a --stop-after intern run: capture draft + approved, save.
     st = state.fresh_state("bd1", reports_dir=tmp_path, timestamp="20260101T000000")
     draft = _draft()
     st.draft = draft
     st.approved = models.ExecutablePlan(
         epic=draft.epic, user_stories=draft.user_stories, definition_of_done=["d"],
         acceptance_criteria=["a"], rubric_cube=models.RubricCube(cells=[]), summary="s",
-        tasks=[models.ApprovedTask(id="coder01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
+        tasks=[models.ApprovedTask(id="intern01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
         alignment="a", workplan=_workplan(),
         strategy=draft.strategy,
     )
-    state.record_phase(st, "supervisor_plan")
+    state.record_phase(st, "engineer_plan")
     state.save_state(st)
 
     # Simulate bare --resume: load_state + reset_stale_in_progress rehydrates.
@@ -66,7 +66,7 @@ def test_rehydrate_contract_persists_and_resumes(tmp_path):
     # The rehydration path in runner.py rebuilds history/phase_summaries from these.
     assert loaded.draft is not None and loaded.draft.subtasks[0].id == "s1"
     assert loaded.approved is not None and loaded.approved.alignment == "a"
-    assert loaded.current_phase == "supervisor_plan"
+    assert loaded.current_phase == "engineer_plan"
 
 
 def test_resume_without_prior_state_hard_refuses(tmp_path):

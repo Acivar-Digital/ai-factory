@@ -10,13 +10,13 @@ from factory.infra.models import (
     WorkGroup,
 )
 
-def test_coder_budget():
-    assert ROLE_TOOL_BUDGET.get("coder") == 75
+def test_intern_budget():
+    assert ROLE_TOOL_BUDGET.get("intern") == 75
 
 def test_check_plan_invariants_valid():
     epic = Epic(title="Epic", deliverables=["d1"], must_be_pydantic=True)
     task1 = ApprovedTask(
-        id="coder01",
+        id="intern01",
         title="Task 1",
         file_paths=["file1.py"],
         instruction="Do something",
@@ -25,7 +25,7 @@ def test_check_plan_invariants_valid():
         evidence=[]
     )
     task2 = ApprovedTask(
-        id="coder02",
+        id="intern02",
         title="Task 2",
         file_paths=["file3.py"],
         instruction="Do something else",
@@ -63,7 +63,7 @@ def test_check_plan_invariants_valid():
 def test_check_plan_invariants_over_five_files():
     epic = Epic(title="Epic", deliverables=["d1"], must_be_pydantic=True)
     task1 = ApprovedTask.model_construct(
-        id="coder01",
+        id="intern01",
         title="Task 1",
         file_paths=["f1.py", "f2.py", "f3.py", "f4.py", "f5.py", "f6.py"],
         instruction="Too many files",
@@ -97,7 +97,7 @@ def test_check_plan_invariants_over_five_files():
 def test_check_plan_invariants_collisions():
     epic = Epic(title="Epic", deliverables=["d1"], must_be_pydantic=True)
     task1 = ApprovedTask(
-        id="coder01",
+        id="intern01",
         title="Task 1",
         file_paths=["file1.py"],
         instruction="Do something",
@@ -106,7 +106,7 @@ def test_check_plan_invariants_collisions():
         evidence=[]
     )
     task2 = ApprovedTask(
-        id="coder02",
+        id="intern02",
         title="Task 2",
         file_paths=["file1.py"],
         instruction="Do something else",

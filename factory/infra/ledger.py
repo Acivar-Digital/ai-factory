@@ -1,6 +1,6 @@
 """Deterministic, zero-LLM infrastructure for the Orchestrator State Machine.
 
-Holds the amnesiac coder hand-off, a scoped repo-map injector, and a thin
+Holds the amnesiac intern hand-off, a scoped repo-map injector, and a thin
 ledger that mirrors `AgentDependencies` state. Everything that touches the
 filesystem / CLI is routed through the `factory/tools/*.py` wrappers via
 `uv run`, exactly as the conductor (A8) expects.
@@ -238,17 +238,17 @@ def inject_repo_map(target_files: list[str]) -> str:
     return "\n".join(lines)
 
 
-def build_coder_brief(task: ApprovedTask, plan: ApprovedPlan) -> str:
-    """Build the *amnesiac* coder hand-off.
+def build_intern_brief(task: ApprovedTask, plan: ApprovedPlan) -> str:
+    """Build the *amnesiac* intern hand-off.
 
-    Returns ONLY the coder's scoped task (instruction, file_paths, acceptance,
+    Returns ONLY the intern's scoped task (instruction, file_paths, acceptance,
     tool_preference) plus the workplan context it needs to execute — the global
     alignment and workplan DAG. The task spec's raw prompt, rubric reasoning and
     senior review prose are deliberately excluded. This fixes the old
     `runner.py:664` "accumulate all role history" context-leak bug.
     """
     out: list[str] = [
-        "CODER BRIEF (amnesiac hand-off)",
+        "INTERN BRIEF (amnesiac hand-off)",
         "=" * 40,
         f"TASK ID: {task.id}",
         f"TITLE: {task.title}",

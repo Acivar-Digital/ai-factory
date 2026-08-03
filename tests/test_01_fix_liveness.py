@@ -1,6 +1,6 @@
 """Regression tests for 01_fix.md DAG timeout fixes (s49n0).
 
-No LLM keys required: coder_fn is stubbed and the ApprovedPlan is built in-process.
+No LLM keys required: intern_fn is stubbed and the ApprovedPlan is built in-process.
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from factory.infra.models import (
     WorkGroup,
 )
 from factory.infra.execution import (
-    CODER_VALIDATION_PASSES,
+    INTERN_VALIDATION_PASSES,
     DAG_DEADLOCK_TIMEOUT,
     run_execute_phase,
 )
@@ -39,20 +39,20 @@ def _plan() -> ExecutablePlan:
     epic = Epic(title="e", deliverables=["d"], must_be_pydantic=True)
     g1 = WorkGroup(
         id="g1",
-        tasks=[ApprovedTask(id="coder01", title="t1", file_paths=["src2/a.py"],
-                            instruction="implement coder_1", acceptance="coder_1 ok",
+        tasks=[ApprovedTask(id="intern01", title="t1", file_paths=["src2/a.py"],
+                            instruction="implement intern_1", acceptance="intern_1 ok",
                             tool_preference="CLI-wrapper")],
     )
     g2 = WorkGroup(
         id="g2",
         depends_on=["g1"],
-        tasks=[ApprovedTask(id=f"coder0{i}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
-                            instruction=f"implement coder_0{i}", acceptance=f"coder_0{i} ok",
+        tasks=[ApprovedTask(id=f"intern0{i}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
+                            instruction=f"implement intern_0{i}", acceptance=f"intern_0{i} ok",
                             tool_preference="CLI-wrapper") for i in range(2, 5)],
     )
     strat = Strategy(
         how_to_fix="x",
-        tool_preference={f"coder0{i}": "CLI-wrapper" for i in range(1, 5)},
+        tool_preference={f"intern0{i}": "CLI-wrapper" for i in range(1, 5)},
         parallelisable_workplan=ParallelisableWorkplan(groups=[g1, g2]),
     )
     return ExecutablePlan(
@@ -75,7 +75,7 @@ def _plan() -> ExecutablePlan:
 # ---- Fix 1: DAG liveness guard ----
 
 def test_dag_timeout_constant_is_correct():
-    assert CODER_VALIDATION_PASSES == 3
+    assert INTERN_VALIDATION_PASSES == 3
     assert AGENT_RUN_TIMEOUT == 600.0
     assert DAG_DEADLOCK_TIMEOUT == 1800.0
 
@@ -88,46 +88,46 @@ def test_slow_legitimate_group_does_not_crash(monkeypatch):
     monkeypatch.setattr("factory.infra.execution.AGENT_RUN_TIMEOUT", 5.0)
     monkeypatch.setattr("factory.infra.execution._write_harness_patches", lambda task_id, files, bd="": ([], 1))
 
-    async def slow_coder_fn(brief: str, task_id: str | None = None) -> str:
+    async def slow_intern_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         await asyncio.sleep(1.0)
         return json.dumps({"status": "done", "task_id": tid, "files_changed": [], "diff_summary": "", "notes": ""})
 
     results = asyncio.run(run_execute_phase(
-        _plan(), TEMP_DIR / "01fix_slow", asyncio.Semaphore(20), slow_coder_fn,
+        _plan(), TEMP_DIR / "01fix_slow", asyncio.Semaphore(20), slow_intern_fn,
     ))
     assert all(r.status == "done" for r in results.values())
-    assert {f"coder0{i}" for i in range(1, 5)} == set(results.keys())
+    assert {f"intern0{i}" for i in range(1, 5)} == set(results.keys())
 
 
 # ---- Fix 2: Per-task timeout ----
 
-def test_hung_coder_times_out_and_is_blocked(monkeypatch):
-    """A coder that exceeds AGENT_RUN_TIMEOUT returns blocked instead of stalling."""
+def test_hung_intern_times_out_and_is_blocked(monkeypatch):
+    """A intern that exceeds AGENT_RUN_TIMEOUT returns blocked instead of stalling."""
     monkeypatch.setattr("factory.infra.execution.AGENT_RUN_TIMEOUT", 0.5)
     monkeypatch.setattr("factory.infra.execution.DAG_DEADLOCK_TIMEOUT", 10.0)
 
-    async def hang_coder_fn(brief: str, task_id: str | None = None) -> str:
+    async def hang_intern_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
-        if tid == "coder01":
+        if tid == "intern01":
             await asyncio.sleep(2.0)
         return json.dumps({"status": "done", "task_id": tid, "files_changed": [], "diff_summary": "", "notes": ""})
 
-    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*coder01"):
+    with pytest.raises(RuntimeError, match="EXECUTE phase incomplete.*intern01"):
         asyncio.run(run_execute_phase(
-            _plan(), TEMP_DIR / "01fix_hang", asyncio.Semaphore(20), hang_coder_fn,
+            _plan(), TEMP_DIR / "01fix_hang", asyncio.Semaphore(20), hang_intern_fn,
         ))
 
 
 def test_all_done_no_timeout(monkeypatch):
     monkeypatch.setattr("factory.infra.execution._write_harness_patches", lambda task_id, files, bd="": ([], 1))
 
-    async def quick_coder_fn(brief: str, task_id: str | None = None) -> str:
+    async def quick_intern_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         return json.dumps({"status": "done", "task_id": tid, "files_changed": [], "diff_summary": "", "notes": ""})
 
     results = asyncio.run(run_execute_phase(
-        _plan(), TEMP_DIR / "01fix_ok", asyncio.Semaphore(20), quick_coder_fn,
+        _plan(), TEMP_DIR / "01fix_ok", asyncio.Semaphore(20), quick_intern_fn,
     ))
     assert all(r.status == "done" for r in results.values())
 

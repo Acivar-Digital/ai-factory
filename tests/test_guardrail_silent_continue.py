@@ -30,7 +30,7 @@ def _setup_staging(tmp_path):
     return live, staged
 
 
-async def _coder_done(brief: str, task_id: str | None = None) -> str:
+async def _intern_done(brief: str, task_id: str | None = None) -> str:
     from factory.infra.context import stage_path
     try:
         sp = Path(stage_path("src2/a.py"))
@@ -41,7 +41,7 @@ async def _coder_done(brief: str, task_id: str | None = None) -> str:
 
     return json.dumps({
         "status": "done",
-        "task_id": "coder01",
+        "task_id": "intern01",
         "files_changed": ["src2/a.py"],
         "diff_summary": "changed",
         "notes": "Done",
@@ -71,7 +71,7 @@ def test_guardrail_crash_blocks_task(tmp_path, monkeypatch):
     plan.workplan.groups[0].tasks[0].file_paths = ["src2/a.py"]
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
         asyncio.run(run_execute_phase(
-            plan, tmp_path / "run", asyncio.Semaphore(20), _coder_done
+            plan, tmp_path / "run", asyncio.Semaphore(20), _intern_done
         ))
 
 
@@ -100,7 +100,7 @@ def test_guardrail_unparseable_output_blocks_task(tmp_path, monkeypatch):
     plan.workplan.groups[0].tasks[0].file_paths = ["src2/a.py"]
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
         asyncio.run(run_execute_phase(
-            plan, tmp_path / "run", asyncio.Semaphore(20), _coder_done
+            plan, tmp_path / "run", asyncio.Semaphore(20), _intern_done
         ))
 
 
@@ -127,6 +127,6 @@ def test_runtime_load_gate_crash_logged(tmp_path, monkeypatch):
     plan.workplan.groups[0].tasks[0].file_paths = ["src2/a.py"]
     with pytest.raises(RuntimeError, match="EXECUTE phase incomplete"):
         asyncio.run(run_execute_phase(
-            plan, tmp_path / "run", asyncio.Semaphore(20), _coder_done
+            plan, tmp_path / "run", asyncio.Semaphore(20), _intern_done
         ))
     assert len(calls) >= 1, "load_schema_gate.py should have been called"

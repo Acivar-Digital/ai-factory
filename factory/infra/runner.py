@@ -39,10 +39,10 @@ from factory.infra.validation import (  # noqa: F401
     _feedback_from_audit,
 )
 from factory.infra.execution import (  # noqa: F401
-    run_execute_phase, CODER_VALIDATION_PASSES, DAG_DEADLOCK_TIMEOUT,
+    run_execute_phase, INTERN_VALIDATION_PASSES, DAG_DEADLOCK_TIMEOUT,
 )
 from factory.infra.agent import (  # noqa: F401
-    build_role_agent, _run_agent_retry, _coder_agent_id,
+    build_role_agent, _run_agent_retry, _intern_agent_id,
 )
 from factory.infra.artefacts import artefacts_dir, persist_role  # noqa: F401
 from factory.infra._runtime import RAW_OUTPUTS, SCOPE_CONTEXT, _PHASE_ORDER  # noqa: F401

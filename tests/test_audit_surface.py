@@ -79,7 +79,7 @@ def _subtask():
 
 def _approved_task():
     return models.ApprovedTask(
-        id="coder01", title="t", file_paths=["src2/x.py"],
+        id="intern01", title="t", file_paths=["src2/x.py"],
         instruction="i", acceptance="a", tool_preference="AST-edit",
     )
 
@@ -118,7 +118,7 @@ def _empty_draft():
 
 def _valid_approved():
     return models.ApprovedPlan(
-        evaluations=[models.EvaluationItem(item_id="coder01", approved="Yes", comments="ok")]
+        evaluations=[models.EvaluationItem(item_id="intern01", approved="Yes", comments="ok")]
     )
 
 

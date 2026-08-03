@@ -57,7 +57,7 @@ bd: ticket-id-123
 write_mode: staged        # "staged" (safer) or "direct" (in-place)
 language: python          # python, typescript, rust, etc.
 lint_command: "uv run ruff check"
-start_phase: intern       # intern | engineer | senior | planner | coder
+start_phase: intern       # intern | engineer | senior | senior | intern
 stop_phase: senior        # intern | engineer | senior | ops
 scope:
   - path/to/file1.py

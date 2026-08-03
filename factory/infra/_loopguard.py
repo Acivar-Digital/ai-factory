@@ -165,7 +165,7 @@ def _dump_failure(fail_dir: Path, phase, role, history, limits, exc, agent_id: s
 
     # Infra-level guarantee: the failure transcript MUST land in the same role
     # folder the operator expects (artefacts/history/<role>/), not only in
-    # logs/runtime/fail_*.json. Without this, the coder/EXECUTE phase leaves
+    # logs/runtime/fail_*.json. Without this, the intern/EXECUTE phase leaves
     # zero debuggable history on a crash/hang (SA5-F2). Additive + never fatal.
     try:
         from factory.infra.artefacts import persist_messages
@@ -275,7 +275,7 @@ async def run_with_loopguard(
     # pydantic-ai counts MODEL REQUESTS (~2 per tool call: call + result), so the
     # cap is budget * 2. Engineer (75) -> 150; senior (15) -> 30.
     # intern cap raised to 60 to give CC=49+ refactoring tasks more headroom
-    # (see session_crash.md coder_4 UsageLimitExceeded).
+    # (see session_crash.md intern_4 UsageLimitExceeded).
     role_request_cap = {
         "intern": 60,
         "engineer": 150,
@@ -388,11 +388,11 @@ async def run_with_loopguard(
                     timeout=timeout,
                 )
             except UsageLimitExceeded as exc:
-                # CHANGE 3 (01_fix.md): a coder that exhausts the (now generous) request
+                # CHANGE 3 (01_fix.md): a intern that exhausts the (now generous) request
                 # cap is NOT a hard failure — force a best-effort answer with tools=[] so
                 # the pipeline continues. Without this, UsageLimitExceeded propagated as a
                 # [HALT] that marked the task blocked and aborted the whole EXECUTE phase
-                # (see session_crash.md coder_4). `res` is undefined on this exception, so
+                # (see session_crash.md intern_4). `res` is undefined on this exception, so
                 # recover from current_history.
                 _dump_failure(fail_dir, phase, role, current_history, limits, exc, agent_id=agent_id)
                 print(
@@ -845,8 +845,8 @@ async def compact_memory_gate(
     exceeds CONTEXT_COMPACT_CEILING. Runs up to EMPTY_EXT_RETRIES passes with an
     agent whose ONLY tool is `keep_memory` (the working LLM, no separate agent),
     then falls back to the summarizer if still too large. Returns the compacted
-    `message_history` ready to prepend. For an isolated coder agent, `agent_id`
-    is forwarded to `rotate_role_transcript` so the snapshot is `coderN.compactM.jsonl`
+    `message_history` ready to prepend. For an isolated intern agent, `agent_id`
+    is forwarded to `rotate_role_transcript` so the snapshot is `internN.compactM.jsonl`
     (ticket a101k, Q6 never-prune per agent).
     """
     compact_instruction, compact_retry = _load_compact_prompts()

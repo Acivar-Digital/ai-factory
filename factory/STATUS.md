@@ -1,8 +1,8 @@
-# Orchestrator Status — bd:  (updated: 2026-08-03 05:05:09 UTC)
+# Orchestrator Status — bd:  (updated: 2026-08-03 16:31:31 UTC)
 
-## ▶ LIVE — coder04 → src2/4.py
+## ▶ LIVE — intern04 → src2/4.py
 - Roles completed (executions/phases): 0/3
-- Active task: coder04 → src2/4.py
+- Active task: intern04 → src2/4.py
 - Loopguard recoveries (fabricated best-effort): 0
 - Compactions: 0
 
@@ -10,7 +10,7 @@
 - (none)
 
 ## ◐ IN-PROGRESS
-- [~] coder04 → src2/4.py
+- [~] intern04 → src2/4.py
 
 ## □ TODO (remaining pipeline)
 - [ ] intern

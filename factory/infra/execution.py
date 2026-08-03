@@ -1,4 +1,4 @@
-"""DAG execution for coder tasks."""
+"""DAG execution for intern tasks."""
 from __future__ import annotations
 
 import asyncio
@@ -23,15 +23,15 @@ from factory.infra.exchange import (
 )
 from factory.infra.tools import wrap_injected_context
 
-CODER_VALIDATION_PASSES = 3
-DAG_DEADLOCK_TIMEOUT: float = CODER_VALIDATION_PASSES * 600  # 1800.0
+INTERN_VALIDATION_PASSES = 3
+DAG_DEADLOCK_TIMEOUT: float = INTERN_VALIDATION_PASSES * 600  # 1800.0
 
 
 async def run_execute_phase(
     plan: ApprovedPlan,
     run_dir: Path,
     sem: asyncio.Semaphore,
-    coder_fn,
+    intern_fn,
     prior: dict[str, TaskResult] | None = None,
     rerun_ids: set[str] | None = None,
     feedback: dict[str, str] | None = None,
@@ -51,9 +51,9 @@ async def run_execute_phase(
     - `prior` + `rerun_ids` enable surgical re-execution: only tasks whose id is
       in `rerun_ids` are re-run; others are copied from `prior`.
     - `feedback` (optional) is a task_id -> prior-review/audit findings text map.
-      When a rerun task's id is in `feedback`, its coder brief is augmented with
+      When a rerun task's id is in `feedback`, its intern brief is augmented with
       a `=== PRIOR FEEDBACK ===` block (R1, ticket baziforecaster-nw9ov) so the
-      rerun coder is told exactly what to change instead of re-deriving it blind.
+      rerun intern is told exactly what to change instead of re-deriving it blind.
     - Asserts the task spec's file-disjoint claim per concurrent group (HALT)."""
     workplan = plan.workplan
     groups = {g.id: g for g in workplan.groups}
@@ -117,16 +117,16 @@ async def run_execute_phase(
     async def execute_task(t: ApprovedTask) -> TaskResult:
         staged = stage_paths(t.file_paths)
         # ── SIZE-AWARE CONTEXT INJECTION GATE (epic baziforecaster-gx30p) ──
-        # A coder must hold the full target file to edit precisely, but an
+        # A intern must hold the full target file to edit precisely, but an
         # unbounded file risks blowing the 200K budget. Compute deterministic
-        # token counts per task BEFORE any coder spawns (cheap assertion before
+        # token counts per task BEFORE any intern spawns (cheap assertion before
         # an expensive LLM call). k2owt / qkm3p / fzqa2 / vze01.
         est = estimate_task_tokens(t.file_paths)
         total_tokens: int = est["total"]  # type: ignore[typeddict-item]
         per_file: dict[str, int] = est["per_file"]  # type: ignore[typeddict-item]
         tier = "A" if total_tokens <= TASK_TOKEN_THRESHOLD else "B"
         # fzqa2: stage (copy) live files into temp/<task>/ as an eviction-exempt
-        # baseline. The coder reads from staging (real content, never evicted),
+        # baseline. The intern reads from staging (real content, never evicted),
         # the live tree stays read-only. Modes drive the per-file EDIT MODE block.
         edit_modes = _stage_copies(t.file_paths, staged)
         if tier == "B":
@@ -140,14 +140,14 @@ async def run_execute_phase(
                     f"{TIER_B_SLICE_THRESHOLD:,}-token slice budget: "
                     f"{sorted(oversized)}. Re-plan with narrower file_paths."
                 )
-            # qkm3p: Tier B — do NOT inject the full files. The coder works from
+            # qkm3p: Tier B — do NOT inject the full files. The intern works from
             # the eviction-exempt staging copies + a structural map so it can
             # target precise slices without the whole file in its context.
             tier_b_map = _build_tier_b_map(t.file_paths)
             print(
                 f"  [SIZE-GATE] task {t.id}: Tier B ({total_tokens:,} tokens > "
                 f"{TASK_TOKEN_THRESHOLD:,} threshold) — injecting structural map, "
-                f"coder reads staging slices.",
+                f"intern reads staging slices.",
                 flush=True,
             )
             inline_files = ""
@@ -173,9 +173,9 @@ async def run_execute_phase(
                 )
         # R5 (baziforecaster-6gizg): frozen, structured behaviour appendix derived
         # from the task's acceptance/DoD — NOT the task spec's raw prose. Anchors the
-        # coder to a contract regardless of task spec wording.
+        # intern to a contract regardless of task spec wording.
         behaviour_appendix = (
-            "=== EXPECTED CODER BEHAVIOUR (frozen contract) ===\n"
+            "=== EXPECTED INTERN BEHAVIOUR (frozen contract) ===\n"
             "- Implement ONLY this task; do not touch other tasks' files.\n"
             "- Satisfy EVERY acceptance_criteria line below verbatim; if a criterion "
             "is unachievable, return status 'blocked' with the reason — never fake it.\n"
@@ -191,14 +191,14 @@ async def run_execute_phase(
         feedback_block = ""
         if feedback and t.id in feedback:
             # R1 (baziforecaster-nw9ov): the harness computed prior review/audit
-            # findings to pick rerun_ids but never showed them to the coder. The
-            # rerun coder is per-agent isolated (coderN.jsonl) and effectively
+            # findings to pick rerun_ids but never showed them to the intern. The
+            # rerun intern is per-agent isolated (internN.jsonl) and effectively
             # fresh, so explicit injection is REQUIRED — do not rely on message_history.
             feedback_block = (
                 "\n=== PRIOR FEEDBACK (why this task was reopened) ===\n"
                 "You are FIXING a previously-failed attempt. The harness reopened "
                 "this task based on the review/audit findings below. Address EVERY "
-                "point. Your own prior attempt context lives in your coder memory "
+                "point. Your own prior attempt context lives in your intern memory "
                 "(compacted via keep_memory) — this block is the authoritative list "
                 "of what changed.\n"
                 f"{feedback[t.id]}\n"
@@ -207,7 +207,7 @@ async def run_execute_phase(
             feedback_block = (
                 "\n=== PRIOR FEEDBACK ===\n"
                 "This task was reopened by the harness (rerun target) but no "
-                "structured findings were captured. Re-read your own coder memory "
+                "structured findings were captured. Re-read your own intern memory "
                 "(keep_memory) and the staged files, and re-verify your prior "
                 "attempt against the acceptance criteria.\n"
             )
@@ -246,18 +246,18 @@ async def run_execute_phase(
             pass
         # ------------------
         async with sem:
-            # P1 vo94 (M3): show the coder as IN-FLIGHT *before* it runs, so an
+            # P1 vo94 (M3): show the intern as IN-FLIGHT *before* it runs, so an
             # active task is not misreported as finished (the board previously
-            # only flipped to coder:{id} after the call returned).
+            # only flipped to intern:{id} after the call returned).
             update_status_board(history if history is not None else [], f"{t.id} → {t.file_paths[0] if t.file_paths else '?'}", bd)
             try:
                 out = await asyncio.wait_for(
-                    coder_fn(brief, task_id=t.id), timeout=AGENT_RUN_TIMEOUT
+                    intern_fn(brief, task_id=t.id), timeout=AGENT_RUN_TIMEOUT
                 )
             except TimeoutError:
                 # docs/01_fix.md Fix B: surface silent blocked paths loudly.
                 log_operator(
-                    f"task {t.id} blocked: coder timed out after "
+                    f"task {t.id} blocked: intern timed out after "
                     f"{AGENT_RUN_TIMEOUT}s (initial pass)",
                     level="WARNING",
                 )
@@ -266,11 +266,11 @@ async def run_execute_phase(
                     status="blocked",
                     files_changed=[],
                     diff_summary="",
-                    notes=f"coder timed out after {AGENT_RUN_TIMEOUT}s",
+                    notes=f"intern timed out after {AGENT_RUN_TIMEOUT}s",
                 )
             except Exception as e:
                 log_operator(
-                    f"[execute_task] coder_fn exception for task {t.id}; "
+                    f"[execute_task] intern_fn exception for task {t.id}; "
                     f"marking blocked. error={e!r}",
                     level="ERROR",
                 )
@@ -279,9 +279,9 @@ async def run_execute_phase(
                     status="blocked",
                     files_changed=[],
                     diff_summary="",
-                    notes=f"coder execution failed: {e}",
+                    notes=f"intern execution failed: {e}",
                 )
-            # SA5-F2: per-task transcript for coder/EXECUTE diagnostics.
+            # SA5-F2: per-task transcript for intern/EXECUTE diagnostics.
             try:
                 task_log = RUNTIME_DIR / f"task_{t.id}.log"
                 task_log.parent.mkdir(parents=True, exist_ok=True)
@@ -291,7 +291,7 @@ async def run_execute_phase(
                 )
             except Exception as log_exc:
                 print(f"[WARN] task transcript write failed for {t.id}: {log_exc!r}", flush=True)
-        append_exchange_turn(exchange, pass_counter, "coder", out, bd)
+        append_exchange_turn(exchange, pass_counter, "intern", out, bd)
         try:
             obj = json.loads(out)
         except Exception as e:
@@ -299,7 +299,7 @@ async def run_execute_phase(
             # the LLM loop) BUT surface the fault to the operator instead of
             # hiding it inside `notes` alone.
             log_operator(
-                f"[execute_task] coder output for task {t.id} was not valid JSON; "
+                f"[execute_task] intern output for task {t.id} was not valid JSON; "
                 f"marking blocked. error={e!r}",
                 level="WARNING",
             )
@@ -308,20 +308,20 @@ async def run_execute_phase(
                 status="blocked",
                 files_changed=[],
                 diff_summary="",
-                notes=f"coder output not JSON: {e}",
+                notes=f"intern output not JSON: {e}",
             )
 
         # --- HARNESS-OWNED VALIDATION RE-SPAWN LOOP (DECISION C / Q4-A) ---
-        # The coder only DECLARES done; the harness runs the guardrail (ruff +
+        # The intern only DECLARES done; the harness runs the guardrail (ruff +
         # smoke type-construction gate + broadened union pyright) on the staged
-        # files. On RUFF, SMOKE, OR PYRIGHT failure it spawns a FRESH coder agent
+        # files. On RUFF, SMOKE, OR PYRIGHT failure it spawns a FRESH intern agent
         # with the feedback appended so it self-corrects (docs/01_fix.md Tasks
         # 1, 2, 6: pyright is now BLOCKING, immediate re-spawn). The per-stage
         # gate means a broken upstream type contract surfaces at the PRODUCER,
-        # not the consumer. Each coder call is a clean agent (no shell needed).
+        # not the consumer. Each intern call is a clean agent (no shell needed).
         feedback_brief = brief
         verdict_state: dict[str, dict] = {}  # fp -> last guardrail payload
-        for _pass in range(CODER_VALIDATION_PASSES + 1):
+        for _pass in range(INTERN_VALIDATION_PASSES + 1):
             files = obj.get("files_changed") or obj.get("files") or []
             ruff_failed = False
             pyright_failed = False
@@ -337,7 +337,7 @@ async def run_execute_phase(
                     # collapse to the live file and self-compare as a false zero-diff).
                     validate_target = stage_path(fp)
                     # Fix A (Q5 Option B): zero-diff vs the captured .orig
-                    # baseline -> genuine no-op edit. Re-spawn the coder to actually
+                    # baseline -> genuine no-op edit. Re-spawn the intern to actually
                     # edit; block (via the SPAWN-ALL HALT) only if it persists.
                     _zd = staged_zero_diff(fp)
                     if _zd is True:
@@ -382,7 +382,7 @@ async def run_execute_phase(
                     continue
                 verdict_state[fp] = gj
                 # Fix E: mechanically auto-fix lint on the staged file,
-                # then re-score the auto-fixed file so a coder is never burned for
+                # then re-score the auto-fixed file so a intern is never burned for
                 # a trivial I001/UP034 it can't see. Only re-runs when ruff failed.
                 if gj.get("ruff_ok", True) is False:
                     try:
@@ -441,7 +441,7 @@ async def run_execute_phase(
             if not (ruff_failed or smoke_failed or pyright_failed or zero_diff_failed):
                 break  # clean -> final result is the current out/obj.
 
-            if _pass + 1 > CODER_VALIDATION_PASSES:
+            if _pass + 1 > INTERN_VALIDATION_PASSES:
                 # HARD-HALT after exhausting all re-spawn attempts.
                 reasons = []
                 if ruff_failed:
@@ -456,13 +456,13 @@ async def run_execute_phase(
                 # HALT so the operator sees it without a deep log dive.
                 log_operator(
                     f"[HALT] task {t.id} failed validation after "
-                    f"{CODER_VALIDATION_PASSES} re-spawn attempts "
+                    f"{INTERN_VALIDATION_PASSES} re-spawn attempts "
                     f"({', '.join(reasons)})",
                     level="ERROR",
                 )
                 raise RuntimeError(
                     f"[HALT] task {t.id} failed validation after "
-                    f"{CODER_VALIDATION_PASSES} re-spawn attempts "
+                    f"{INTERN_VALIDATION_PASSES} re-spawn attempts "
                     f"({', '.join(reasons)}). EXECUTE phase aborted — a broken "
                     f"type contract must not reach the senior review phase."
                 )
@@ -483,12 +483,12 @@ async def run_execute_phase(
                 update_status_board(history if history is not None else [], f"{t.id} → {t.file_paths[0] if t.file_paths else '?'}", bd)
                 try:
                     out = await asyncio.wait_for(
-                        coder_fn(feedback_brief, task_id=t.id), timeout=AGENT_RUN_TIMEOUT
+                        intern_fn(feedback_brief, task_id=t.id), timeout=AGENT_RUN_TIMEOUT
                     )
                 except TimeoutError:
                     # docs/01_fix.md Fix B: surface silent blocked paths loudly.
                     log_operator(
-                        f"task {t.id} blocked: coder re-spawn timed out after "
+                        f"task {t.id} blocked: intern re-spawn timed out after "
                         f"{AGENT_RUN_TIMEOUT}s (validation re-spawn pass)",
                         level="WARNING",
                     )
@@ -497,11 +497,11 @@ async def run_execute_phase(
                         status="blocked",
                         files_changed=[],
                         diff_summary="",
-                        notes=f"coder re-spawn timed out after {AGENT_RUN_TIMEOUT}s",
+                        notes=f"intern re-spawn timed out after {AGENT_RUN_TIMEOUT}s",
                     )
                 except Exception as e:
                     log_operator(
-                        f"[execute_task] coder_fn re-spawn exception for task {t.id}; "
+                        f"[execute_task] intern_fn re-spawn exception for task {t.id}; "
                         f"marking blocked. error={e!r}",
                         level="ERROR",
                     )
@@ -510,7 +510,7 @@ async def run_execute_phase(
                         status="blocked",
                         files_changed=[],
                         diff_summary="",
-                        notes=f"coder re-spawn execution failed: {e}",
+                        notes=f"intern re-spawn execution failed: {e}",
                     )
                 try:
                     task_log = RUNTIME_DIR / f"task_{t.id}.log"
@@ -519,12 +519,12 @@ async def run_execute_phase(
                         fh.write(f"\n=== RE-SPAWN PASS {_pass + 2} ===\nBRIEF:\n{feedback_brief}\n\nOUTPUT:\n{out}\n")
                 except Exception as log_exc:
                     print(f"[WARN] task transcript append failed for {t.id}: {log_exc!r}", flush=True)
-            append_exchange_turn(exchange, pass_counter, "coder", out, bd)
+            append_exchange_turn(exchange, pass_counter, "intern", out, bd)
             try:
                 obj = json.loads(out)
             except Exception as e:
                 log_operator(
-                    f"[execute_task] re-spawned coder output for task {t.id} was not "
+                    f"[execute_task] re-spawned intern output for task {t.id} was not "
                     f"valid JSON; proceeding with last valid obj. error={e!r}",
                     level="WARNING",
                 )
@@ -574,7 +574,7 @@ async def run_execute_phase(
             pass
         # ------------------
 
-        # HARNESS-OWNED PATCH GENERATION (B1–B7) — replaces coder hand-written .diff
+        # HARNESS-OWNED PATCH GENERATION (B1–B7) — replaces intern hand-written .diff
         files = obj.get("files_changed") or obj.get("files") or []
         if obj.get("status") == "done":
             written, real_changes = _write_harness_patches(t.id, files, bd)
@@ -585,7 +585,7 @@ async def run_execute_phase(
                 return TaskResult(task_id=t.id, status="blocked", files_changed=[],
                                   diff_summary="", notes="fake-done: no file changes vs baseline")
 
-        # Task 4 (docs/01_fix.md, D1): cumulative ValidationVerdict. The coder's
+        # Task 4 (docs/01_fix.md, D1): cumulative ValidationVerdict. The intern's
         # JSON is the *claim* half; these fields are the harness-filled *verdict*
         # half, derived from the guardrail payloads collected in the re-spawn loop.
         ruff_ok = py_ok = smk_ok = True
@@ -628,12 +628,12 @@ async def run_execute_phase(
             # executes regardless of whether a sibling/prerequisite task blocked.
             # We no longer short-circuit a dependent group when its prerequisite
             # yielded blocked tasks — a single blocked task must NOT axe unrelated
-            # sibling coders. The whole EXECUTE phase is instead hard-halted AFTER
+            # sibling interns. The whole EXECUTE phase is instead hard-halted AFTER
             # all groups finish (see post-gather scan below), so incomplete work
             # never flows on toward review. The wait still gates true dependency
             # ordering (a group only starts once its prerequisites completed).
             # 01_FIX-D1: unbounded wait + liveness guard. The old 300s deadline
-            # crashed on slow-but-legitimate groups (coder_1 + coder_2 re-spawns
+            # crashed on slow-but-legitimate groups (intern_1 + intern_2 re-spawns
             # took >5min). Now we only raise if the prerequisite already completed
             # but forgot to signal its event (true code-regression bug).
             try:
@@ -687,7 +687,7 @@ async def run_execute_phase(
                 # failure loudly next to the SPAWN-ALL HALT so triage does not
                 # require a deep log dive. The message carries the underlying
                 # reason (e.g. "[HALT] task <id> failed validation after N
-                # coder passes (pyright/ruff/smoke)" from the re-spawn loop).
+                # intern passes (pyright/ruff/smoke)" from the re-spawn loop).
                 log_operator(
                     f"task {t.id} blocked: {type(r).__name__}: {r}",
                     level="WARNING",

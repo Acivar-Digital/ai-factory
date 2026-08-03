@@ -1,6 +1,6 @@
-"""Regression tests for 0xvqo: coder tool-budget hardening.
+"""Regression tests for 0xvqo: intern tool-budget hardening.
 
-Root cause (session_crash.md): coder_1/coder_3 each re-read their 3 staging
+Root cause (session_crash.md): intern_1/intern_3 each re-read their 3 staging
 files 6x (redundant batch_read) then probed blind, exhausting the flat 15-call
 budget -> RuntimeHALT. Two fixes are guarded here, both testable WITHOUT LLM keys:
 
@@ -9,11 +9,11 @@ budget -> RuntimeHALT. Two fixes are guarded here, both testable WITHOUT LLM key
     full content present). A re-read does NOT re-execute the read and does NOT
     consume the read bucket, but still ticks the global tool budget so a chatty
     model cannot loop on re-reads forever.
-  * DYNAMIC CODER BUDGET -- _coder_budget_for(num_files) = clamp(BASE + PER_FILE
+  * DYNAMIC INTERN BUDGET -- _intern_budget_for(num_files) = clamp(BASE + PER_FILE
     * num_files, MIN, MAX). Scales with the task's file count so multi-file
     refactors aren't starved, but clamped vs sprawl.
 
-If a future change re-allows redundant re-reads or reverts to a flat coder
+If a future change re-allows redundant re-reads or reverts to a flat intern
 budget, these tests fail loudly.
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ from factory.infra.tools import (
     _READ_FATAL,
     _READ_REDUNDANT,
     GuardToolset,
-    _coder_budget_for,
+    _intern_budget_for,
 )
 
 
@@ -145,7 +145,7 @@ async def test_redundant_read_still_ticks_global_budget() -> None:
 
 async def test_redundant_reads_exhaust_read_budget_force_final_result() -> None:
     # 0lj69 regression: a model that re-reads the SAME files over
-    # and over (the session_crash.md hbh1 planner looped 12x on 2 files) must be
+    # and over (the session_crash.md hbh1 intern looped 12x on 2 files) must be
     # force-stopped. Re-reads now count against READ_BUDGET, so the Nth redundant
     # read returns _READ_FATAL ("emit final_result NOW") instead of looping until
     # request_limit=40 kills the whole run.
@@ -179,19 +179,19 @@ async def test_read_budget_exhaustion_returns_fatal() -> None:
     assert _READ_FATAL in res
 
 
-def test_coder_budget_dynamic_scales_and_clamps() -> None:
+def test_intern_budget_dynamic_scales_and_clamps() -> None:
     # 1 file -> 16 (12+4, clamped to MIN)
-    assert _coder_budget_for(1) == 16
+    assert _intern_budget_for(1) == 16
     # 3 files -> 24 (matches the session_crash task shape, no longer 15)
-    assert _coder_budget_for(3) == 24
+    assert _intern_budget_for(3) == 24
     # 0 files -> treat as 1 -> 16
-    assert _coder_budget_for(0) == 16
+    assert _intern_budget_for(0) == 16
     # 2 files -> 20
-    assert _coder_budget_for(2) == 20
+    assert _intern_budget_for(2) == 20
     # 10 files -> 12+40=52 clamped to MAX 30
-    assert _coder_budget_for(10) == 30
+    assert _intern_budget_for(10) == 30
     # monotonic: more files never yields fewer calls
-    assert _coder_budget_for(5) >= _coder_budget_for(1)
+    assert _intern_budget_for(5) >= _intern_budget_for(1)
 
 
 async def test_path_normalization_deduplication() -> None:
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     asyncio.run(test_read_file_redundant_rejected())
     asyncio.run(test_redundant_read_still_ticks_global_budget())
     asyncio.run(test_read_budget_exhaustion_returns_fatal())
-    test_coder_budget_dynamic_scales_and_clamps()
+    test_intern_budget_dynamic_scales_and_clamps()
     asyncio.run(test_path_normalization_deduplication())
     print("OK")
 

@@ -3,8 +3,8 @@ Resume: false
 bd: test-prompt-good
 write_mode: staged
 language: python
-start_phase: planner
-stop_phase: supervisor_review
+start_phase: senior
+stop_phase: engineer_review
 scope:
   - src2/engine/module11_probability.py
 ---
@@ -16,7 +16,7 @@ Verify valence-gated clash scoring works with real workspace files only.
 `src2/engine/module11_probability.py` exists. `src2/engine/module3_interaction.py` does NOT exist in workspace.
 Implement valence-gated clash (`clash_beneficial` / `clash_harmful`) directly inside `module11_probability.py` without phantom imports.
 
-## PRE-CHECK (planner must verify before coding)
+## PRE-CHECK (senior must verify before coding)
 Run: `ls src2/engine/module3_interaction.py` — if MISSING, implement `get_clash_valence` locally (do NOT import missing module).
 
 ## DELIVERABLES
@@ -29,7 +29,7 @@ Run: `ls src2/engine/module3_interaction.py` — if MISSING, implement `get_clas
 - No `except: pass`
 - Fail loudly: broken imports must crash visibly
 
-## ACCEPTANCE (must pass at supervisor_review phase)
+## ACCEPTANCE (must pass at engineer_review phase)
 1. `python -c "from src2.engine.module11_probability import get_valence_gated_clash; print(get_valence_gated_clash('甲','子','午'))"` succeeds
 2. Function returns key `clash_beneficial` or `clash_harmful` + weights dict
 3. `uv run ruff check src2/engine/module11_probability.py` passes

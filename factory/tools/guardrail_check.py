@@ -3,13 +3,13 @@
 guardrail_check.py — HARNESS-SIDE guardrail CLI for the orchestrator.
 
 This is a harness-owned validation tool run by runner.py (or manually by the
-operator). It is NOT exposed to any agent's tool_allow_list — the coder never
+operator). It is NOT exposed to any agent's tool_allow_list — the intern never
 sees or calls it. It implements the post-edit gate:
 
     ruff check -> scoped pyright -> diff_vs_orig
 
-so a deliberately-broken coder edit can be surfaced (ruff_output + diff) back
-to a fresh coder for self-correction, without ever giving the model a shell.
+so a deliberately-broken intern edit can be surfaced (ruff_output + diff) back
+to a fresh intern for self-correction, without ever giving the model a shell.
 
 Modes:
     validate  <file>  Run ruff, scoped pyright, and print a single JSON line:
@@ -130,10 +130,10 @@ def _changed_lines_from_diff(diff_text: str) -> set[int] | None:
 def typecheck_file(file_path: str, changed: set[int] | None = None) -> tuple[bool, str]:
     """Run `uv run pyright <file>`, scoped to THIS file's errors.
 
-    Pre-existing type errors elsewhere in the repo do not block. A coder is
+    Pre-existing type errors elsewhere in the repo do not block. A intern is
     only held accountable for errors it INTRODUCED on the lines it CHANGED
-    (architectural principle: "other coder's shit is
-    our shit"). Pre-existing errors in the same file on lines the coder never
+    (architectural principle: "other intern's shit is
+    our shit"). Pre-existing errors in the same file on lines the intern never
     touched are filtered out via the ``changed`` set (computed from the diff
     vs the live original); when ``changed`` is ``None`` we fall back to
     whole-file scope. If pyright is absent, this is non-blocking (skipped).
@@ -156,7 +156,7 @@ def typecheck_file(file_path: str, changed: set[int] | None = None) -> tuple[boo
 
     output = (result.stdout or "") + (result.stderr or "")
     fname = path.name
-    # Scope errors to the lines the coder actually changed (per D2). A coder
+    # Scope errors to the lines the intern actually changed (per D2). A intern
     # must not be blocked by pre-existing pyright errors on lines it never
     # touched. Fall back to whole-file scope only when no diff exists.
     if changed is None:
@@ -184,7 +184,7 @@ def discover_dependencies(primary: Path, edit_set: set[str] | None = None) -> li
     the strongest import-edge weight (most imports of that module).
 
     For newly-created files (no imports resolvable), callers may pass the
-    planner's declared ``depends_on`` files via ``edit_set`` so those are
+    intern's declared ``depends_on`` files via ``edit_set`` so those are
     included. Returns absolute Paths, bounded to ``UNION_MAX_DEPS``.
     """
     try:
@@ -204,7 +204,7 @@ def discover_dependencies(primary: Path, edit_set: set[str] | None = None) -> li
                 wanted[stem] = wanted.get(stem, 0) + 1
 
     if not wanted:
-        # New file with no imports: fall back to the edit set (planner deps).
+        # New file with no imports: fall back to the edit set (intern deps).
         if edit_set:
             out = []
             for p in list(edit_set)[:UNION_MAX_DEPS]:
@@ -258,13 +258,13 @@ def typecheck_union(
     """Run ``uv run pyright`` once over the bounded union of files so cross-file
     type inference loads all edited modules (docs/01_fix.md Task 3).
 
-    Each edited file's errors are scoped to the lines the coder actually
-    CHANGED (per D2) — a coder is never held responsible for pre-existing
-    errors in the same file. Errors attributed to a file the coder did NOT edit
+    Each edited file's errors are scoped to the lines the intern actually
+    CHANGED (per D2) — a intern is never held responsible for pre-existing
+    errors in the same file. Errors attributed to a file the intern did NOT edit
     (a dependency, Fix F) are **dropped entirely** — a dependency type break is
-    the architect's shit, not the coder's. ``changed_map`` maps basename -> the
+    the architect's shit, not the intern's. ``changed_map`` maps basename -> the
     set of changed NEW line numbers (``None`` == no diff -> whole-file scope for
-    that file). ``edited_names`` is the set of basenames the coder actually
+    that file). ``edited_names`` is the set of basenames the intern actually
     owns; any error whose file basename is not in it is dropped. If pyright is
     absent, this is non-blocking (skipped). Returns (success, output_text).
     """

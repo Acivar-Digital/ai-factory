@@ -7,7 +7,7 @@ Offline by design: no network, no LLM. Asserts that:
 - ``_build_repo_map`` strips the JSON envelope and bounds the tree so the
   injected map stays small even for the unscoped (broadcast) roles that used to
   receive a 62KB depth-3 tree.
-- The lean block + map keep a non-coder system prompt well under the 30KB
+- The lean block + map keep a non-intern system prompt well under the 30KB
   acceptance ceiling.
 """
 from __future__ import annotations
@@ -67,13 +67,13 @@ def test_unscoped_repo_map_is_small():
 
 
 def test_scoped_repo_map_is_capped():
-    """A scoped (coder) map must be length-capped to avoid payload blow-up."""
+    """A scoped (intern) map must be length-capped to avoid payload blow-up."""
     mp = tools_mod._build_repo_map(scope_paths=["src2/engine/unified.py"])
     assert len(mp.encode()) < 20_000
 
 
-def test_non_coder_system_prompt_under_ceiling():
-    """Approximate non-coder system prompt must stay under the 30KB ceiling."""
+def test_non_intern_system_prompt_under_ceiling():
+    """Approximate non-intern system prompt must stay under the 30KB ceiling."""
     block = tools_mod.pydantic_ai_default_block()
     rm = tools_mod._build_repo_map()
     total = (

@@ -27,7 +27,7 @@ is parsed by `read_prompt()` (runner.py) for machine-level configuration.
 | `write_mode` | `"direct"` \| `"staged"` | no | `"direct"` | `direct` = edit target files in-place; `staged` = copy to factory temp, edit there, apply at end |
 | `language` | string | no | `"python"` | Project language hint (`python`, `typescript`, `rust`, `html`, etc.) |
 | `lint_command` | string | no | `"uv run ruff check"` | Command to run for acceptance lint gate. Set to `""` to skip. |
-| `start_phase` | string | no | — | Pipeline phase or review tier to start from (e.g. `intern`, `engineer`, `senior`, `planner`, `coder`). |
+| `start_phase` | string | no | — | Pipeline phase or review tier to start from (e.g. `intern`, `engineer`, `senior`, `senior`, `intern`). |
 | `stop_phase` | string | no | — | Pipeline phase or review tier to stop after (e.g. `intern`, `engineer`, `senior`, `ops`). |
 
 ---

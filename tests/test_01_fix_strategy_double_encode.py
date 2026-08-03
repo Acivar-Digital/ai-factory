@@ -1,6 +1,6 @@
 """Regression tests for docs/01_fix.md — fast_json_repair corrupts double-encoded `strategy`.
 
-The planner phase crashes with `strategy: Input should be an object` because a
+The intern phase crashes with `strategy: Input should be an object` because a
 free/low-tier model double-encodes the ENTIRE `final_result` payload as a JSON
 string (and the nested `strategy` object is itself a JSON string). The old
 pipeline ran `fast_json_repair` unconditionally, which truncated the inner
@@ -32,9 +32,9 @@ from factory.infra.models import (
 def _build_strategy() -> Strategy:
     return Strategy(
         how_to_fix="wire the patch generator",
-        tool_preference=[ToolPreferenceItem(task_id="coder01", preference="AST-edit")],
+        tool_preference=[ToolPreferenceItem(task_id="intern01", preference="AST-edit")],
         parallelisable_workplan=ParallelisableWorkplan(
-            groups=[WorkGroup(id="g1", tasks=[ApprovedTask(id="coder01", title="t",
+            groups=[WorkGroup(id="g1", tasks=[ApprovedTask(id="intern01", title="t",
                 file_paths=["src2/a.py"], instruction="i", acceptance="a",
                 tool_preference="AST-edit")])]
         ),
@@ -49,7 +49,7 @@ def _build_draft_plan(strategy: Strategy) -> DraftPlan:
         rubric_cube=RubricCube(cells=[RubricCell(dimension="pydantic", criterion="c",
             severity="blocker", passed=True)]),
         summary="sum",
-        subtasks=[SubTaskBrief(id="coder01", title="t", file_paths=["src2/a.py"],
+        subtasks=[SubTaskBrief(id="intern01", title="t", file_paths=["src2/a.py"],
             instruction="i", acceptance="a", tool_preference="AST-edit",
             evidence=[EvidenceItem(file_path="src2/a.py", content="c")])],
         risks=[],
@@ -65,11 +65,11 @@ def _build_executable_plan(strategy: Strategy) -> ExecutablePlan:
         rubric_cube=RubricCube(cells=[RubricCell(dimension="pydantic", criterion="c",
             severity="blocker", passed=True)]),
         summary="sum",
-        tasks=[ApprovedTask(id="coder01", title="t", file_paths=["src2/a.py"],
+        tasks=[ApprovedTask(id="intern01", title="t", file_paths=["src2/a.py"],
             instruction="i", acceptance="a", tool_preference="AST-edit")],
         alignment="aligned",
         workplan=ParallelisableWorkplan(groups=[WorkGroup(id="g1",
-            tasks=[ApprovedTask(id="coder01", title="t", file_paths=["src2/a.py"],
+            tasks=[ApprovedTask(id="intern01", title="t", file_paths=["src2/a.py"],
                 instruction="i", acceptance="a", tool_preference="AST-edit")])]),
         strategy=strategy,
     )
