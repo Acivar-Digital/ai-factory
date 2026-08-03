@@ -61,6 +61,13 @@ def _downstream_closure(failing: set[str], groups: list[WorkGroup]) -> set[str]:
     """Forward-reachable task set from `failing`: each failing task plus every
     task in any downstream (dependent) WorkGroup. Bounds re-execution so a bad
     upstream task re-runs its dependents, but untouched work is preserved."""
+    task_group, by_id, dependents = _build_dependency_graph(groups)
+    out = _traverse_downstream(failing, task_group, by_id, dependents)
+    return out
+
+
+def _build_dependency_graph(groups: list[WorkGroup]) -> tuple[dict[str, str], dict[str, WorkGroup], dict[str, list[str]]]:
+    """Build lookup maps for task-to-group, group-by-id, and group dependents."""
     task_group: dict[str, str] = {}
     by_id = {g.id: g for g in groups}
     dependents: dict[str, list[str]] = {g.id: [] for g in groups}
@@ -70,23 +77,54 @@ def _downstream_closure(failing: set[str], groups: list[WorkGroup]) -> set[str]:
         for d in g.depends_on:
             if d in dependents:
                 dependents[d].append(g.id)
+    return task_group, by_id, dependents
+
+
+def _traverse_downstream(
+    failing: set[str],
+    task_group: dict[str, str],
+    by_id: dict[str, WorkGroup],
+    dependents: dict[str, list[str]],
+) -> set[str]:
+    """Traverse downstream from failing tasks and collect all reachable task IDs."""
     out: set[str] = set(failing)
-    stack = [task_group[t] for t in failing if t in task_group]
+    stack = _initial_stack(failing, task_group)
     seen: set[str] = set()
     while stack:
         gid = stack.pop()
-        if gid in seen:
+        if _already_seen(gid, seen):
             continue
         seen.add(gid)
-        for dep in dependents[gid]:
-            for t in by_id[dep].tasks:
-                out.add(t.id)
-            stack.append(dep)
+        _process_group_deps(gid, dependents, by_id, out, stack)
     return out
 
 
-def red_team_passed(findings: list[dict], rubric_cells: list[dict]) -> bool:
-    """Deterministic red-team go/no-go verdict — SINGLE SOURCE OF TRUTH.
+def _initial_stack(failing: set[str], task_group: dict[str, str]) -> list[str]:
+    """Build the initial traversal stack from failing task IDs."""
+    return [task_group[t] for t in failing if t in task_group]
+
+
+def _already_seen(gid: str, seen: set[str]) -> bool:
+    """Return True if this group was already visited."""
+    return gid in seen
+
+
+def _process_group_deps(
+    gid: str,
+    dependents: dict[str, list[str]],
+    by_id: dict[str, WorkGroup],
+    out: set[str],
+    stack: list[str],
+) -> None:
+    """Add all tasks from dependent groups and schedule them for traversal."""
+    for dep in dependents[gid]:
+        for t in by_id[dep].tasks:
+            out.add(t.id)
+        stack.append(dep)
+
+
+def security_checks_passed(findings: list[dict], rubric_cells: list[dict]) -> bool:
+    """Deterministic security audit go/no-go verdict — SINGLE SOURCE OF TRUTH.
 
     Used by BOTH `run_red_team_gate` and the inline `passed()` reviewer check
     so the gating logic can never drift between the two code paths (and never
@@ -179,12 +217,12 @@ def _blocker_findings_from_risks(
     risks: list[AuditRisk],
     known_task_ids: set[str],
 ) -> tuple[list[ReviewFinding], list[str]]:
-    """Anti-laziness guard for the self-graded red-team verdict.
+    """Anti-laziness guard for the self-graded security audit verdict.
 
-    The red-team model emits BOTH `findings` (which route re-execution) and
+    The security audit model emits BOTH `findings` (which route re-execution) and
     `risks` (which name offending tasks). A lazy model can emit Critical/High
     `risks` flagging real defects yet leave `findings` empty — which lets
-    `red_team_passed` return True and skip re-execution entirely, so the
+    `security_checks_passed` return True and skip re-execution entirely, so the
     defects ship to ops unreviewed.
 
     Any Critical/High `AuditRisk` that carries a `task_id` inside the approved

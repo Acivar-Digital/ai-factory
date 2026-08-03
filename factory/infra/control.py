@@ -418,10 +418,19 @@ ling_flash = OpenAIChatModel(
     ),
 )
 
-intern_model = ling_flash
-engineer_model = ling_flash
-senior_model = ling_flash
-compact_model = ling_flash
+laguna_s = OpenAIChatModel(
+    "openrouter/poolside/laguna-s-2.1:free",
+    provider=PROVIDERS["literouter"],
+    profile=OpenAIModelProfile(openai_supports_tool_choice_required=None),
+    settings=ModelSettings(
+        extra_body={
+            "reasoning": {
+                "effort": "high",
+                "exclude": True,
+            }
+        }
+    ),
+)
 
 laguna_xs = OpenAIChatModel(
     "openrouter/poolside/laguna-xs-2.1:free",
@@ -537,12 +546,13 @@ def load_control_sheet() -> ControlSheet:
             "coder_model": gemini_3_1_pro_low,
             "red_team_model": gemini_3_1_pro_low,
             "ops_model": laguna_xs,
+            "compact_model": gemini_3_5_flash_extra_low,
             "codebase_model": gemini_3_5_flash_extra_low,
             "healer_model" : gemini_3_5_flash_extra_low,
-            "intern_model" : ling_flash,
-            "engineer_model" : ling_flash,
-            "senior_model" : ling_flash,
-            "compact_model" : ling_flash,
+            "intern_model" : laguna_s,
+            "engineer_model" : laguna_s,
+            "senior_model" : laguna_s,
+            "compact_model" : laguna_s,
               
               
 
@@ -643,30 +653,15 @@ class TodoList(BaseModel):
 
 
 # =====================================================================
-# 6. ORCHESTRATOR CONTROL KNOPS
+# 6. ORCHESTRATOR CONTROL KNOBS
 # =====================================================================
 MAX_AGENTS = 20
 
 READ_BUDGET = 15
 CODER_READ_FILE_BUDGET = 10
 REMEMBER_BUDGET = 999
-REPLACE_FUNCTION_BUDGET = 15
-REPLACE_TEXT_BUDGET = 15
-WRITE_FILE_BUDGET = 15
-READ_FILE_BUDGET = 30
+compact_model = ling_flash
 REQUIRE_HUMAN_GATE = False
-
-
-def get_dynamic_write_budget(file_path: str) -> int:
-    path = Path(file_path)
-    if not path.exists():
-        return 15
-    line_count = len(path.read_text(encoding="utf-8").splitlines())
-    return max(15, line_count // 2)
-
-
-def get_dynamic_read_budget(file_path: str) -> int:
-    return 2 * get_dynamic_write_budget(file_path)
 
 # =====================================================================
 # 7. SKILL_MAP (M2) — role -> template + ROLE model key + output_type + tools
