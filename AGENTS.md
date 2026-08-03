@@ -86,7 +86,7 @@ This prevents "tool thrashing" (endlessly looping on discovery tools without a p
 ### Shadow Tooling (CLI Wrappers)
 
 - **Tooling Hierarchy**: Discovery (`/search`) $\rightarrow$ Analysis (`/investigate`) $\rightarrow$ Modification (AST tools) $\rightarrow$ System/DevOps (`bash`).
-- **Execution**: All tooling is migrated to 1:1 CLI wrappers in `factory/tools/` (invoked via `uv run python factory/tools/<tool>.py`).
+- **Execution**: LLM-facing tooling is in `factory/tools/` (invoked via `uv run python factory/tools/<tool>.py`). Infra/devops tooling is in `tools_repo/` (invoked via `uv run python tools_repo/<tool>.py`).
 - **Core Enforcement**: NEVER use raw MCP tools if a CLI wrapper exists in `factory/tools/`.
 
 ### Available Shadow Tools (`factory/tools/`)
@@ -100,8 +100,6 @@ This prevents "tool thrashing" (endlessly looping on discovery tools without a p
 - `get_file_symbols.py` -- symbols, definitions, class/func
 - `find_related_code.py` -- related logic, cross-ref
 - `query_knowledge_graph.py` -- KG query
-- `index_repository.py` -- update index, vectorize
-- `build_repo_graph.py` -- build graph, dependencies
 
 **Web Search**
 
@@ -133,6 +131,33 @@ This prevents "tool thrashing" (endlessly looping on discovery tools without a p
 - `explain_failure.py` -- crash diagnostics
 - `count_lines.py` -- line stats
 - `verify_file_path.py` -- path existence
+
+### `tools_repo/` — AI-Factory Infra Tooling
+
+Standalone CLI tools for ai-factory's own operations (indexing, collection management, graph utilities). Invoked via `uv run python tools_repo/<tool>.py`. NOT LLM-facing harness tools.
+
+**Indexing & Collections**
+
+- `index_repository.py` -- one-shot repo indexer; wraps `infra/codebase/indexer.py:index_repository`. Meta: `index`, `vectorize`, `collection`, `reset`, `--repo-name`, `--collection-name`
+- `delete_collection.py` -- drop a Qdrant collection by name. Meta: `collection`, `delete`, `drop`, `reset`
+- `get_collection_stats_tool.py` -- point count, status, index info for a collection. Meta: `stats`, `collection`, `count`, `points`, `status`
+
+**Graph & Repo**
+
+- `build_repo_graph.py` -- build dependency graph for a repo. Meta: `graph`, `dependencies`, `deps`, `build`, `repo`
+- `graph_health.py` -- check staleness of code knowledge graph files. Meta: `graph`, `health`, `staleness`, `status`
+
+**Utilities**
+
+- `count_lines.py` -- line counts for files/directories. Meta: `lines`, `count`, `stats`, `size`
+- `ast_clean_imports.py` -- remove unused imports from Python files. Meta: `imports`, `clean`, `ast`, `unused`
+- `verify_file_path.py` -- check if a file path exists. Meta: `path`, `exists`, `verify`, `check`
+- `explain_failure.py` -- crash diagnostics and traceback analysis. Meta: `failure`, `error`, `diagnose`, `crash`, `traceback`
+- `create_execution_plan.py` -- generate structured execution plan from a task description. Meta: `plan`, `execution`, `sequence`, `task`
+
+**Web Search**
+
+- `web.py` -- web search & synthesis (Exa/Tavily/SearXNG). Meta: `web`, `search`, `query`, `synthesize`, `research`
 
 ### Hard Directives
 
