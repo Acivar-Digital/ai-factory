@@ -13,14 +13,14 @@ Design guarantees:
   * ONE shared pipe (here, in ``common/``) so no single role can silently
     revert the per-turn MD re-injection to jsonl replay.
   * Exact-md resolution via ``_history_filename(role, agent_id)`` — NO
-    mtime-glob (the glob was the coder-tagging bug in the old
-    ``read_latest_md`` HALT-guard). For ``coder`` + ``agent_id='coder3'`` this
-    resolves ``coder/coder3.md``; for non-coder roles ``agent_id=None`` ->
+    mtime-glob (the glob was the intern-tagging bug in the old
+    ``read_latest_md`` HALT-guard). For ``intern`` + ``agent_id='intern3'`` this
+    resolves ``intern/intern3.md``; for non-intern roles ``agent_id=None`` ->
     ``<role>.md``.
   * Cold spawn (no twin yet) returns ``None`` — NO HALT.
-  * Per-coderN isolation (ticket a101k) is preserved by construction: the
-    module reuses ``_history_filename`` which already returns ``coderN.jsonl``
-    for coder+agent_id, so the ``.md`` sibling is ``coderN.md``.
+  * Per-internN isolation (ticket a101k) is preserved by construction: the
+    module reuses ``_history_filename`` which already returns ``internN.jsonl``
+    for intern+agent_id, so the ``.md`` sibling is ``internN.md``.
 
 Import discipline to avoid cycles: ``common/md_bridge`` imports from
 ``infra/artefacts`` (which does NOT import ``common``).
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 def _read_exact_md(role: str, agent_id: str | None) -> str | None:
     """Return the EXACT `.md` twin content for ``role``/``agent_id``, or None.
 
-    Resolves the filename through ``artefacts._history_filename`` so coder
+    Resolves the filename through ``artefacts._history_filename`` so intern
     agent-isolation is honoured, then appends ``.md`` and reads it. No mtime
     glob, no "latest" guesswork — the exact sibling of the role's own jsonl.
     """

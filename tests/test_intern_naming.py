@@ -1,9 +1,9 @@
-"""Coder naming contract (ticket tqpgf).
+"""Intern naming contract (ticket tqpgf).
 
 No LLM keys required. Validates:
-  * ApprovedTask.id MUST match ^coder_\\d+$ (no task_N, no concatenated, no non-numeric);
+  * ApprovedTask.id MUST match ^intern_\\d+$ (no task_N, no concatenated, no non-numeric);
   * ApprovedPlan tasks MUST have unique ids across the whole plan;
-  * _coder_agent_id is a pass-through returning the planner id verbatim (no digit mangling);
+  * _intern_agent_id is a pass-through returning the intern id verbatim (no digit mangling);
   * the harness plan-gate re-validation surfaces a clear HALT on non-conforming plans.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ from factory.infra.models import (
     UserStory,
     WorkGroup,
 )
-from factory.infra.agent import _coder_agent_id
+from factory.infra.agent import _intern_agent_id
 
 
 def _task(tid: str) -> ApprovedTask:
@@ -57,34 +57,34 @@ def _plan(ids: list[str]) -> ExecutablePlan:
     )
 
 
-def test_valid_coder_ids_accepted():
-    # coder01, coder02, coder10 sort correctly and validate.
-    plan = _plan(["coder01", "coder02", "coder10"])
-    assert plan.tasks[0].id == "coder01"
-    assert plan.tasks[2].id == "coder10"
+def test_valid_intern_ids_accepted():
+    # intern01, intern02, intern10 sort correctly and validate.
+    plan = _plan(["intern01", "intern02", "intern10"])
+    assert plan.tasks[0].id == "intern01"
+    assert plan.tasks[2].id == "intern10"
 
 
-@pytest.mark.parametrize("bad", ["task_3", "coder3", "coder91011", "coder_X", "coder", "3", ""])
-def test_invalid_coder_id_rejected(bad):
+@pytest.mark.parametrize("bad", ["task_3", "intern3", "intern91011", "intern_X", "intern", "3", ""])
+def test_invalid_intern_id_rejected(bad):
     with pytest.raises(ValidationError):
         _plan([bad])
 
 
-def test_duplicate_coder_ids_rejected():
+def test_duplicate_intern_ids_rejected():
     with pytest.raises(ValidationError):
-        _plan(["coder01", "coder01"])
+        _plan(["intern01", "intern01"])
 
 
-def test_coder_agent_id_passthrough():
-    # _coder_agent_id returns the planner id verbatim — no digit mangling.
-    assert _coder_agent_id("coder01") == "coder01"
-    assert _coder_agent_id("coder_10") == "coder_10"
-    # non-coder role paths pass None
-    assert _coder_agent_id(None) is None
+def test_intern_agent_id_passthrough():
+    # _intern_agent_id returns the intern id verbatim — no digit mangling.
+    assert _intern_agent_id("intern01") == "intern01"
+    assert _intern_agent_id("intern_10") == "intern_10"
+    # non-intern role paths pass None
+    assert _intern_agent_id(None) is None
 
 
 def test_legacy_digit_mangling_no_longer_possible():
-    # The old logic would have turned "task_3"+"task_4" into "coder34".
-    # Now each id is validated independently, so the planner can never emit it.
+    # The old logic would have turned "task_3"+"task_4" into "intern34".
+    # Now each id is validated independently, so the intern can never emit it.
     with pytest.raises(ValidationError):
         _plan(["task_3", "task_4"])

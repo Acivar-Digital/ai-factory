@@ -13,10 +13,10 @@ from factory.infra.tools_guard import detect_prompt_injection
 from factory.infra.tools_guard import wrap_untrusted_task
 from factory.infra.tools_guard import wrap_injected_context
 from factory.infra.tools_guard import DEFAULT_TOOL_BUDGET
-from factory.infra.tools_guard import CODER_BUDGET_BASE
-from factory.infra.tools_guard import CODER_BUDGET_PER_FILE
-from factory.infra.tools_guard import CODER_BUDGET_MIN
-from factory.infra.tools_guard import CODER_BUDGET_MAX
+from factory.infra.tools_guard import INTERN_BUDGET_BASE
+from factory.infra.tools_guard import INTERN_BUDGET_PER_FILE
+from factory.infra.tools_guard import INTERN_BUDGET_MIN
+from factory.infra.tools_guard import INTERN_BUDGET_MAX
 from factory.infra.tools_guard import READ_FORGIVE_BUDGET
 from factory.infra.tools_file import normalize_read_path
 from factory.infra.tools_guard import GuardToolset
@@ -57,7 +57,7 @@ from factory.infra.tools_guard import _READ_REDUNDANT
 from factory.infra.tools_guard import _within_repo
 from factory.infra.tools_guard import _acl_allows
 from factory.infra.tools_guard import _log_acl_denied
-from factory.infra.tools_guard import _coder_budget_for
+from factory.infra.tools_guard import _intern_budget_for
 from factory.infra.tools_guard import _tool_budget_for
 from factory.infra.tools_guard import READ_ONLY_TOOLS
 from factory.infra.tools_guard import READ_FILE_TOOLS
@@ -76,10 +76,10 @@ from factory.infra.tools_skill import load_skill
 from factory.infra.tools_skill import forge_skill_spec
 from factory.infra.tools_skill import forge_skill
 from factory.infra.tools_skill import build_worker_spec
-from factory.infra.tools_const import MAX_BATCH_FILES, CODER_WRITE_ROOTS, _BATCH_READ_DEFAULT_HEAD, _BATCH_READ_NO_PATHS, _BATCH_READ_STEER
+from factory.infra.tools_const import MAX_BATCH_FILES, INTERN_WRITE_ROOTS, _BATCH_READ_DEFAULT_HEAD, _BATCH_READ_NO_PATHS, _BATCH_READ_STEER
 from factory.infra.tools_guard import _is_secret_path
 from factory.infra.tools_skill import _build_repo_map
 from factory.common import _run_tool
 from factory.infra.control import PKG_DIR, ORCH_ROOT, line_count_budgets
 
-__all__ = ['UNTRUSTED_OPEN', 'UNTRUSTED_CLOSE', 'CONTEXT_OPEN', 'CONTEXT_CLOSE', 'detect_prompt_injection', 'wrap_untrusted_task', 'wrap_injected_context', 'DEFAULT_TOOL_BUDGET', 'CODER_BUDGET_BASE', 'CODER_BUDGET_PER_FILE', 'CODER_BUDGET_MIN', 'CODER_BUDGET_MAX', 'MAX_BATCH_FILES', 'READ_FORGIVE_BUDGET', 'CODER_WRITE_ROOTS', 'normalize_read_path', 'GuardToolset', 'ROLE_TOOL_BUDGET', 'guard_tools', 'pydantic_ai_default_block', 'log_prompt_sent', 'log_run_prompt', 'log_response_raw', 'MAX_FORGE_ITERS', 'read_file', 'batch_read', 'investigate', 'search', 'list_files', 'get_file_symbols', 'get_repo_structure', 'query_knowledge_graph', 'find_related_code', 'get_code_hierarchy', 'write_file', 'replace_text', 'replace_function', 'add_constant', 'add_import', 'delete_file', 'rename_file', 'move_symbol', 'verify_edit', 'set_current_role', 'get_current_role', 'set_current_agent', 'get_current_agent', 'remember', 'keep_memory', 'record_plan', 'READ_ONLY_TOOLS', 'READ_FILE_TOOLS', 'MODIFY_TOOLS', 'TOOL_REGISTRY', 'TOOL_REGISTRY_KEYS', 'CODING_PHILOSOPHY_BLOCK', '_DISCOVERY_TOOLS', '_TOOL_BY_NAME', 'build_tool_usage_guide', 'wrap_with_acl', 'SkillSpec', 'build_skill_spec', 'load_skill_spec', 'load_skill', 'forge_skill_spec', 'forge_skill', 'build_worker_spec', '_BATCH_READ_DEFAULT_HEAD', '_BATCH_READ_NO_PATHS', '_BATCH_READ_STEER', '_coder_budget_for', '_tool_budget_for', 'line_count_budgets', '_READ_FATAL', '_READ_REDUNDANT', '_within_repo', '_acl_allows', '_is_secret_path', '_log_acl_denied', '_build_repo_map', '_run_tool', 'PKG_DIR', 'ORCH_ROOT']
+__all__ = ['UNTRUSTED_OPEN', 'UNTRUSTED_CLOSE', 'CONTEXT_OPEN', 'CONTEXT_CLOSE', 'detect_prompt_injection', 'wrap_untrusted_task', 'wrap_injected_context', 'DEFAULT_TOOL_BUDGET', 'INTERN_BUDGET_BASE', 'INTERN_BUDGET_PER_FILE', 'INTERN_BUDGET_MIN', 'INTERN_BUDGET_MAX', 'MAX_BATCH_FILES', 'READ_FORGIVE_BUDGET', 'INTERN_WRITE_ROOTS', 'normalize_read_path', 'GuardToolset', 'ROLE_TOOL_BUDGET', 'guard_tools', 'pydantic_ai_default_block', 'log_prompt_sent', 'log_run_prompt', 'log_response_raw', 'MAX_FORGE_ITERS', 'read_file', 'batch_read', 'investigate', 'search', 'list_files', 'get_file_symbols', 'get_repo_structure', 'query_knowledge_graph', 'find_related_code', 'get_code_hierarchy', 'write_file', 'replace_text', 'replace_function', 'add_constant', 'add_import', 'delete_file', 'rename_file', 'move_symbol', 'verify_edit', 'set_current_role', 'get_current_role', 'set_current_agent', 'get_current_agent', 'remember', 'keep_memory', 'record_plan', 'READ_ONLY_TOOLS', 'READ_FILE_TOOLS', 'MODIFY_TOOLS', 'TOOL_REGISTRY', 'TOOL_REGISTRY_KEYS', 'CODING_PHILOSOPHY_BLOCK', '_DISCOVERY_TOOLS', '_TOOL_BY_NAME', 'build_tool_usage_guide', 'wrap_with_acl', 'SkillSpec', 'build_skill_spec', 'load_skill_spec', 'load_skill', 'forge_skill_spec', 'forge_skill', 'build_worker_spec', '_BATCH_READ_DEFAULT_HEAD', '_BATCH_READ_NO_PATHS', '_BATCH_READ_STEER', '_intern_budget_for', '_tool_budget_for', 'line_count_budgets', '_READ_FATAL', '_READ_REDUNDANT', '_within_repo', '_acl_allows', '_is_secret_path', '_log_acl_denied', '_build_repo_map', '_run_tool', 'PKG_DIR', 'ORCH_ROOT']

@@ -3,8 +3,8 @@ Resume: false
 bd: factory-harness-smoke
 write_mode: staged
 language: python
-start_phase: planner
-stop_phase: supervisor_plan
+start_phase: senior
+stop_phase: engineer_plan
 scope:
   - admin/orchestrator/temp/
 ---

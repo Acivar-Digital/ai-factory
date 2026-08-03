@@ -1,11 +1,11 @@
-"""Control-flow tests for the DAG execution gates (code-review + red-team).
+"""Control-flow tests for the DAG execution gates (code-review + senior).
 
-No LLM keys required: coder_fn / reviewer_fn are stubbed, and the ApprovedPlan
+No LLM keys required: intern_fn / reviewer_fn are stubbed, and the ApprovedPlan
 is built in-process. Validates:
-  * run_red_team_gate re-derives the verdict from rubric_cube (ignore `green`);
+  * run_senior_audit_gate re-derives the verdict from rubric_cube (ignore `green`);
   * a blocker finding re-executes only the failing task + downstream closure;
   * the HARD wall raises after MAX_RETRIES (no forced pass);
-  * per-task coder turns + reviewer turns are appended to the resume exchange.
+  * per-task intern turns + reviewer turns are appended to the resume exchange.
 """
 import sys
 from pathlib import Path
@@ -32,11 +32,11 @@ from factory.infra.models import (
 
 
 def _plan() -> ExecutablePlan:
-    """g1=[coder_1]; g2=[coder_2,coder_3] depends on g1."""
+    """g1=[intern_1]; g2=[intern_2,intern_3] depends on g1."""
     epic = Epic(title="e", deliverables=["d"], must_be_pydantic=True)
     g1 = WorkGroup(
         id="g1",
-        tasks=[ApprovedTask(id="coder01", title="coder01", file_paths=["src2/a.py"],
+        tasks=[ApprovedTask(id="intern01", title="intern01", file_paths=["src2/a.py"],
                             instruction="i", acceptance="a",
                             tool_preference="CLI-wrapper")],
     )
@@ -44,17 +44,17 @@ def _plan() -> ExecutablePlan:
         id="g2",
         depends_on=["g1"],
         tasks=[
-            ApprovedTask(id="coder02", title="coder02", file_paths=["src2/b.py"],
+            ApprovedTask(id="intern02", title="intern02", file_paths=["src2/b.py"],
                          instruction="i", acceptance="a",
                          tool_preference="CLI-wrapper"),
-            ApprovedTask(id="coder03", title="coder03", file_paths=["src2/c.py"],
+            ApprovedTask(id="intern03", title="intern03", file_paths=["src2/c.py"],
                          instruction="i", acceptance="a",
                          tool_preference="CLI-wrapper"),
         ],
     )
     strat = Strategy(
         how_to_fix="x",
-        tool_preference={"coder01": "CLI-wrapper", "coder02": "CLI-wrapper", "coder03": "CLI-wrapper"},
+        tool_preference={"intern01": "CLI-wrapper", "intern02": "CLI-wrapper", "intern03": "CLI-wrapper"},
         parallelisable_workplan=ParallelisableWorkplan(groups=[g1, g2]),
     )
     return ExecutablePlan(
@@ -74,12 +74,12 @@ def _plan() -> ExecutablePlan:
     )
 
 
-def _coder_factory(log: dict[str, int]):
-    async def coder_fn(brief: str, task_id: str | None = None) -> str:
+def _intern_factory(log: dict[str, int]):
+    async def intern_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         log[tid] = log.get(tid, 0) + 1
         return json.dumps({"status": "done", "rc": 0, "stdout": "ok", "stderr": "", "task_id": tid, "files_changed": [], "diff_summary": "", "notes": ""})
-    return coder_fn
+    return intern_fn
 
 
 def _prior_batch(plan: ExecutablePlan) -> dict[str, TaskResult]:
@@ -100,7 +100,7 @@ def _audit_json(passed: bool, failed_tasks: list[str] | None = None) -> str:
         evals.append(EvaluationItem(item_id="rubric_global", approved="No", comments="failed rubric"))
     if evals:
         return AuditResult(evaluations=evals).model_dump_json()
-    return AuditResult(evaluations=[EvaluationItem(item_id="coder01", approved="Yes", comments="all good")]).model_dump_json()
+    return AuditResult(evaluations=[EvaluationItem(item_id="intern01", approved="Yes", comments="all good")]).model_dump_json()
 
 
 def _reviewer_always(passed: bool):

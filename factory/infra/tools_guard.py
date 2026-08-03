@@ -23,7 +23,7 @@ from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets import FunctionToolset, WrapperToolset
 from pydantic_ai.toolsets.abstract import ToolsetTool
 from pydantic_core import SchemaValidator
-from factory.infra.control import CODER_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REMEMBER_BUDGET, REPO_ROOT, line_count_budgets
+from factory.infra.control import INTERN_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REMEMBER_BUDGET, REPO_ROOT, line_count_budgets
 from factory.infra.tools_const import _BATCH_READ_DEFAULT_HEAD, _BATCH_READ_NO_PATHS
 from factory.infra.tools_file import _parse_range, batch_read, delete_file, normalize_read_path, read_file, rename_file, write_file
 from factory.infra.tools_memory import remember
@@ -86,10 +86,10 @@ class _GuardDict(dict):
         return self._guard._make_guard_tool(key)
 
 DEFAULT_TOOL_BUDGET = 35
-CODER_BUDGET_BASE = 12
-CODER_BUDGET_PER_FILE = 4
-CODER_BUDGET_MIN = 16
-CODER_BUDGET_MAX = 30
+INTERN_BUDGET_BASE = 12
+INTERN_BUDGET_PER_FILE = 4
+INTERN_BUDGET_MIN = 16
+INTERN_BUDGET_MAX = 30
 _READ_FATAL = 'READ BUDGET EXHAUSTED. You have finished reading. Produce your output (final_result) NOW. Do NOT call batch_read or read_file again — they are disabled for the rest of this run.'
 READ_FORGIVE_BUDGET = 3
 _READ_REDUNDANT = 'REDUNDANT READ: every file you requested was ALREADY read this run. The staging copy is eviction-exempt and holds the full file content — re-reading wastes your tool budget. Do NOT call batch_read/read_file again for these paths. Apply your edits or emit final_result now.'
@@ -102,7 +102,7 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
     _known_tools: dict[str, ToolsetTool[AgentDepsT]] = field(default_factory=dict)
     budget: int = DEFAULT_TOOL_BUDGET
     read_budget: int = READ_BUDGET
-    read_file_budget: int = CODER_READ_FILE_BUDGET
+    read_file_budget: int = INTERN_READ_FILE_BUDGET
     line_count: int | None = None
 
     def __post_init__(self) -> None:
@@ -283,21 +283,21 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
             return self._warning(name)
         return _run
 
-ROLE_TOOL_BUDGET: dict[str, int] = {'coder': 75}
+ROLE_TOOL_BUDGET: dict[str, int] = {'intern': 75}
 _FATAL_BUDGET = 'FATAL: Tool budget exhausted. Emit your final result now (stop calling tools).'
 
 def _tool_budget_for(role: str) -> int:
     return ROLE_TOOL_BUDGET.get(role, DEFAULT_TOOL_BUDGET)
 
-def _coder_budget_for(num_files: int) -> int:
+def _intern_budget_for(num_files: int) -> int:
     effective = max(num_files, 1)
-    raw = CODER_BUDGET_BASE + CODER_BUDGET_PER_FILE * effective
-    return max(CODER_BUDGET_MIN, min(CODER_BUDGET_MAX, raw))
+    raw = INTERN_BUDGET_BASE + INTERN_BUDGET_PER_FILE * effective
+    return max(INTERN_BUDGET_MIN, min(INTERN_BUDGET_MAX, raw))
 
 def _tool_budget_instruction(budget: int) -> str:
     return f"\n\nTOOL BUDGET: You are allocated {budget} tool calls for this task. After every tool call you will see a '[TOOL CALL a/{budget}]' marker reporting how many calls you have used. When you approach or reach {budget}, STOP calling tools and emit your final result immediately."
 
-def guard_tools(tools: list[Callable[..., Any]], budget: int=DEFAULT_TOOL_BUDGET, read_budget: int=READ_BUDGET, read_file_budget: int=CODER_READ_FILE_BUDGET, line_count: int | None=None) -> GuardToolset:
+def guard_tools(tools: list[Callable[..., Any]], budget: int=DEFAULT_TOOL_BUDGET, read_budget: int=READ_BUDGET, read_file_budget: int=INTERN_READ_FILE_BUDGET, line_count: int | None=None) -> GuardToolset:
     """Create a :class:`GuardToolset` wrapping the given tools.
 
     When ``line_count`` is provided (target file's line count), both
@@ -450,6 +450,6 @@ def wrap_with_acl(func, allowed_paths: list[str], deny_only: bool=False):
     return wrapper
 
 
-def assert_planner_emitted(budget_exhausted: bool, produced_output: bool, role: str) -> None:
+def assert_senior_emitted(budget_exhausted: bool, produced_output: bool, role: str) -> None:
     if budget_exhausted and not produced_output:
         raise RuntimeError(f"[{role.upper()}] tool budget exhausted without a final_result — HALT")

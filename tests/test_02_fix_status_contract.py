@@ -1,10 +1,10 @@
-"""Tests for factory/docs/02_fix.md — coder status-string contract.
+"""Tests for factory/docs/02_fix.md — intern status-string contract.
 
-Guards (root cause of RuntimeError: [HALT] EXECUTE phase incomplete: coder03, coder07):
-  - TaskResult.status is constrained to Literal["done","blocked"] (the coder "form").
+Guards (root cause of RuntimeError: [HALT] EXECUTE phase incomplete: intern03, intern07):
+  - TaskResult.status is constrained to Literal["done","blocked"] (the intern "form").
   - A mode="before" validator normalizes synonyms ("completed"/"ok"/"complete*"/
     "finished"/"success" -> "done"; "fail"/"failed"/"error" -> "blocked") so a
-    coder emitting a non-canonical but valid status no longer stalls the EXECUTE
+    intern emitting a non-canonical but valid status no longer stalls the EXECUTE
     completion scan.
   - Unknown statuses raise ValueError("status must be 'done' or 'blocked'") so
     pydantic-ai feeds the error back and HALTs after retries (no silent swallow).
@@ -20,7 +20,7 @@ from factory.infra import models as models_mod
 
 def _make(status: str) -> models_mod.TaskResult:
     return models_mod.TaskResult(
-        task_id="coder03",
+        task_id="intern03",
         status=status,
         files_changed=[],
         diff_summary="",
@@ -73,7 +73,7 @@ def test_unknown_status_rejected():
             raise AssertionError(f"expected ValidationError for status={bad!r}")
 
 
-# --- Form requirement: the coder schema exposes exactly done|blocked -----------
+# --- Form requirement: the intern schema exposes exactly done|blocked -----------
 
 def test_status_schema_lists_only_done_or_blocked():
     schema = models_mod.TaskResult.model_json_schema()
@@ -95,7 +95,7 @@ def test_notes_and_diff_summary_have_descriptions():
 
 def test_existing_done_construction_untouched():
     tr = models_mod.TaskResult(
-        task_id="coder01",
+        task_id="intern01",
         status="done",
         files_changed=[],
         diff_summary="x",

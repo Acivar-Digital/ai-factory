@@ -3,7 +3,7 @@
 smoke_test.py — HARNESS-SIDE per-file type-construction smoke gate.
 
 This is a harness-owned validation tool run by runner.py (or manually by the
-operator). It is NOT exposed to any agent's tool_allow_list — the coder never
+operator). It is NOT exposed to any agent's tool_allow_list — the intern never
 sees or calls it.
 
 For one staged `.py` file it:
@@ -42,7 +42,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent  # factory/tools/
 PROJECT_ROOT = SCRIPT_DIR.parent.parent  # baziforecaster/
 
 # Environmental import failures (DB/network at import time) must NOT block a
-# coder — they are the architect's runtime concern, not a type bug (Fix H).
+# intern — they are the architect's runtime concern, not a type bug (Fix H).
 _ENV_ERRORS: tuple[type[BaseException], ...] = (ConnectionError, OSError)
 try:
     import psycopg2
@@ -193,7 +193,7 @@ def _load_module_dotted(path: Path) -> tuple[types.ModuleType | None, str | None
     try:
         return (importlib.import_module(dotted), None)
     except _ENV_ERRORS as e:
-        # Environmental: do not block the coder.
+        # Environmental: do not block the intern.
         return (None, f"__ENV_SKIP__:{e}")
     except Exception as e:  # genuine import failure -> caller falls back
         return (None, f"Import failed: {type(e).__name__}: {e}")

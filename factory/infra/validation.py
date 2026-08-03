@@ -198,7 +198,7 @@ def _process_finding_for_feedback(f, out: dict[str, list[str]], prefix: str = ""
 
 def _feedback_from_review_findings(review: "CodePassed") -> dict[str, str]:
     """R1 (baziforecaster-nw9ov): render review findings + traceback_route
-    into a task_id -> prior-feedback text map for the rerun coder brief."""
+    into a task_id -> prior-feedback text map for the rerun intern brief."""
     out: dict[str, list[str]] = {}
     findings = getattr(review, "findings", None) or []
     for f in findings:
@@ -228,7 +228,7 @@ def _feedback_from_audit(
     findings: list["ReviewFinding"], audit: "AuditResult"
 ) -> dict[str, str]:
     """R1 (baziforecaster-nw9ov): render security audit findings + risks into a
-    task_id -> prior-feedback text map for the rerun coder brief."""
+    task_id -> prior-feedback text map for the rerun intern brief."""
     out: dict[str, list[str]] = {}
     for f in findings:
         _process_finding_for_feedback(f, out, prefix="SENIOR ")

@@ -63,7 +63,7 @@ def _model_to_md(obj: object, limit: int = 4000) -> str:
 def _render_verdict_block(batch: Any) -> str:
     """Task 5 (docs/01_fix.md, D5): render the harness-filled ValidationVerdict
     per task so the reviewer audits MACHINE-CHECKED facts (ruff/pyright/smoke
-    verdict + real unified diff + dependency pointers) instead of the coder's
+    verdict + real unified diff + dependency pointers) instead of the intern's
     self-report alone.
     """
     if batch is None:
@@ -235,7 +235,7 @@ def update_status_board(history: list[tuple[str, str]], current_role: str | None
      # spurious TODO.
     done = list(dict.fromkeys(runtime._SKIPPED_PHASES + [r for r, _ in history]))
     # When a gate blocks (senior review cycle FAIL with rerun needed),
-    # show loop-back to coder so status board reflects what's going on.
+    # show loop-back to intern so status board reflects what's going on.
     loop_back = current_role in ("senior", "engineer") and any(
         "FAIL" in (v if isinstance(v, str) else str(v)) for r, v in history[-3:] if r == current_role
     )
@@ -248,7 +248,7 @@ def update_status_board(history: list[tuple[str, str]], current_role: str | None
         return f"- [{mark}] {role}"
 
     done_lines = [bullet(r, "x") for r in done] or ["- (none)"]
-    live_suffix = " (BACK TO CODER)" if (current and loop_back) else ""
+    live_suffix = " (BACK TO INTERN)" if (current and loop_back) else ""
     live_line = f"- [~] {current}{live_suffix}" if current else "- (none)"
     done_set = set(done)
     todo_roles = [r for r in runtime._PHASE_ORDER if r not in done_set and r != current]
@@ -258,7 +258,7 @@ def update_status_board(history: list[tuple[str, str]], current_role: str | None
         f"# Orchestrator Status — bd:{bd}  (updated: {now})\n\n"
         f"## ▶ LIVE — {current or 'idle'}\n"
         f"- Roles completed (executions/phases): {len(done)}/{len(runtime._PHASE_ORDER)}\n"
-        f"- Active task: {current if (current and current.startswith('coder')) else '—'}\n"
+        f"- Active task: {current if (current and current.startswith('intern')) else '—'}\n"
         f"- Loopguard recoveries (fabricated best-effort): {runtime._RECOVERY_COUNT}\n"
         f"- Compactions: {runtime._COMPACTION_COUNT}\n\n"
         f"## ✓ DONE\n" + "\n".join(done_lines) + "\n\n"
@@ -269,7 +269,7 @@ def update_status_board(history: list[tuple[str, str]], current_role: str | None
 
 
 class ExchangeTurn(BaseModel):
-    """One persisted turn in the reloadable coder<->checker exchange."""
+    """One persisted turn in the reloadable intern<->checker exchange."""
 
     role: str
     pass_no: int

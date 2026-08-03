@@ -2,12 +2,12 @@
 
 Protects the harness-level contracts the orchestrator silently depends on:
 
-- coder tool-budget dynamic scaling + clamping (``tools._coder_budget_for``)
+- intern tool-budget dynamic scaling + clamping (``tools._intern_budget_for``)
 - staging/temp path normalization (``tools.normalize_read_path``)
 - the local JSONL fact store used by the agent memory CLIs
   (``factory/tools/{remember,recall,list}_fact.py``)
 
-If any of these regress, the coder/planner tool ACL and agent memory break
+If any of these regress, the intern/intern tool ACL and agent memory break
 WITHOUT a loud error -- exactly the class of silent failure this suite exists
 to catch before go-live.
 """
@@ -18,18 +18,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from factory.infra.tools import _coder_budget_for, normalize_read_path
+from factory.infra.tools import _intern_budget_for, normalize_read_path
 
 
-def test_coder_budget_dynamic_scales_and_clamps():
+def test_intern_budget_dynamic_scales_and_clamps():
     """Budget scales with file count but is clamped to [MIN, MAX]."""
-    assert _coder_budget_for(0) == 16   # effective files floored to 1 -> MIN
-    assert _coder_budget_for(1) == 16
-    assert _coder_budget_for(3) == 24
-    assert _coder_budget_for(10) == 30  # clamps at MAX for big refactors
-    assert _coder_budget_for(100) == 30
+    assert _intern_budget_for(0) == 16   # effective files floored to 1 -> MIN
+    assert _intern_budget_for(1) == 16
+    assert _intern_budget_for(3) == 24
+    assert _intern_budget_for(10) == 30  # clamps at MAX for big refactors
+    assert _intern_budget_for(100) == 30
     # monotonic non-decreasing in file count
-    assert _coder_budget_for(1) <= _coder_budget_for(2) <= _coder_budget_for(5)
+    assert _intern_budget_for(1) <= _intern_budget_for(2) <= _intern_budget_for(5)
 
 
 def test_path_normalization_deduplication():

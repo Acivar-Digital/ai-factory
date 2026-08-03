@@ -112,12 +112,12 @@ def _big_history(n: int = 68, line_len: int = 4000) -> list[ModelRequest]:
 async def test_maybe_compact_sink1_structure_and_q2(patch_summarizer, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)  # keep SINK-3 file writes out of the repo
     # Redirect role-history persist (rotate_role_transcript / persist_messages)
-    # away from the live ARTIFACTS_DIR so the test never pollutes coder.jsonl.
+    # away from the live ARTIFACTS_DIR so the test never pollutes intern.jsonl.
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(tmp_path))
     msgs = _big_history()
     state = SimpleNamespace(bd_id="", phase_summaries={})
 
-    out = await lg.maybe_compact(msgs, TestModel(), state, "EXECUTE", role="coder")
+    out = await lg.maybe_compact(msgs, TestModel(), state, "EXECUTE", role="intern")
 
     # SINK-1: first message is the prepended summary (a SystemPromptPart).
     assert isinstance(out[0], ModelRequest)
@@ -136,7 +136,7 @@ async def test_maybe_compact_per_role_budget(patch_summarizer, monkeypatch, tmp_
     msgs = _big_history()
     state = SimpleNamespace(bd_id="", phase_summaries={})
 
-    worker = await lg.maybe_compact(msgs, TestModel(), state, "EXECUTE", role="coder")
+    worker = await lg.maybe_compact(msgs, TestModel(), state, "EXECUTE", role="intern")
     orchestrator = await lg.maybe_compact(msgs, TestModel(), state, "ORCHESTRATOR", role="orchestrator")
 
     # Worker compacts (over its 70k budget); orchestrator stays under its 76.8k budget.
@@ -192,7 +192,7 @@ class _LoopAgent:
 async def test_run_with_loopguard_wires_sink1(patch_summarizer, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     # Redirect role-history persist (run_with_loopguard -> persist_messages) away
-    # from the live ARTIFACTS_DIR so the test never pollutes coder.jsonl.
+    # from the live ARTIFACTS_DIR so the test never pollutes intern.jsonl.
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(tmp_path))
     calls: list[tuple[int, object]] = []
     orig = lg.maybe_compact
@@ -213,7 +213,7 @@ async def test_run_with_loopguard_wires_sink1(patch_summarizer, monkeypatch, tmp
         history=history,
         state=state,
         phase="EXECUTE",
-        role="coder",
+        role="intern",
     )
 
     # The loop completed and SINK-1 path was reached (compaction fired at least once).
@@ -274,7 +274,7 @@ async def test_run_with_loopguard_threads_agent_id_into_persist(
     assert (hist_dir / "intern3.jsonl").exists(), "isolated intern3.jsonl missing"
 
 
-def test_build_role_agent_clones_coder_model():
+def test_build_role_agent_clones_intern_model():
     from factory.infra.runner import build_role_agent
     agent1, _ = build_role_agent("intern")
     agent2, _ = build_role_agent("intern")
@@ -298,7 +298,7 @@ async def test_concurrent_loopguard_monkeypatching_isolation(monkeypatch, tmp_pa
     # Create a shared model instance
     shared_model = TestModel()
 
-    # We simulate building two coder agents with cloned models
+    # We simulate building two intern agents with cloned models
     model1 = copy.copy(shared_model)
     model2 = copy.copy(shared_model)
 

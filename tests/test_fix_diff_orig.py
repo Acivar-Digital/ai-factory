@@ -118,21 +118,21 @@ class _FakeBatch:
 def test_render_upfront_diffs_with_diffs():
     """Diffs are extracted and formatted into a visible block."""
     batch = _FakeBatch([
-        _FakeTaskResult("coder01", "@@ -1,3 +1,3 @@\n-line1\n+line1 modified\n"),
-        _FakeTaskResult("coder02", "@@ -1,2 +1,2 @@\n-old\n+new\n"),
+        _FakeTaskResult("intern01", "@@ -1,3 +1,3 @@\n-line1\n+line1 modified\n"),
+        _FakeTaskResult("intern02", "@@ -1,2 +1,2 @@\n-old\n+new\n"),
     ])
     result = exchange._render_upfront_diffs(batch)
     assert "=== PROPOSED CODE CHANGES (DIFF) ===" in result
     assert "====================================" in result
-    assert "coder01" in result
-    assert "coder02" in result
+    assert "intern01" in result
+    assert "intern02" in result
     assert "line1 modified" in result
     assert "new" in result
 
 
 def test_render_upfront_diffs_empty_batch():
     """Batch with no diffs returns empty string."""
-    batch = _FakeBatch([_FakeTaskResult("coder01", "")])
+    batch = _FakeBatch([_FakeTaskResult("intern01", "")])
     result = exchange._render_upfront_diffs(batch)
     assert result == ""
 
@@ -146,12 +146,12 @@ def test_render_upfront_diffs_none_batch():
 def test_render_upfront_diffs_mixed():
     """Only tasks with verdict_diff are included."""
     batch = _FakeBatch([
-        _FakeTaskResult("coder01", "@@ -1 +1 @@\n+added\n"),
-        _FakeTaskResult("coder02", ""),
-        _FakeTaskResult("coder03", "@@ -1 +1 @@\n+another\n"),
+        _FakeTaskResult("intern01", "@@ -1 +1 @@\n+added\n"),
+        _FakeTaskResult("intern02", ""),
+        _FakeTaskResult("intern03", "@@ -1 +1 @@\n+another\n"),
     ])
     result = exchange._render_upfront_diffs(batch)
-    assert "coder01" in result
-    assert "coder03" in result
-    assert "coder02" not in result
+    assert "intern01" in result
+    assert "intern03" in result
+    assert "intern02" not in result
 

@@ -7,7 +7,7 @@ Offline by design: no network, no LLM keys.
   ``Resume:`` first-line format still fails loudly.
 - xfqkf: ``inject_repo_map`` expands folders, lists per-file symbols + KG for
   files, and falls back to a shallow whole-repo tree for an empty scope.
-- y1oqi: the scoped context is injected into BOTH planner and supervisor_plan
+- y1oqi: the scoped context is injected into BOTH intern and engineer_plan
   briefs in ``load_skill`` (no hardcoded DictMap block remains).
 """
 
@@ -195,7 +195,7 @@ def test_inject_repo_map_mixed_scope(tmp_path: Path) -> None:
 def test_inject_repo_map_strips_json_envelope() -> None:
     # Regression: the shadow tools emit {"success", "message", "data"} JSON
     # envelopes. The injected context MUST be clean text, not the raw envelope
-    # (ev1gf — planner.md:72-78 showed garbage JSON).
+    # (ev1gf — intern.md:72-78 showed garbage JSON).
     out = inject_repo_map(["src2/core/schemas/unified.py"])
     assert '"success"' not in out
     assert '"message"' not in out
@@ -205,7 +205,7 @@ def test_inject_repo_map_strips_json_envelope() -> None:
 def test_inject_repo_map_tree_is_py_only_and_not_gitignored() -> None:
     # Regression: the orientation tree MUST contain only .py files under
     # src2/ (+ tests/) and MUST exclude anything matched by .gitignore. The
-    # old get_repo_structure dump flooded the planner brief with _docs/, _prd/,
+    # old get_repo_structure dump flooded the intern brief with _docs/, _prd/,
     # .beads/*.darc, WEB/*.html, logs/training_data/*.json, bot*.log, etc.
     out = inject_repo_map(["src2/core/schemas/unified.py"])
     assert "STRUCTURE (src2/ + tests/, .py only):" in out
@@ -232,7 +232,7 @@ def test_inject_repo_map_tree_is_py_only_and_not_gitignored() -> None:
 
 
 def test_unwrap_tool_output_flattens_symbols_list() -> None:
-    # Regression for the "rubbish file" planner.md: get_file_symbols returns
+    # Regression for the "rubbish file" intern.md: get_file_symbols returns
     # {"success": true, "data": {"symbols": [{"name","type","line"}, ...]}}.
     # The unwrapper MUST render a compact name: type (line N) listing, NOT the
     # raw JSON array of objects (which re-polluted the injected context).
@@ -252,7 +252,7 @@ def test_unwrap_tool_output_flattens_symbols_list() -> None:
     assert "DictMap: class (line 277)" in result
 
 
-def test_rebuild_clean_planner_md_from_rubbish_file() -> None:
+def test_rebuild_clean_senior_md_from_rubbish_file() -> None:
     # End-to-end: an injected context block captured WITH the raw envelope must
     # be fully stripped (no "success"/"message" leaking) and symbols flattened.
     import re
@@ -303,8 +303,8 @@ def test_rebuild_clean_planner_md_from_rubbish_file() -> None:
     assert "foo: function (line 1)" in clean
 
 
-# ── y1oqi: injection into planner + supervisor_plan (no hardcoded DictMap) ──
-def test_load_skill_injects_scope_into_planner_and_supervisor(monkeypatch) -> None:
+# ── y1oqi: injection into intern + engineer_plan (no hardcoded DictMap) ──
+def test_load_skill_injects_scope_into_senior_and_engineer(monkeypatch) -> None:
     from factory.infra import _runtime as runtime_mod
 
     # Provide a cached scope context and avoid the real agent spawn.

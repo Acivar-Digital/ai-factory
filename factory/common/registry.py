@@ -47,7 +47,7 @@ OUTPUT_TYPE_REGISTRY: dict[str, type] = {
     "str": str,
 }
 
-# role name -> output-type NAME (e.g. "supervisor_plan" -> "ApprovedPlan").
+# role name -> output-type NAME (e.g. "engineer" -> "TaskResult").
 # Derived from SKILL_MAP (the role->spawn-binding SSoT) so a role's
 # expected output type stays defined in ONE place. Replaces the old
 # runner.ROLE_OUTPUT dict that the pqr2 refactor dropped — callers that

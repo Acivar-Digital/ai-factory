@@ -14,11 +14,11 @@ from pydantic import BaseModel, model_validator
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 from factory.common import OUTPUT_TYPE_REGISTRY, _run_tool, log_operator, resolve_model
-from factory.infra.control import CODER_READ_FILE_BUDGET, CONTROL_SHEET, PKG_DIR, READ_BUDGET, SKILL_MAP, SKILL_ROLES
+from factory.infra.control import INTERN_READ_FILE_BUDGET, CONTROL_SHEET, PKG_DIR, READ_BUDGET, SKILL_MAP, SKILL_ROLES
 from factory.infra.models import ApprovedTask, Strategy, TaskResult
-from factory.infra.tools_const import CODER_WRITE_ROOTS
+from factory.infra.tools_const import INTERN_WRITE_ROOTS
 from factory.infra.tools_file import batch_read
-from factory.infra.tools_guard import CODING_PHILOSOPHY_BLOCK, MODIFY_TOOLS, TOOL_REGISTRY, TOOL_REGISTRY_KEYS, _DISCOVERY_TOOLS, _TOOL_BY_NAME, _coder_budget_for, _tool_budget_for, _tool_budget_instruction, guard_tools, log_prompt_sent, pydantic_ai_default_block, wrap_with_acl
+from factory.infra.tools_guard import CODING_PHILOSOPHY_BLOCK, MODIFY_TOOLS, TOOL_REGISTRY, TOOL_REGISTRY_KEYS, _DISCOVERY_TOOLS, _TOOL_BY_NAME, _intern_budget_for, _tool_budget_for, _tool_budget_instruction, guard_tools, log_prompt_sent, pydantic_ai_default_block, wrap_with_acl
 from factory.infra.tools_memory import record_plan
 
 MAX_FORGE_ITERS = 3
@@ -227,7 +227,7 @@ def _build_repo_map(scope_paths: list[str] | None=None, extra_paths: list[str] |
     it can declare its reads via batch_read instead of probing one file at a time.
 
     - A bounded ASCII tree of the repo for orientation. Unscoped (broadcast)
-      roles get a shallow depth-2 tree (cheap orientation only); scoped coder
+      roles get a shallow depth-2 tree (cheap orientation only); scoped intern
       roles get depth-3 so they can locate exact files. The JSON envelope from
       `get_repo_structure` is stripped — only the tree text is injected (nz4ai).
     - Symbols (classes/functions + line numbers) for the files it may touch
@@ -266,7 +266,7 @@ def load_skill(role: str, model_key: str | None=None, task: ApprovedTask | None=
     bound to that role's model + `output_type` (from `SKILL_MAP`/`controls.py`)
     and the allow-listed tools. Returns `(SkillSpec, Agent)`.
 
-    The coder role needs per-task ACL context (file_paths), so it delegates to
+    The intern role needs per-task ACL context (file_paths), so it delegates to
     `build_worker_spec` and requires `task`/`strategy`/`run_dir`. All other
     roles are broadcast-only and need no task context. `model_key` overrides the
     bound model (used by `runner.run_phase_model` to spawn the role's agent).
@@ -275,9 +275,9 @@ def load_skill(role: str, model_key: str | None=None, task: ApprovedTask | None=
         raise KeyError(f'[HALT] role {role!r} not in SKILL_MAP')
     entry = SKILL_MAP.roles[role]
     spec = load_skill_spec(role)
-    if role == 'coder':
+    if role == 'intern':
         if task is None or strategy is None or run_dir is None:
-            raise RuntimeError("[HALT] load_skill('coder') requires task, strategy and run_dir (coder needs per-task ACL context for tool wrapping).")
+            raise RuntimeError("[HALT] load_skill('intern') requires task, strategy and run_dir (intern needs per-task ACL context for tool wrapping).")
         agent = build_worker_spec(task, strategy, alignment, run_dir)
         return (spec, agent)
     key = model_key or entry.model_key
@@ -360,10 +360,10 @@ def forge_skill(role: str, base_template: dict, ctx: str, run_dir: Path, task_id
     return skill
 
 def build_worker_spec(task: ApprovedTask, strategy: Strategy, alignment: str, run_dir: Path) -> Agent[object, TaskResult]:
-    """Build the Coder agent: allow-list → ACL wrap → cached SkillSpec → Agent.
+    """Build the Intern agent: allow-list → ACL wrap → cached SkillSpec → Agent.
 
     M2: instructions + tool contract are READ from the D8-cached SkillSpec
-    (customised/coder.yaml) instead of forging per-task. Tool binding still
+    (customised/intern.yaml) instead of forging per-task. Tool binding still
     honours the per-task strategy override so the python-first escalation of M1
     is preserved (identical runtime).
     """
@@ -378,23 +378,23 @@ def build_worker_spec(task: ApprovedTask, strategy: Strategy, alignment: str, ru
             allowed_funcs.append(wrap_with_acl(func, task.file_paths, deny_only=True))
             continue
         if func in MODIFY_TOOLS:
-            allowed_funcs.append(wrap_with_acl(func, CODER_WRITE_ROOTS))
+            allowed_funcs.append(wrap_with_acl(func, INTERN_WRITE_ROOTS))
         else:
             allowed_funcs.append(wrap_with_acl(func, task.file_paths, deny_only=True))
     if not any((f.__name__ == 'batch_read' for f in allowed_funcs)):
         allowed_funcs.append(wrap_with_acl(batch_read, task.file_paths, deny_only=True))
-    spec = load_skill_spec('coder')
+    spec = load_skill_spec('intern')
     assert set(spec.tool_allow_list) <= set(TOOL_REGISTRY_KEYS), 'rogue tool in spec'
     allowed_funcs.append(record_plan)
     instructions = pydantic_ai_default_block() + '\n\n' + CODING_PHILOSOPHY_BLOCK + '\n\n' + spec.instructions
-    all_coder_names = set(spec.tool_allow_list)
-    tool_guide = build_tool_usage_guide(all_coder_names)
+    all_intern_names = set(spec.tool_allow_list)
+    tool_guide = build_tool_usage_guide(all_intern_names)
     instructions = instructions + tool_guide
     instructions = instructions + '\n\nPLAN BEFORE YOU ACT: You have a `record_plan(approach)` tool. You MUST call `record_plan` with your concrete edit strategy (which files, what change, in what order) BEFORE calling any write/edit tool (write_file, replace_text, replace_function, add_constant, add_import, delete_file, rename_file, move_symbol). Sequence: (1) record_plan, (2) batch_read the files you need (mandatory line_ranges, max 5 calls), (3) apply edits, (4) emit your final result. NEVER emit your final result before a record_plan call.'
     instructions = instructions + '\n\n' + _build_repo_map(scope_paths=list(task.file_paths))
-    budget = _coder_budget_for(len(getattr(task, 'file_paths', []) or []))
+    budget = _intern_budget_for(len(getattr(task, 'file_paths', []) or []))
     instructions = instructions + _tool_budget_instruction(budget)
-    instructions = instructions + f'\n\nREAD BUDGET: you may call batch_read at most {READ_BUDGET} times and read_file at most {CODER_READ_FILE_BUDGET} times this run. After that, reads are disabled and you MUST emit final_result.'
-    log_prompt_sent('CODER', task.id, task.id, instructions)
-    agent = Agent(model=CONTROL_SHEET.models['intern_model'], toolsets=[guard_tools(allowed_funcs, budget, read_budget=READ_BUDGET, read_file_budget=CODER_READ_FILE_BUDGET)], instructions=instructions, output_type=TaskResult, model_settings=ModelSettings(parallel_tool_calls=False))
+    instructions = instructions + f'\n\nREAD BUDGET: you may call batch_read at most {READ_BUDGET} times and read_file at most {INTERN_READ_FILE_BUDGET} times this run. After that, reads are disabled and you MUST emit final_result.'
+    log_prompt_sent('INTERN', task.id, task.id, instructions)
+    agent = Agent(model=CONTROL_SHEET.models['intern_model'], toolsets=[guard_tools(allowed_funcs, budget, read_budget=READ_BUDGET, read_file_budget=INTERN_READ_FILE_BUDGET)], instructions=instructions, output_type=TaskResult, model_settings=ModelSettings(parallel_tool_calls=False))
     return agent

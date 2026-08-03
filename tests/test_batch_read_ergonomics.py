@@ -1,6 +1,6 @@
 """Regression tests for rj4ie: forgiving batch_read ergonomics.
 
-Root cause (session-ses_088e.md + forensic-planner-md-2026-07-17-defects):
+Root cause (session-ses_088e.md + forensic-intern-md-2026-07-17-defects):
 the model burned its entire read_budget on malformed batch_read calls
 ("no paths provided", "line_ranges REQUIRED") because the tool contract was
 unforgiving and the templates gave zero illustration of the call shape. That

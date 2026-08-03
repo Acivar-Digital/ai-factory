@@ -645,7 +645,7 @@ class TodoList(BaseModel):
 MAX_AGENTS = 20
 
 READ_BUDGET = 62
-CODER_READ_FILE_BUDGET = 20
+INTERN_READ_FILE_BUDGET = 20
 REMEMBER_BUDGET = 999
 compact_model = ling_flash
 REQUIRE_HUMAN_GATE = False
@@ -658,7 +658,7 @@ REQUIRE_HUMAN_GATE = False
 #   read_budget   = max(62, line_count)     — ~2x write_budget, floor = READ_BUDGET (62)
 # DEFAULT_TOOL_BUDGET (35) and READ_BUDGET (62) are the verified static floors;
 # the functions below apply them per-file when ``line_count`` is known at
-# agent-creation time.  Existing CODER_BUDGET_* constants (per-file-count-based)
+# agent-creation time.  Existing INTERN_BUDGET_* constants (per-file-count-based)
 # remain intact for the file-count path — this is an orthogonal line-count path.
 
 def line_count_budgets(line_count: int) -> tuple[int, int]:

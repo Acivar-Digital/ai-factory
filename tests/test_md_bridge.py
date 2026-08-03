@@ -3,7 +3,7 @@
 Offline by design: no network, no LLM keys. We build a hermetic artefacts tree
 (via the ``ORCHESTRATOR_ARTEFACTS_DIR`` env override) containing `.md` twins and
 assert ``build_md_bridge`` resolves the EXACT twin (no mtime-glob), returns None
-on cold spawn, and honours per-coderN isolation.
+on cold spawn, and honours per-internN isolation.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def test_cold_spawn_returns_none(tmp_path, monkeypatch):
 
 
 def test_role_md_bridge_injects_exact_twin(tmp_path, monkeypatch):
-    """A non-coder role's `.md` twin is wrapped as a single ModelRequest."""
+    """A non-intern role's `.md` twin is wrapped as a single ModelRequest."""
     art = tmp_path / "artefacts"
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))
     _write_md(art, "engineer", "engineer", "# Engineer journal\n- did X\n- did Y")
@@ -48,7 +48,7 @@ def test_role_md_bridge_injects_exact_twin(tmp_path, monkeypatch):
     assert "<!-- MD_LEDGER -->" in part.content
 
 
-def test_coder_agent_isolation(tmp_path, monkeypatch):
+def test_intern_agent_isolation(tmp_path, monkeypatch):
     """intern + agent_id resolves the isolated internN.md; no sibling leakage."""
     art = tmp_path / "artefacts"
     monkeypatch.setenv("ORCHESTRATOR_ARTEFACTS_DIR", str(art))

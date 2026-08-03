@@ -1,10 +1,10 @@
 """Regression tests that scope guardrail pyright
-errors to the lines the coder actually CHANGED.
+errors to the lines the intern actually CHANGED.
 
-Root cause (hbh1 HALT): ``guardrail_check.py`` held coders accountable for
+Root cause (hbh1 HALT): ``guardrail_check.py`` held interns accountable for
 pre-existing errors on lines they never touched (Defect B). Architectural
-principle: a coder must only be held accountable for errors it introduced on the
-lines it changed ("other coder's shit is our shit").
+principle: a intern must only be held accountable for errors it introduced on the
+lines it changed ("other intern's shit is our shit").
 
 These tests monkeypatch the pyright ``subprocess`` so they run without pyright
 installed and without touching real source.
@@ -84,16 +84,16 @@ def test_typecheck_file_scopes_to_changed_lines(tmp_path: Path, monkeypatch):
     # pyright reports BOTH an error on the changed line (2) and a pre-existing
     # error on the untouched line (1). Only the changed-line one must block.
     out = (
-        "foo.py:2:5 - error: NEW error on the line the coder edited\n"
-        "foo.py:1:1 - error: PRE-EXISTING error the coder never touched\n"
+        "foo.py:2:5 - error: NEW error on the line the intern edited\n"
+        "foo.py:1:1 - error: PRE-EXISTING error the intern never touched\n"
     )
     monkeypatch.setattr(gc.subprocess, "run", _fake_pyright(out))
 
     ok, text = gc.typecheck_file(str(staged), changed=changed)
     assert ok is False
     # only the changed-line error is reported
-    assert "NEW error on the line the coder edited" in text
-    assert "PRE-EXISTING error the coder never touched" not in text
+    assert "NEW error on the line the intern edited" in text
+    assert "PRE-EXISTING error the intern never touched" not in text
 
 
 def test_typecheck_file_clean_edit_passes(tmp_path: Path, monkeypatch):
@@ -105,8 +105,8 @@ def test_typecheck_file_clean_edit_passes(tmp_path: Path, monkeypatch):
     diff = gc.diff_staged_vs_original(staged, live)
     changed = gc._changed_lines_from_diff(diff)
 
-    # only pre-existing error on untouched line 1 -> coder is NOT blocked
-    out = "foo.py:1:1 - error: PRE-EXISTING error the coder never touched\n"
+    # only pre-existing error on untouched line 1 -> intern is NOT blocked
+    out = "foo.py:1:1 - error: PRE-EXISTING error the intern never touched\n"
     monkeypatch.setattr(gc.subprocess, "run", _fake_pyright(out))
 
     ok, _ = gc.typecheck_file(str(staged), changed=changed)

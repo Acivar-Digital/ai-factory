@@ -132,8 +132,8 @@ def persist_role(role: str, result: object, agent_id: str | None = None) -> None
     `result` is a pydantic_ai RunResult (has .output and .all_messages()).
     No-op (silent) if the role is not in ROLE_FOLDER. On ANY persist failure we
     log loudly to stderr/run.log but DO NOT raise — the pipeline must continue.
-    For the coder role with a non-None `agent_id`, the transcript is isolated to
-    ``coder/<agent_id>.jsonl`` (per-coderN memory, ticket a101k).
+    For the intern role with a non-None `agent_id`, the transcript is isolated to
+    ``intern/<agent_id>.jsonl`` (per-internN memory, ticket a101k).
     """
     folder = ROLE_FOLDER.get(role)
     if not folder or result is None:
@@ -169,9 +169,9 @@ def persist_messages(
     """Persist a raw message list to artefacts/history/<role>/ even when no RunResult exists.
 
     Used on failure paths (e.g. the loopguard crash-dump) so EVERY agent — especially
-    the coder/EXECUTE phase — leaves a debuggable transcript under its role folder,
-    not only on success. For the coder role with a non-None `agent_id`, the transcript
-    is isolated to ``coder/<agent_id>.jsonl``. `messages` may be any iterable of
+    the intern/EXECUTE phase — leaves a debuggable transcript under its role folder,
+    not only on success. For the intern role with a non-None `agent_id`, the transcript
+    is isolated to ``intern/<agent_id>.jsonl``. `messages` may be any iterable of
     pydantic-ai ModelMessages. No-op (silent) if the role is unknown. On error we
     log loudly but do NOT raise.
     """
@@ -208,7 +208,7 @@ def _file_cache_store(path: str, content: str) -> None:
 
     The content is deliberately NEVER read back — it exists only so a full file
     read is verifiably removed from the token stream (the `file_cache` pattern
-    from context.md). Coder is fresh per task (D2) so no other subagent mutates
+    from context.md). Intern is fresh per task (D2) so no other subagent mutates
     its files mid-run → staleness is impossible.
     """
     try:
@@ -365,9 +365,9 @@ def _persist_transcript(
     file each call (no per-turn file sprawl). The JSONL is the native,
     re-injectable source (`ModelMessagesTypeAdapter`); the MD is the human twin.
     The EVICTION transform is applied to the messages BEFORE serializing so the
-    accumulated file stays bounded and safely re-injectable. For the coder role
+    accumulated file stays bounded and safely re-injectable. For the intern role
     with a non-None `agent_id`, the file is the agent-isolated ``<agent_id>.jsonl``
-    (per-coderN memory, ticket a101k) — distinct from the shared ``coder.jsonl``.
+    (per-internN memory, ticket a101k) — distinct from the shared ``intern.jsonl``.
     """
     messages = _clean_messages(messages)
     evicted = _evict_messages(messages)
@@ -405,7 +405,7 @@ def _history_filename(role: str, agent_id: str | None) -> str:
     folder = ROLE_FOLDER.get(role)
     if not folder:
         return f"{role}.jsonl"
-    if role in ("coder", "intern"):
+    if role in ("intern", "intern"):
         if not agent_id:
             raise ValueError(
                 f"[HALT] _history_filename called for role {role!r} with "

@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-_CODER_ID_RE = re.compile(r"^coder\d{2}$")
+_INTERN_ID_RE = re.compile(r"^intern\d{2}$")
 
 
 def _coerce_strategy(raw):
@@ -61,7 +61,7 @@ class RubricCell(BaseModel):
     severity: Literal["blocker", "warn"]  # "blocker" | "warn"
     passed: bool = False
     evidence: str = ""  # file:line or command output proving pass/fail
-    coder_idents: list[str] = Field(default_factory=list)
+    intern_idents: list[str] = Field(default_factory=list)
 
 
 class RubricCube(BaseModel):
@@ -110,15 +110,15 @@ class ApprovedTask(SubTaskBrief):
     notes: str = ""
 
     @model_validator(mode="after")
-    def _require_coder_id(self) -> "ApprovedTask":
-        """The orchestrator OWNS coder naming (ticket baziforecaster-tqpgf): ids MUST be
-        `coderNN` so per-coder memory files, status-board lines,
+    def _require_intern_id(self) -> "ApprovedTask":
+        """The orchestrator OWNS intern naming (ticket baziforecaster-tqpgf): ids MUST be
+        `internNN` so per-intern memory files, status-board lines,
         and orchestrator ids are the identical string. Non-conforming ids HALT + re-plan.
         """
-        if not _CODER_ID_RE.match(self.id):
+        if not _INTERN_ID_RE.match(self.id):
             raise ValueError(
-                f"ApprovedTask.id {self.id!r} must match the format 'coderNN' "
-                f"(e.g. 'coder01', 'coder02'). Never 'task_N', never concatenated, "
+                f"ApprovedTask.id {self.id!r} must match the format 'internNN' "
+                f"(e.g. 'intern01', 'intern02'). Never 'task_N', never concatenated, "
                 f"never non-numeric. The orchestrator owns this naming."
             )
         return self
@@ -126,7 +126,7 @@ class ApprovedTask(SubTaskBrief):
     @model_validator(mode="after")
     def _require_single_file(self) -> "ApprovedTask":
         if len(self.file_paths) != 1:
-            raise ValueError(f"exactly one file per coder (task {self.id!r} has {len(self.file_paths)})")
+            raise ValueError(f"exactly one file per intern (task {self.id!r} has {len(self.file_paths)})")
         return self
 
 
@@ -142,7 +142,7 @@ class ParallelisableWorkplan(BaseModel):
 
 class ToolPreferenceItem(BaseModel):
     task_id: str = Field(
-        description="The task ID matching one of the subtasks (e.g., 'coder01')."
+        description="The task ID matching one of the subtasks (e.g., 'intern01')."
     )
     preference: str = Field(
         description="The tool preference bucket (e.g., 'AST-edit', 'CLI-wrapper', or 'python-first-then-agent')."
@@ -228,7 +228,7 @@ class DraftPlan(BaseModel):
 
 class EvaluationItem(BaseModel):
     item_id: str = Field(
-        description="Task ID from the DraftPlan. Must match a proposed task id exactly (e.g. coder01, coder02)."
+        description="Task ID from the DraftPlan. Must match a proposed task id exactly (e.g. intern01, intern02)."
     )
     approved: Literal["Yes", "No"] = Field(
         description="Yes = task approved, proceed. No = task rejected — MUST explain why in comments.",
@@ -236,7 +236,7 @@ class EvaluationItem(BaseModel):
     )
     comments: str = Field(
         description="Required when approved=No: cite file:line, explain what's wrong, reference the brief's constraints/anti-patterns. When approved=Yes: may be empty string.",
-        examples=["", "Instruction tells coder to move _unified_medicine before line 216, but brief says 'Do NOT touch annual Tai Sui section (lines 340-399)'."]
+        examples=["", "Instruction tells intern to move _unified_medicine before line 216, but brief says 'Do NOT touch annual Tai Sui section (lines 340-399)'."]
     )
 
     @model_validator(mode="before")
@@ -294,25 +294,25 @@ class ExecutablePlan(BaseModel):
         return data
 
     @model_validator(mode="after")
-    def _require_unique_coder_ids(self) -> "ExecutablePlan":
+    def _require_unique_intern_ids(self) -> "ExecutablePlan":
         seen: set[str] = set()
         for t in self.tasks:
             if t.id in seen:
                 raise ValueError(
                     f"ExecutablePlan has duplicate task id {t.id!r}. Every "
-                    f"ApprovedTask.id must be unique (coder01, coder02, …)."
+                    f"ApprovedTask.id must be unique (intern01, intern02, …)."
                 )
             seen.add(t.id)
         return self
 
 
 # ── Phase 3 → 4 ───────────────────────────────────────────────
-class TaskResult(BaseModel):  # Coder's output_type
+class TaskResult(BaseModel):  # Intern's output_type
     task_id: str
     # Constrained form (docs/02_fix.md): only "done" | "blocked" are accepted.
-    # The Literal injects the enum into the pydantic-ai output schema (the coder
+    # The Literal injects the enum into the pydantic-ai output schema (the intern
     # "form"), and _norm_status (mode="before") normalizes synonyms and rejects
-    # anything else — so a coder emitting "completed"/"ok" proceeds, while an
+    # anything else — so a intern emitting "completed"/"ok" proceeds, while an
     # unknown value raises ValueError for pydantic-ai to feed back + HALT on retry.
     status: Literal["done", "blocked"]  # "done" | "blocked"
     files_changed: list[str]
@@ -327,7 +327,7 @@ class TaskResult(BaseModel):  # Coder's output_type
     )  # if blocked: script + error for escalation
     # ValidationVerdict (docs/01_fix.md Task 4, D1): cumulative machine verdict
     # fields the harness fills AFTER the smoke + ruff + pyright gates run. The
-    # coder's LLM output is the *claim* half; these are the *verdict* half, kept
+    # intern's LLM output is the *claim* half; these are the *verdict* half, kept
     # in the same object so reviewers and the operator see both.
     ruff_ok: bool = True
     pyright_ok: bool = True

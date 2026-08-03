@@ -1,6 +1,6 @@
-"""Regression tests for uqj06: spawn-all coders + halt-on-block.
+"""Regression tests for uqj06: spawn-all interns + halt-on-block.
 
-No LLM keys required: coder_fn is stubbed and the ApprovedPlan is built in-process.
+No LLM keys required: intern_fn is stubbed and the ApprovedPlan is built in-process.
 
 Validates end-to-end through `run_execute_phase`:
 
@@ -48,24 +48,24 @@ def _patch_harness(monkeypatch: pytest.MonkeyPatch):
 
 
 def _plan() -> ExecutablePlan:
-    """g1=[coder_1]; g2=[coder_2..coder_6] depends_on g1 (mirrors hbh1)."""
+    """g1=[intern_1]; g2=[intern_2..intern_6] depends_on g1 (mirrors hbh1)."""
     epic = Epic(title="e", deliverables=["d"], must_be_pydantic=True)
     g1 = WorkGroup(
         id="g1",
-        tasks=[ApprovedTask(id="coder01", title="t1", file_paths=["src2/a.py"],
-                            instruction="implement coder_1", acceptance="coder_1 ok",
+        tasks=[ApprovedTask(id="intern01", title="t1", file_paths=["src2/a.py"],
+                            instruction="implement intern_1", acceptance="intern_1 ok",
                             tool_preference="CLI-wrapper")],
     )
     g2 = WorkGroup(
         id="g2",
         depends_on=["g1"],
-        tasks=[ApprovedTask(id=f"coder{i:02d}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
-                            instruction=f"implement coder_{i}", acceptance=f"coder_{i} ok",
+        tasks=[ApprovedTask(id=f"intern{i:02d}", title=f"t{i}", file_paths=[f"src2/{i}.py"],
+                            instruction=f"implement intern_{i}", acceptance=f"intern_{i} ok",
                             tool_preference="CLI-wrapper") for i in range(2, 7)],
     )
     strat = Strategy(
         how_to_fix="x",
-        tool_preference={f"coder{i:02d}": "CLI-wrapper" for i in range(1, 7)},
+        tool_preference={f"intern{i:02d}": "CLI-wrapper" for i in range(1, 7)},
         parallelisable_workplan=ParallelisableWorkplan(groups=[g1, g2]),
     )
     return ExecutablePlan(
@@ -85,14 +85,14 @@ def _plan() -> ExecutablePlan:
     )
 
 
-def _coder_block_first(blocked_ids: set[str], spawned: dict[str, str] | None = None):
-    """Coder stub: returns `blocked` for ids in blocked_ids, else `done`.
+def _intern_block_first(blocked_ids: set[str], spawned: dict[str, str] | None = None):
+    """Intern stub: returns `blocked` for ids in blocked_ids, else `done`.
 
     Records every spawned task into `spawned` so the test can assert all
-    dependent-group coders still ran despite a prerequisite block.
+    dependent-group interns still ran despite a prerequisite block.
     """
     def _make(blocked: set[str]):
-        async def coder_fn(brief: str, task_id: str | None = None) -> str:
+        async def intern_fn(brief: str, task_id: str | None = None) -> str:
             tid = task_id or brief.split("TASK ID:")[1].split()[0]
             if spawned is not None:
                 spawned[tid] = brief
@@ -100,18 +100,18 @@ def _coder_block_first(blocked_ids: set[str], spawned: dict[str, str] | None = N
             return json.dumps({"status": status, "rc": 0, "stdout": "ok", "stderr": "",
                                 "task_id": tid, "files_changed": [], "diff_summary": "",
                                 "notes": "blocked on read budget" if status == "blocked" else ""})
-        return coder_fn
+        return intern_fn
     return _make(blocked_ids)
 
 
-def _coder_record_spawn(spawned: dict[str, str]):
-    async def coder_fn(brief: str, task_id: str | None = None) -> str:
+def _intern_record_spawn(spawned: dict[str, str]):
+    async def intern_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
         spawned[tid] = brief
         return json.dumps({"status": "done", "rc": 0, "stdout": "ok", "stderr": "",
                             "task_id": tid, "files_changed": [], "diff_summary": "",
                             "notes": ""})
-    return coder_fn
+    return intern_fn
 
 
 def test_spawn_all_when_prerequisite_blocked():
@@ -121,12 +121,12 @@ def test_spawn_all_when_prerequisite_blocked():
     with pytest.raises(RuntimeError) as exc:
         asyncio.run(run_execute_phase(
             plan, TEMP_DIR / "spawn_all", asyncio.Semaphore(20),
-            _coder_block_first({"coder01"}, spawned),
+            _intern_block_first({"intern01"}, spawned),
         ))
-    # All six coders spawned despite the prerequisite block.
-    assert set(spawned) == {f"coder{i:02d}" for i in range(1, 7)}
+    # All six interns spawned despite the prerequisite block.
+    assert set(spawned) == {f"intern{i:02d}" for i in range(1, 7)}
     # The halt names only the incomplete task(s).
-    assert "[HALT] EXECUTE phase incomplete: coder01" in str(exc.value)
+    assert "[HALT] EXECUTE phase incomplete: intern01" in str(exc.value)
 
 
 def test_halt_lists_all_incomplete_tasks():
@@ -136,12 +136,12 @@ def test_halt_lists_all_incomplete_tasks():
     with pytest.raises(RuntimeError) as exc:
         asyncio.run(run_execute_phase(
             plan, TEMP_DIR / "spawn_all_multi", asyncio.Semaphore(20),
-            _coder_block_first({"coder01", "coder04", "coder06"}, spawned),
+            _intern_block_first({"intern01", "intern04", "intern06"}, spawned),
         ))
-    assert set(spawned) == {f"coder{i:02d}" for i in range(1, 7)}
+    assert set(spawned) == {f"intern{i:02d}" for i in range(1, 7)}
     msg = str(exc.value)
     assert "[HALT] EXECUTE phase incomplete:" in msg
-    for tid in ("coder01", "coder04", "coder06"):
+    for tid in ("intern01", "intern04", "intern06"):
         assert tid in msg
 
 
@@ -151,19 +151,19 @@ def test_no_halt_when_all_done():
     spawned: dict[str, str] = {}
     results = asyncio.run(run_execute_phase(
         plan, TEMP_DIR / "spawn_all_ok", asyncio.Semaphore(20),
-        _coder_record_spawn(spawned),
+        _intern_record_spawn(spawned),
     ))
-    assert set(spawned) == {f"coder{i:02d}" for i in range(1, 7)}
+    assert set(spawned) == {f"intern{i:02d}" for i in range(1, 7)}
     assert all(r.status == "done" for r in results.values())
 
 
 def test_halt_on_exception_mapping():
-    """Verify that if coder_fn raises an exception, the runner wraps it into a TaskResult(status="blocked") instead of crashing."""
+    """Verify that if intern_fn raises an exception, the runner wraps it into a TaskResult(status="blocked") instead of crashing."""
     plan = _plan()
     
-    async def throwing_coder_fn(brief: str, task_id: str | None = None) -> str:
+    async def throwing_intern_fn(brief: str, task_id: str | None = None) -> str:
         tid = task_id or brief.split("TASK ID:")[1].split()[0]
-        if tid == "coder01":
+        if tid == "intern01":
             raise RuntimeError("Simulation of a tool/subprocess failure")
         return json.dumps({"status": "done", "rc": 0, "stdout": "ok", "stderr": "",
                             "task_id": tid, "files_changed": [], "diff_summary": "",
@@ -172,7 +172,7 @@ def test_halt_on_exception_mapping():
     with pytest.raises(RuntimeError) as exc:
         asyncio.run(run_execute_phase(
             plan, TEMP_DIR / "spawn_all_exception", asyncio.Semaphore(20),
-            throwing_coder_fn,
+            throwing_intern_fn,
         ))
     msg = str(exc.value)
-    assert "[HALT] EXECUTE phase incomplete: coder01" in msg
+    assert "[HALT] EXECUTE phase incomplete: intern01" in msg

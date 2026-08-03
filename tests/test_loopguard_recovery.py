@@ -91,7 +91,7 @@ async def test_alternating_two_tools_recovered_before_cap():
 
     agent = _fake_agent(run_coro)
     out = await run_with_loopguard(
-        agent, "do the work", role="coder",
+        agent, "do the work", role="intern",
         max_same=3, max_miss=3,
     )
     assert out is not None
@@ -108,7 +108,7 @@ async def test_model_http_error_400_retries_then_propagates():
     agent = _fake_agent(run_coro)
     with pytest.raises(ModelHTTPError):
         await run_with_loopguard(
-            agent, "do the work", role="coder",
+            agent, "do the work", role="intern",
             max_same=3, max_miss=3,
         )
     # Called 4 times: 3 retries + 1 that propagates (4th call falls through)
@@ -123,7 +123,7 @@ async def test_model_http_error_non_400_propagates_immediately():
     agent = _fake_agent(run_coro)
     with pytest.raises(ModelHTTPError):
         await run_with_loopguard(
-            agent, "do the work", role="coder",
+            agent, "do the work", role="intern",
             max_same=3, max_miss=3,
         )
 
@@ -140,7 +140,7 @@ async def test_model_http_error_400_retry_then_succeeds():
 
     agent = _fake_agent(run_coro)
     out = await run_with_loopguard(
-        agent, "do the work", role="coder",
+        agent, "do the work", role="intern",
         max_same=3, max_miss=3,
     )
     assert out is not None
@@ -161,7 +161,7 @@ async def test_noop_same_result_recovered():
 
     agent = _fake_agent(run_coro)
     out = await run_with_loopguard(
-        agent, "do the work", role="coder",
+        agent, "do the work", role="intern",
         max_same=3, max_miss=3,
     )
     assert out is not None
@@ -179,7 +179,7 @@ async def test_usage_limit_exceeded_recovered_not_raised():
     # Must NOT raise — the CHANGE 3 branch forces RECOVER with a tools=[]
     # recovery Agent (built on the same real model) and returns its result.
     out = await run_with_loopguard(
-        agent, "do the work", role="coder",
+        agent, "do the work", role="intern",
         max_same=3, max_miss=3,
     )
     # The recovery Agent returns an AgentRunResult wrapping _DummyOut (TestModel),
@@ -194,7 +194,7 @@ async def test_legit_agent_returns_normally():
 
     agent = _fake_agent(run_coro)
     out = await run_with_loopguard(
-        agent, "do the work", role="coder",
+        agent, "do the work", role="intern",
         max_same=3, max_miss=3,
     )
     assert out is not None

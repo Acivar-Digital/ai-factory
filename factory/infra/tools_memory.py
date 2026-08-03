@@ -19,7 +19,7 @@ def get_current_role() -> str | None:
     return _current_role.get()
 
 def set_current_agent(agent_id: str | None) -> None:
-    """Set the active agent id (coderN) for per-agent memory isolation (ticket a101k)."""
+    """Set the active agent id (internN) for per-agent memory isolation (ticket a101k)."""
     _current_agent.set(agent_id)
 
 def get_current_agent() -> str | None:
@@ -32,9 +32,9 @@ def remember(note: str) -> str:
     Because each agent is stateless across turns, call this to record anything
     you need to execute correctly on your next turn (open questions, collisions,
     decisions). The note is appended to your own `<role>.jsonl` (or, for an
-    isolated coder agent, `coder/<agent_id>.jsonl`) + `.md` and re-injected as
+    isolated intern agent, `intern/<agent_id>.jsonl`) + `.md` and re-injected as
     context on your next turn. It is separate from `bd` and writes ONLY to your
-    own folder — it never leaks to other roles or sibling coders (ticket a101k).
+    own folder — it never leaks to other roles or sibling interns (ticket a101k).
 
     Args:
         note: The text you want to remember for your next turn.
@@ -54,8 +54,8 @@ def keep_memory(note: str) -> str:
 
     Named alias of `remember`: uses the SAME persistence path (the current_role /
     current_agent contextvars -> `artefacts.remember_note`) so a role only ever
-    writes its OWN history. For an isolated coder agent the note lands in its own
-    `coder/<agent_id>.jsonl` (keep_memory stays PRIVATE to coderN, ticket a101k).
+    writes its OWN history. For an isolated intern agent the note lands in its own
+    `intern/<agent_id>.jsonl` (keep_memory stays PRIVATE to internN, ticket a101k).
     The compaction agent has this as its ONLY tool and calls it exactly once with
     the essentials it needs to continue. Do NOT invent a separate persistence path.
     """
@@ -64,13 +64,13 @@ def keep_memory(note: str) -> str:
 def record_plan(ctx: RunContext, approach: str) -> str:
     """MUST be called BEFORE applying any edit. State your edit strategy.
 
-    Forces the coder to commit to a concrete approach (which files, what
+    Forces the intern to commit to a concrete approach (which files, what
     change, in what order) before it touches the repo. Without this gate a weak
     model silently research-loops on read-only calls and emits zero writes. The
     plan is echoed to run.log for forensics; the tool itself performs no I/O.
     """
     plan = (approach or '').strip()
-    print(f'[CODER PLAN] {plan}', flush=True)
+    print(f'[INTERN PLAN] {plan}', flush=True)
     if not plan:
         return 'No plan provided. Call record_plan again with a concrete edit strategy BEFORE any write/edit tool.'
     return 'Plan acknowledged. You are cleared to investigate further and then apply your edits.'

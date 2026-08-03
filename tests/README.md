@@ -71,8 +71,8 @@ if any file fails, so it is CI-friendly.
    `conftest.py` (they redirect `ORCH_ROOT` to a temp dir) so gold tests never
    touch the real repo. Stub LLM calls — do NOT require live API keys.
 4. **Pin the contract, not the implementation trivia.** Assert the observable
-   behaviour a downstream phase relies on (e.g. "red-team gates map
-   user-story ids to coder ids", "a hung coder trips the timeout").
+   behaviour a downstream phase relies on (e.g. "senior-audit gates map
+   user-story ids to intern ids", "a hung intern trips the timeout").
 5. **No `@skip`, no weakened asserts** (see FROZEN policy).
 6. **Update `CHANGELOG.md`** with the ticket id and what the test protects.
 7. **Verify:** `uv run ruff check admin/orchestrator/test/<file>.py` must be
@@ -94,13 +94,13 @@ standard for fidelity tests.
 | `test_01_fix_liveness.py` | DAG liveness guard + per-task timeout + `add_constant` empty-value guard (s49n0). |
 | `test_audit_surface.py` | Harness security/observability invariants (timeouts, ACL, secrets) stay intact. |
 | `test_batch_read_ergonomics.py` | Forgiving `batch_read` ergonomics (rj4ie): bounded head on missing line ranges, no blind budget burn. |
-| `test_coder_naming.py` | Coder naming contract (tqpgf): ids match `^coder_\d+$`, unique, pass-through. |
+| `test_intern_naming.py` | Intern naming contract (tqpgf): ids match `^intern_\d+$`, unique, pass-through. |
 | `test_context_injection.py` | Size-aware context injection (gx30p): Tier-A/B delivery, no token blow-up. |
-| `test_file_disjoint_filter.py` | Planner file-disjointness filter (vw4dd): correctness + HALT on true overlap. |
-| `test_gates.py` | DAG execution gates (code-review + red-team): forced-pass overrides, id mapping. |
-| `test_guard_read_idempotency.py` | Coder read-budget hardening (0xvqo): redundant re-reads trip `_READ_FATAL`. |
+| `test_file_disjoint_filter.py` | Senior file-disjointness filter (vw4dd): correctness + HALT on true overlap. |
+| `test_gates.py` | DAG execution gates (code-review + senior-audit): forced-pass overrides, id mapping. |
+| `test_guard_read_idempotency.py` | Intern read-budget hardening (0xvqo): redundant re-reads trip `_READ_FATAL`. |
 | `test_harness_gates.py` | Staging diff gate + runtime load gate + budget/loopguard overrides. |
-| `test_hbh1_fixes.py` | hbh1 fixes: plan-invariant validation + coder tool-budget values. |
+| `test_hbh1_fixes.py` | hbh1 fixes: plan-invariant validation + intern tool-budget values. |
 | `test_jsonl_healer.py` | JSONL output healing / salvage path. |
 | `test_loopguard.py` | Compaction gate + loop-guard control flow (request isolation, cleanup). |
 | `test_md_bridge.py` | MD-twin per-turn re-injection bridge (mb1k5). |
@@ -108,17 +108,17 @@ standard for fidelity tests.
 | `test_payload_diet.py` | Harness payload diet (nz4ai): lean system prompts, scoped repo map. |
 | `test_prestage.py` | Conductor-led pre-staging. |
  | `test_read_memory_bridge.py` | Read-Memory Bridge feature. |
-| `test_rerun_feedback.py` | Coder rerun feedback injection (R1) + frozen expected-behaviour appendix. |
+| `test_rerun_feedback.py` | Intern rerun feedback injection (R1) + frozen expected-behaviour appendix. |
 | `test_sanitizer_malformed_call.py` | Framework-rejected tool-call salvage path (78j9m). |
 | `test_scope_auto_context.py` | Scope-driven auto-context (86rmw / xfqkf / y1oqi). |
-| `test_spawn_all_halt.py` | Spawn-all coders + halt-on-block (uqj06). |
+| `test_spawn_all_halt.py` | Spawn-all interns + halt-on-block (uqj06). |
 | `test_state.py` | Crash-resume state (atomic save, stale-in-progress reset). |
 | `test_status_board.py` | Orchestrator STATUS BOARD (l4wjg): live per-phase tracking. |
 | `test_stop_continue.py` | Stop/Continue mechanism (udylx). |
 | `test_string_output.py` | String-output resilience in the runner. |
 | `test_timeout_fire.py` | **Trip-wire:** `AGENT_RUN_TIMEOUT=1` must actually halt (not hang) — direct + dependent-group. |
 | `test_tool_exceptions.py` | IDE modification tools raise `ModelRetry` on error/failure. |
-| `test_cli_contract.py` | CLI contracts: coder budget scaling/clamp, path normalization, fact-store roundtrip. |
+| `test_cli_contract.py` | CLI contracts: intern budget scaling/clamp, path normalization, fact-store roundtrip. |
 | `test_validation_hardening.py` | Schema generation + validation hardening (structured-output recovery). |
 
 ### `bifr/` sub-suite (gold, real-run fidelity)

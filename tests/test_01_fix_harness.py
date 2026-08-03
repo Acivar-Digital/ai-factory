@@ -96,7 +96,7 @@ def test_smoke_narrow_container_intent():
 
 def test_validation_verdict_fields_present():
     tr = models_mod.TaskResult(
-        task_id="coder01",
+        task_id="intern01",
         status="done",
         files_changed=[],
         diff_summary="",

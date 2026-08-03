@@ -125,7 +125,7 @@ def test_draft_plan_validation_hardening():
             groups=[
                 WorkGroup(
                     id="g1",
-                    tasks=[ApprovedTask(id="coder01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
+                    tasks=[ApprovedTask(id="intern01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
                 )
             ]
         )
@@ -136,11 +136,11 @@ def test_draft_plan_validation_hardening():
             acceptance_criteria=["a"],
             rubric_cube=RubricCube(cells=[]),
             summary="s",
-            subtasks=[SubTaskBrief(id="coder01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit", evidence=[EvidenceItem(file_path="src2/x.py", content="verified")])],
+            subtasks=[SubTaskBrief(id="intern01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit", evidence=[EvidenceItem(file_path="src2/x.py", content="verified")])],
             risks=[],
             strategy=Strategy(
                 how_to_fix="f",
-                tool_preference=[ToolPreferenceItem(task_id="coder01", preference="AST-edit")],
+                tool_preference=[ToolPreferenceItem(task_id="intern01", preference="AST-edit")],
                 parallelisable_workplan=workplan
             ),
         )
@@ -148,7 +148,7 @@ def test_draft_plan_validation_hardening():
     # 1. Valid DraftPlan passes
     draft = make_valid_draft()
     assert draft.subtasks[0].evidence[0].file_path == "src2/x.py"
-    assert draft.strategy.tool_preference_dict == {"coder01": "AST-edit"}
+    assert draft.strategy.tool_preference_dict == {"intern01": "AST-edit"}
 
     # 2. Missing evidence fails
     draft_invalid_ev = make_valid_draft()
@@ -167,12 +167,12 @@ def test_draft_plan_validation_hardening():
     # 4. Unknown task ID in tool preference fails
     draft_unknown_pref = make_valid_draft()
     draft_unknown_pref.strategy.tool_preference = [
-        ToolPreferenceItem(task_id="coder01", preference="AST-edit"),
-        ToolPreferenceItem(task_id="coder_99", preference="AST-edit")
+        ToolPreferenceItem(task_id="intern01", preference="AST-edit"),
+        ToolPreferenceItem(task_id="intern_99", preference="AST-edit")
     ]
     with pytest.raises(ValidationError) as excinfo:
         DraftPlan.model_validate(draft_unknown_pref.model_dump())
-    assert "specifies unknown task ID 'coder_99'" in str(excinfo.value)
+    assert "specifies unknown task ID 'intern_99'" in str(excinfo.value)
 
 
 @pytest.mark.asyncio

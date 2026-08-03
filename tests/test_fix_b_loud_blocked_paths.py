@@ -5,15 +5,15 @@ Before this fix, three paths returned ``TaskResult(status="blocked")`` with no
 ``log_operator`` call, forcing a log dive to triage (hbh1 HALT). Fix B adds a
 ``log_operator(level="WARNING")`` at each path:
 
-  1. initial coder timeout (``asyncio.wait_for`` around the first coder call)
-  2. re-spawn (validation-loop) coder timeout
+  1. initial intern timeout (``asyncio.wait_for`` around the first intern call)
+  2. re-spawn (validation-loop) intern timeout
   3. validation-exhaustion: the harness-owned ``RuntimeError("[HALT] task <id>
-     failed validation after N coder passes ...")`` is caught by the SPAWN-ALL
+     failed validation after N intern passes ...")`` is caught by the SPAWN-ALL
      gather and stored as a plain blocked result with a generic note — now it is
      surfaced loudly next to the HALT.
 
 These tests monkeypatch ``log_operator`` and the relevant ``subprocess`` /
-``asyncio.wait_for`` seams so they run without a real coder or pyright.
+``asyncio.wait_for`` seams so they run without a real intern or pyright.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ from factory.infra.models import (
 
 def _make_plan() -> ExecutablePlan:
     task = ApprovedTask(
-        id="coder01",
+        id="intern01",
         title="t",
         file_paths=["src2/x.py"],
         instruction="i",
@@ -62,7 +62,7 @@ def _make_plan() -> ExecutablePlan:
         workplan=wp,
         strategy=Strategy(
             how_to_fix="f",
-            tool_preference=[ToolPreferenceItem(task_id="coder01", preference="AST-edit")],
+            tool_preference=[ToolPreferenceItem(task_id="intern01", preference="AST-edit")],
             parallelisable_workplan=wp,
         ),
         approved=True,
@@ -92,7 +92,7 @@ def _guardrail_fail_run(*args, **kwargs):
     return _FakeCompleted("", returncode=0)
 
 
-def _coder_json(task_id: str = "coder01") -> str:
+def _intern_json(task_id: str = "intern01") -> str:
     return json.dumps(
         {
             "status": "done",
@@ -104,8 +104,8 @@ def _coder_json(task_id: str = "coder01") -> str:
     )
 
 
-async def _coder_fn(brief, task_id=None):
-    return _coder_json(task_id or "coder01")
+async def _intern_fn(brief, task_id=None):
+    return _intern_json(task_id or "intern01")
 
 
 async def test_fix_b_initial_timeout_is_loud(monkeypatch):
@@ -136,13 +136,13 @@ async def test_fix_b_initial_timeout_is_loud(monkeypatch):
             plan,
             Path(runner.RUNTIME_DIR),
             asyncio.Semaphore(1),
-            _coder_fn,
+            _intern_fn,
             exchange=[],
             pass_counter={},
             bd="test",
             history=[],
         )
-    assert any("coder01" in msg and "timed out" in msg for _, msg in logs)
+    assert any("intern01" in msg and "timed out" in msg for _, msg in logs)
     assert any(level == "WARNING" for level, _ in logs)
 
 
@@ -173,13 +173,13 @@ async def test_fix_b_respawn_timeout_is_loud(monkeypatch):
             plan,
             Path(runner.RUNTIME_DIR),
             asyncio.Semaphore(1),
-            _coder_fn,
+            _intern_fn,
             exchange=[],
             pass_counter={},
             bd="test",
             history=[],
         )
-    assert any("coder01" in msg and "re-spawn timed out" in msg for _, msg in logs)
+    assert any("intern01" in msg and "re-spawn timed out" in msg for _, msg in logs)
 
 
 async def test_fix_b_validation_exhaustion_is_loud(monkeypatch):
@@ -198,7 +198,7 @@ async def test_fix_b_validation_exhaustion_is_loud(monkeypatch):
             plan,
             Path(runner.RUNTIME_DIR),
             asyncio.Semaphore(1),
-            _coder_fn,
+            _intern_fn,
             exchange=[],
             pass_counter={},
             bd="test",
@@ -206,5 +206,5 @@ async def test_fix_b_validation_exhaustion_is_loud(monkeypatch):
         )
     # The harness-owned validation RuntimeError message must be surfaced loudly.
     assert any(
-        "failed validation after" in msg and "coder01" in msg for _, msg in logs
+        "failed validation after" in msg and "intern01" in msg for _, msg in logs
     )

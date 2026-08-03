@@ -23,7 +23,7 @@ def _workplan():
         groups=[
             models.WorkGroup(
                 id="g1",
-                tasks=[models.ApprovedTask(id="coder01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
+                tasks=[models.ApprovedTask(id="intern01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
             )
         ]
     )
@@ -52,7 +52,7 @@ def test_fresh_state_creates_run_dir(tmp_path):
 
 def test_save_state_atomic_and_resumable(tmp_path):
     st = state.fresh_state("bd1", reports_dir=tmp_path, timestamp="20260101T000000")
-    state.record_phase(st, "planner")
+    state.record_phase(st, "intern")
     state.save_state(st)
     final = Path(st.run_dir) / "state.json"
     tmp = Path(st.run_dir) / "state.json.tmp"
@@ -61,21 +61,21 @@ def test_save_state_atomic_and_resumable(tmp_path):
     # Resume: load_state returns the persisted + appended state.
     loaded = state.load_state("bd1", reports_dir=tmp_path)
     assert loaded is not None
-    assert loaded.current_phase == "planner"
-    assert loaded.phase_attempts == {"planner": 1}
+    assert loaded.current_phase == "intern"
+    assert loaded.phase_attempts == {"intern": 1}
 
 
 def test_append_phase_attempts_increment(tmp_path):
     st = state.fresh_state("bd1", reports_dir=tmp_path, timestamp="20260101T000000")
-    state.record_phase(st, "planner")
+    state.record_phase(st, "intern")
     state.save_state(st)
-    # Simulate a re-execution of planner (e.g. supervisor reopened it).
-    state.record_phase(st, "planner")
+    # Simulate a re-execution of intern (e.g. engineer reopened it).
+    state.record_phase(st, "intern")
     state.save_state(st)
 
     loaded = state.load_state("bd1", reports_dir=tmp_path)
-    assert loaded.phase_attempts["planner"] == 2
-    assert loaded.current_phase == "planner"
+    assert loaded.phase_attempts["intern"] == 2
+    assert loaded.current_phase == "intern"
 
 
 def test_append_tasks_and_handoffs(tmp_path):
@@ -87,7 +87,7 @@ def test_append_tasks_and_handoffs(tmp_path):
     st.approved = models.ExecutablePlan(
         epic=st.draft.epic, user_stories=st.draft.user_stories, definition_of_done=["d"],
         acceptance_criteria=["a"], rubric_cube=models.RubricCube(cells=[]), summary="s",
-        tasks=[models.ApprovedTask(id="coder01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
+        tasks=[models.ApprovedTask(id="intern01", title="t", file_paths=["src2/x.py"], instruction="i", acceptance="a", tool_preference="AST-edit")],
         alignment="a", workplan=_workplan(),
         strategy=st.draft.strategy,
     )
@@ -108,11 +108,11 @@ def test_load_newest_run_when_multiple(tmp_path):
     state.save_state(older)
 
     newer = state.fresh_state("bd1", reports_dir=tmp_path, timestamp="20260202T000000")
-    state.record_phase(newer, "red_team")
+    state.record_phase(newer, "senior")
     state.save_state(newer)
 
     loaded = state.load_state("bd1", reports_dir=tmp_path)
-    assert loaded.current_phase == "red_team"  # newest wins
+    assert loaded.current_phase == "senior"  # newest wins
 
 
 def test_load_state_missing_returns_none(tmp_path):

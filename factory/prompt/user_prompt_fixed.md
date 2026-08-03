@@ -3,8 +3,8 @@ Resume: false
 bd: factory-src2-build
 write_mode: staged
 language: python
-start_phase: planner
-stop_phase: supervisor_review
+start_phase: senior
+stop_phase: engineer_review
 scope:
   - src2/engine/module11_probability.py
 ---

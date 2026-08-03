@@ -4,7 +4,7 @@ No LLM keys required. Exercises the deterministic gate helpers and the
 `run_execute_phase` Tier-A/B injection + hard-halt paths directly.
 
 Guards against regressions where:
-  * a coder receives an unbounded file and blows the 200K budget (truncation /
+  * a intern receives an unbounded file and blows the 200K budget (truncation /
     compaction cliff / hang) — the per-task token gate now bounds every task,
   * Tier B (map + slice) is silently dropped so over-budget tasks fall back to a
     full-file read (evicted to "File read: <path>"),
@@ -151,22 +151,22 @@ def test_tier_b_injects_map_without_halt(tmp_path, monkeypatch):
     f.write_text(("x = 1\n" * 5_000), encoding="utf-8")
     paths.append("src2/mod0.py")
     assert task_context_tier(paths) == "B"
-    task = ApprovedTask(id="coder01", title="t1", file_paths=paths,
+    task = ApprovedTask(id="intern01", title="t1", file_paths=paths,
                         instruction="edit modules", acceptance="ok",
                         tool_preference="CLI-wrapper")
     plan = _plan_with([task])
     spawned: dict[str, str] = {}
 
-    async def coder_fn(brief: str, task_id: str | None = None) -> str:
-        spawned[task_id or "coder01"] = brief
+    async def intern_fn(brief: str, task_id: str | None = None) -> str:
+        spawned[task_id or "intern01"] = brief
         staged_file = Path(stage_path("src2/mod0.py"))
         if staged_file.exists():
             staged_file.write_text(staged_file.read_text(encoding="utf-8") + "\n# edit\n", encoding="utf-8")
-        return json.dumps({"status": "done", "task_id": task_id or "coder01",
+        return json.dumps({"status": "done", "task_id": task_id or "intern01",
                             "files_changed": ["src2/mod0.py"], "diff_summary": "edited mod0.py", "notes": ""})
 
-    asyncio.run(run_execute_phase(plan, TEMP_DIR / "tier_b", asyncio.Semaphore(5), coder_fn))
-    brief = spawned["coder01"]
+    asyncio.run(run_execute_phase(plan, TEMP_DIR / "tier_b", asyncio.Semaphore(5), intern_fn))
+    brief = spawned["intern01"]
     assert "STRUCTURAL MAP" in brief
 
 
@@ -177,16 +177,16 @@ def test_halt_when_single_file_exceeds_slice_budget(tmp_path, monkeypatch):
     huge.parent.mkdir(parents=True, exist_ok=True)
     # > TIER_B_SLICE_THRESHOLD tokens: even a slice read would blow context.
     huge.write_text("x = " + "1" * 1_000_000 + "\n", encoding="utf-8")
-    task = ApprovedTask(id="coder01", title="t1", file_paths=["src2/huge.py"],
+    task = ApprovedTask(id="intern01", title="t1", file_paths=["src2/huge.py"],
                         instruction="edit huge", acceptance="ok",
                         tool_preference="CLI-wrapper")
     plan = _plan_with([task])
 
-    async def coder_fn(brief: str, task_id: str | None = None) -> str:
-        return json.dumps({"status": "done", "task_id": task_id or "coder01",
+    async def intern_fn(brief: str, task_id: str | None = None) -> str:
+        return json.dumps({"status": "done", "task_id": task_id or "intern01",
                             "files_changed": [], "diff_summary": "", "notes": ""})
 
     with pytest.raises(RuntimeError) as exc:
-        asyncio.run(run_execute_phase(plan, TEMP_DIR / "split", asyncio.Semaphore(5), coder_fn))
+        asyncio.run(run_execute_phase(plan, TEMP_DIR / "split", asyncio.Semaphore(5), intern_fn))
     assert "requires SPLIT" in str(exc.value)
-    assert "coder01" in str(exc.value)
+    assert "intern01" in str(exc.value)
