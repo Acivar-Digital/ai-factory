@@ -177,15 +177,15 @@ async def test_has_planned_and_plan_nudges_initialized_in_post_init() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(test_modify_tool_auto_plans_before_planning())
+    asyncio.run(test_modify_tool_blocked_before_planning())
     asyncio.run(test_remember_sets_has_planned())
     asyncio.run(test_exempt_tools_not_blocked_before_planning())
     asyncio.run(test_non_exempt_tool_allowed_after_planning())
-    asyncio.run(test_three_strikes_no_longer_halts())
-    asyncio.run(test_plan_nudges_not_incremented_for_modify_tools())
+    asyncio.run(test_three_strikes_halts_with_runtime_error())
+    asyncio.run(test_plan_nudges_incremented_for_modify_tools())
     asyncio.run(test_final_result_exempt_does_not_increment_nudges())
     asyncio.run(test_keep_memory_exempt_does_not_increment_nudges())
-    asyncio.run(test_write_file_auto_plans_and_executes())
-    asyncio.run(test_replace_text_auto_plans_and_executes())
+    asyncio.run(test_write_file_blocked_before_planning())
+    asyncio.run(test_replace_text_blocked_before_planning())
     asyncio.run(test_has_planned_and_plan_nudges_initialized_in_post_init())
     print("OK")
