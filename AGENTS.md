@@ -143,6 +143,16 @@ This prevents "tool thrashing" (endlessly looping on discovery tools without a p
 - **Surgical**: Target high code-to-value ratio. No "future-proofing".
 - **Crashes**: No silent failures. No hardening/fallbacks.
 
+## BEADS CONCURRENCY — Shared Dolt SQL Server
+
+`bd` uses embedded Dolt by default, which breaks under concurrent subagent writes (file-lock collisions).
+A shared Dolt SQL server (MySQL protocol) on port 15432 solves this — one server, per-repo databases.
+
+- Server: `~/arthityap/infra/dolt-server/` (managed via `~/arthityap/dolt.sh` in tmux)
+- Auth: root password = `BEAMS_DOLT_PASSWORD` (in `~/.bashrc`)
+- Each repo: `dolt_mode: "server"` in `.beads/metadata.json` + `.beads/dolt-server.port` file
+- **Full setup guide**: `docs/Implement_Beads_Concurreny.md`
+
 ## OPERATIONALS
 
 - **Decision Log**: Persist via `bd remember`.
