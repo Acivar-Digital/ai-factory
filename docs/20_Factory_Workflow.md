@@ -198,3 +198,7 @@ Every edit passes through a comprehensive 7-layer AST verification pipeline:
 
 ### 2026-08-02 (Unified Sub-Agent Memory Mandate via bd remember)
 - **Principle 11 (Unified Intelligence & bd remember Alignment)**: Orchestrator and sub-agents operate as ONE unified system. Always use `bd remember` for persistent architectural decisions and alignment updates. Sub-agents query and write to `bd remember` to maintain context across context compactions and agent invocations.
+
+### 2026-08-03 (Dynamic Budget Matrix & Soft Nudge)
+- **Dynamic Budget Matrix**: Replaced static tool budget allocation with a line-count-based dynamic matrix. Write budget = `max(35, line_count // 2)`, where `line_count` is derived from the target function's AST `lineno`/`end_lineno` span. Read budget = 2x write budget, scaling proportional allocation to target function complexity while enforcing a hard cap to prevent infinite read loops. This supersedes the prior `compute_dynamic_retry_budget` formula (`max(5, line_count // 5)`) which was too conservative for multi-function refactors.
+- **Soft Nudge at 80%**: A soft warning (`[budget] warning: 80% threshold reached`) is emitted at 80% of budget consumption via stdout in `_loopguard.py`, prompting the agent to wrap up before the fatal exhaustion threshold at 100%. This replaces the silent failure mode and resolves the earlier rejected formulation (max(5, line_count // 5) / max(15, line_count // 2)) that failed the 7-gap critical assessment.

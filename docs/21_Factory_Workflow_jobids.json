@@ -869,6 +869,54 @@
         "other_infra_files": "265 total CC violations in harness infrastructure (not in refactoring scope)"
       }
     }
+    ,
+    {
+      "job_id": "026",
+      "timestamp_start": "2026-08-03T04:12:50Z",
+      "timestamp_start_sgt": "2026-08-03 12:12:50 SGT",
+      "harness_changes_applied": [
+        "FAIL-LOUDLY gate in pipeline.py run_tier(): if do_role() returns agent output JSON with status != 'done', raises RuntimeError immediately — HALTS the pipeline",
+        "Stale pre-check removed: pipeline.py no longer auto-locks functions based on stale staged file CC",
+        "Tool budget increased: DEFAULT_TOOL_BUDGET=35, READ_BUDGET=35, CODER_READ_FILE_BUDGET=20",
+        "read_file and verify_edit in READ_FILE_TOOLS (not blocked before planning)",
+        "verify_edit removed from MODIFY_TOOLS (fixes duplicate registration)",
+        "Planning gate allows read-only discovery tools before planning",
+        "Artefact cleanup added: when Resume: false, removes factory/artefacts/workplan/ before fresh run",
+        "intern.yaml has Rule 16 (trust surgical context sandwich) + Rule 17 (batch_read format) + 5 CC decomposition patterns",
+        "Stale red_team_passed reference removed from user_prompt.md"
+      ],
+      "pipeline_config": {
+        "start_phase": "intern",
+        "stop_phase": "senior",
+        "target_repo": "/home/yapilwsl/arthityap/ai-factory",
+        "target_functions": [
+          "_run_verify_edit"
+        ],
+        "scope": [
+          "factory/infra/pipeline.py"
+        ]
+      },
+      "timestamp_end": "2026-08-03T04:13:39Z",
+      "timestamp_end_sgt": "2026-08-03 12:13:39 SGT",
+      "status": "FAILED",
+      "failing_tier": "intern",
+      "root_cause": "RuntimeError: [HALT] intern tier: agent returned status 'blocked' (expected 'done'). Notes: The request budget was exhausted before completing the task. I am unable to continue working on this task.. HALTING -- do not escalate to next tier or proceed with verification.",
+      "root_cause_detail": "The intern agent exhausted its request budget (request_limit hit at 12:13:41 after ~51 seconds of tool calls) and forced RECOVER. The agent had attempted refactoring by calling replace_function twice and verify_edit twice, extracting helper functions (_verify_with_functions, _function_exists_in_file, _check_verify_result, _check_direct_result, _verify_all_functions, _format_failed_details, _check_all_functions_cc) into the staged file factory/temp/factory/infra/pipeline.py (1208 lines vs 1191 original). However, the agent could not complete all necessary edits before the budget was exhausted. The FAIL-LOUDLY gate correctly detected the 'blocked' status and halted the pipeline.",
+      "ast_verification_summary": {},
+      "improvements_needed": [
+        "Increase the intern agent's request_limit/tool_budget to allow completion of the _run_verify_edit refactor (CC=49)",
+        "The partial refactor in factory/temp/factory/infra/pipeline.py extracted 7 helper functions but was incomplete — agent ran out of budget mid-refactor",
+        "Re-run runner.py after increasing tool budget"
+      ],
+      "target_functions_status": {
+        "_run_verify_edit": {
+          "status": "FAILED_AT_INTERN",
+          "baseline_cc": 49,
+          "current_cc": null,
+          "detail": "Intern agent budget exhausted before completing refactor. Partial helper extraction attempted in staged file but agent returned 'blocked' status."
+        }
+      }
+    }
   ],
-  "latest_job_id": "024"
+  "latest_job_id": "026"
 }

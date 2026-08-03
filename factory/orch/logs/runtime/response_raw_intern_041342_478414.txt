@@ -1,0 +1,1 @@
+[tool-call] final_result({"task_id": "unknown", "status": "blocked", "files_changed": [], "diff_summary": "No changes made", "notes": "The request budget was exhausted before completing the task. I am unable to continue working on this task."})
