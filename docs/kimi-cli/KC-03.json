@@ -1,0 +1,136 @@
+{
+  "id": "KC-03",
+  "title": "Core Feature Set & KIMI API Integration",
+  "scope": "Understand the core KIMI model integration, provider calls, and chat/completion logic.",
+  "folders": [
+    "kimi-cli/src",
+    "kimi-cli/sdks",
+    "kimi-cli/packages"
+  ],
+  "findings": {
+    "provider": {
+      "name": "Moonshot AI / Kimi",
+      "base_url": "https://api.moonshot.ai/v1",
+      "alternatives": {
+        "moonshot_cn": "https://api.moonshot.cn/v1",
+        "kimi_code_managed": "https://api.kimi.com/coding/v1"
+      },
+      "chat_completions_url": "https://api.moonshot.ai/v1/chat/completions",
+      "endpoint_path": "/chat/completions"
+    },
+    "sdk_or_client": {
+      "primary_client_class": "Kimi",
+      "file": "packages/kosong/src/kosong/chat_provider/kimi.py",
+      "client_class": "Kimi (lines 67-275)",
+      "streaming_response_class": "KimiStreamedMessage (lines 391-519)",
+      "files_class": "KimiFiles (lines 277-302)",
+      "constructor": "Kimi(model, api_key=None, base_url=None, stream=True, **client_kwargs)",
+      "underlying_transport_sdk": "openai.AsyncOpenAI (openai v2.14.0)",
+      "client_factory": "create_openai_client() in packages/kosong/src/kosong/chat_provider/openai_common.py:24 — wraps AsyncOpenAI(api_key, base_url, **client_kwargs)",
+      "kimi_cli_wiring": "src/kimi_cli/llm.py:create_llm() (line 326) instantiates Kimi via match on provider.type == 'kimi'; llm.py line 153 find_kimi_provider() unwraps the provider",
+      "request_method": "self.client.chat.completions.create(model, messages, tools, stream, stream_options, **generation_kwargs) at kimi.py:174-181 (stream) and 184-191 (non-stream via with_raw_response)",
+      "error_conversion": "convert_error() in openai_common.py:75 maps OpenAIError/httpx.HTTPError to kosong ChatProviderError subclasses",
+      "tool_conversion": "_convert_tool() in kimi.py:365 — standard tools -> {type:'function', function:{name,description,parameters}}; $-prefixed builtin tools -> {type:'builtin_function', function:{name}}",
+      "schema_normalization": "_convert_tool applies ensure_property_types() to fill missing nested 'type' on parameter properties (Moonshot rejects type-less schemas)"
+    },
+    "models": {
+      "discovery": "No hardcoded model list. Models fetched dynamically at runtime via GET {base_url}/models",
+      "list_models_function": "src/kimi_cli/auth/platforms.py:254 async def list_models(platform, api_key) -> list[ModelInfo]",
+      "http_endpoint": "GET {base_url.rstrip('/')}/models with Authorization: Bearer {api_key}",
+      "model_info_shape": {
+        "id": "str",
+        "context_length": "int",
+        "supports_reasoning": "bool",
+        "supports_image_in": "bool",
+        "supports_video_in": "bool",
+        "display_name": "str | None"
+      },
+      "capability_derivation": "platforms.py ModelInfo.capabilities property (line 26): 'thinking'/'always_thinking' for reasoning or kimi-k2 prefix or thinking-in-name models; 'image_in'/'video_in' from supports flags; kimi-k2 family auto-grants thinking+image_in+video_in",
+      "allowed_prefixes": "['kimi-k'] for moonshot platforms; models with 'thinking'/'reason' in name are always-thinking",
+      "known_model_refs": [
+        "kimi-k2-turbo-preview",
+        "kimi-k2-thinking-turbo",
+        "kimi-for-coding",
+        "kimi-code"
+      ],
+      "managed_key_scheme": "managed:{platform_id} provider key + {platform_id}/{model_id} model key (platforms.py:96-101)"
+    },
+    "request_shape": {
+      "endpoint": "POST {base_url}/chat/completions",
+      "auth_header": "Authorization: Bearer <api_key>",
+      "json_body_keys": [
+        "model",
+        "messages",
+        "stream",
+        "stream_options",
+        "tools",
+        "max_completion_tokens",
+        "temperature",
+        "top_p",
+        "n",
+        "presence_penalty",
+        "frequency_penalty",
+        "stop",
+        "prompt_cache_key",
+        "reasoning_effort",
+        "extra_body"
+      ],
+      "messages_structure": "OpenAI-compatible ChatCompletionMessageParam array; roles: system|user|assistant|tool. Supports content parts: text, image_url, audio_url, video_url (ms:// URLs from Kimi files API). Assistant messages carry tool_calls; tool messages carry tool_call_id. Moonshot-specific 'reasoning_content' field added by _convert_message (kimi.py:351-352) for think parts.",
+      "tools_structure": "[{type:'function'|'builtin_function', function:{name, description, parameters}}] — builtin_function for $-prefixed tools omits description/parameters",
+      "generation_kwargs_typed_dict": "Kimi.GenerationKwargs (kimi.py:84-101) — max_completion_tokens, max_tokens (deprecated alias normalized), temperature, top_p, n, presence_penalty, frequency_penalty, stop, prompt_cache_key, reasoning_effort, extra_body",
+      "extra_body": "Moonshot-specific extra_body.thinking: {type:'enabled'|'disabled', keep:any} (ThinkingConfig TypedDict kimi.py:55-64); deep-merged via with_extra_body",
+      "max_tokens_alias": "max_tokens is normalized to max_completion_tokens by _normalize_generation_kwargs (kimi.py:317); explicit None opts out"
+    },
+    "response_shape": {
+      "non_streaming": "openai.types.chat.ChatCompletion",
+      "non_stream_keys": ["id", "object ('chat.completion')", "created", "model", "choices", "usage"],
+      "choices": "[{index, message:{role, content, reasoning_content, tool_calls}, finish_reason}]",
+      "chunk_streaming": "openai.types.chat.ChatCompletionChunk per SSE data line",
+      "chunk_keys": ["id", "object ('chat.completion.chunk')", "created", "model", "choices", "system_fingerprint"],
+      "chunk_choices": "[{index, delta:{role, content, reasoning_content, tool_calls}, finish_reason, usage}]",
+      "last_chunk_usage": "usage dict included when stream_options={include_usage:true} (kimi.py:179); {prompt_tokens, completion_tokens, total_tokens, cached_tokens}",
+      "cached_tokens_field": "Moonshot-specific: usage.cached_tokens (top-level) OR usage.prompt_tokens_details.cached_tokens (OpenAI-compatible) — extracted in KimiStreamedMessage.usage (kimi.py:422-443)",
+      "done_sentinel": "[DONE] SSE terminator"
+    },
+    "transport": {
+      "protocol": "http",
+      "streaming_style": "sse",
+      "streaming_format": "Server-Sent Events (text/event-stream); each event carries line-delimited JSON in the 'data:' field parsed by OpenAI SDK SSEDecoder (_streaming.py). '[DONE]' sentinel terminates stream. OpenAI SDK AsyncStream/SSEDecoder parses raw SSE bytes into JSON objects.",
+      "underlying_http": "httpx (async) via openai SDK _base_client; stream=True triggers SSEDecoder",
+      "sse_decoder": "openai._streaming.SSEDecoder / SSEBytesDecoder — splits on newlines, parses 'data:' lines, yields ServerSentEvent with .json()",
+      "non_stream": "Single POST, full JSON response parsed into ChatCompletion"
+    },
+    "auth": {
+      "env_var": "KIMI_API_KEY",
+      "base_url_env_var": "KIMI_BASE_URL",
+      "model_name_env_var": "KIMI_MODEL_NAME",
+      "resolution_order": "1. Explicit api_key arg to Kimi() 2. KIMI_API_KEY env var (kimi.py:113) 3. OAuth-managed platform token (resolve_api_key) 4. Falls back to configured api_key SecretStr",
+      "openai_sdk_header": "Authorization: Bearer <api_key> set by AsyncOpenAI internally",
+      "oauth_flow": "OAuth 2.0 device authorization at https://auth.kimi.com (KIMI_CODE_CLIENT_ID='17e5f671-d194-4dfb-9706-5516cb48c098'); tokens persisted to file (KIMI_SHARE_DIR/oauth/kimi-code) or legacy keyring (service='kimi-code'); access tokens auto-refreshed via OAuthManager.ensure_fresh() with 429/5xx retry cooldown",
+      "key_validation": "API key validated indirectly by calling GET {base_url}/models during setup (setup.py:84-88; 401 => invalid key). OAuth token resolved via resolve_api_key() (oauth.py:848) which loads cached/persisted token, refreshes if expired, falls back to static api_key.",
+      "config_storage": "pydantic SecretStr in LLMProvider.api_key (config.py:42), serialized via field_serializer to plaintext in config file; managed kimi-code platform stores api_key=SecretStr('') and relies on OAuth ref",
+      "env_overrides": [
+        "KIMI_API_KEY",
+        "KIMI_BASE_URL",
+        "KIMI_MODEL_NAME",
+        "KIMI_MODEL_MAX_CONTEXT_SIZE",
+        "KIMI_MODEL_CAPABILITIES",
+        "KIMI_MODEL_TEMPERATURE",
+        "KIMI_MODEL_TOP_P",
+        "KIMI_MODEL_THINKING_KEEP",
+        "KIMI_MODEL_MAX_COMPLETION_TOKENS",
+        "KIMI_MODEL_MAX_TOKENS"
+      ]
+    }
+  },
+  "proposal": "ai-factory could emulate kimi-cli's Kimi provider with a pydantic-v2 pattern: a pydantic-settings BaseSettings subclass (KimiProviderSettings) bound to KIMI_API_KEY/KIMI_BASE_URL/KIMI_MODEL_NAME env vars with a validated default of https://api.moonshot.ai/v1, a SecretStr api_key with a model_validator that raises a descriptive error when no key or OAuth ref is available, and a thin httpx.AsyncClient transport that POSTs to /chat/completions with a pydantic BaseModel KimiChatRequest (using alias_generator/Field(alias) to map provider snake_case keys like max_completion_tokens, extra_body, and the Moonshot-specific extra_body.thinking {type, keep} sub-dict), while a KimiChatResponse pydantic model captures the OpenAI-compatible response shape (choices[].message with reasoning_content/tool_calls, usage with cached_tokens/prompt_tokens_details) and streams SSE data: lines into ChatCompletionChunk-equivalent models via an async generator — keeping request/response as validated pydantic models while reusing a minimal SSE-by-line parser rather than coupling to the full openai SDK.",
+  "status": "done",
+  "assigned_agent": 3,
+  "dependencies": [
+    "KC-01"
+  ],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T00:00:00Z"
+}

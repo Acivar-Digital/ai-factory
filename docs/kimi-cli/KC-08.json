@@ -1,0 +1,42 @@
+{
+  "id": "KC-08",
+  "title": "Extensibility & Plugin Model",
+  "scope": "Identify plugin/extension systems, custom commands, or scripting hooks.",
+  "folders": [
+    "kimi-cli/src/kimi_cli/plugin",
+    "kimi-cli/src/kimi_cli/cli/plugin.py",
+    "kimi-cli/src/kimi_cli/cli/mcp.py",
+    "kimi-cli/src/kimi_cli/soul/toolset.py",
+    "kimi-cli/src/kimi_cli/soul/agent.py",
+    "kimi-cli/src/kimi_cli/skill",
+    "kimi-cli/src/kimi_cli/app.py",
+    "kimi-cli/src/kimi_cli/share.py",
+    "kimi-cli/src/kimi_cli/config.py",
+    "kimi-cli/src/kimi_cli/mcp_oauth.py",
+    "kimi-cli/examples/sample-plugin",
+    "kimi-cli/tests/core/test_plugin_manager.py"
+  ],
+  "findings": {
+    "plugin_types": "Plugins extend ONLY tools. A plugin is a directory with a plugin.json manifest that declares a list of 'tools', where each tool is an executable command (python3/tsx/shell) that receives params via stdin JSON and returns a string via stdout. Plugins can OPTIONALLY also ship an SKILL.md so the same package doubles as a skill (knowledge/guidance) — confirmed by tests/core/test_plugin_manager.py:193 and the skill root ordering at skill/__init__.py:199 which lists 'Extra(plugins)' as a skill scope. There is NO plugin support for commands, providers, themes, or sessions (those are built-in-only or controlled via config.toml). Source: src/kimi_cli/plugin/__init__.py:30-41 (PluginSpec/PluginToolSpec models), docs/en/customization/plugins.md:19-22.",
+    "registration": "Plugins are NOT registered via Python setuptools entry points or import hooks. Registration is a declarative plugin.json manifest: each plugin directory must contain a 'plugin.json' file (PLUGIN_JSON constant, src/kimi_cli/plugin/__init__.py:44) parsed by parse_plugin_json() into a Pydantic v2 PluginSpec model (src/kimi_cli/plugin/__init__.py:47-64). Installation uses an atomic staging swap (tempdir -> rename) with config injection and runtime metadata written in (install_plugin at src/kimi_cli/plugin/manager.py:62-108). The CLI surface is `kimi plugin install | list | remove | info` (src/kimi_cli/cli/plugin.py). Install targets accept: local directory, .zip file, .zip URL, or git URL (with optional subpath/branch). No entry_points table exists in pyproject.toml (verified: grep for entry.point|entry-points in *.toml across repo returns nothing).",
+    "plugin_storage": "Plugins live in the share directory under a 'plugins' subfolder: get_plugins_dir() returns get_share_dir()/\"plugins\" (src/kimi_cli/plugin/manager.py:26-28). get_share_dir() resolves to Path.home()/'.kimi' by default, or the $KIMI_SHARE_DIR env var if set (src/kimi_cli/share.py:7-13). So the default install location is ~/.kimi/plugins/. Each plugin is its own subdirectory (named by PluginSpec.name, validated against path traversal at _validate_name, src/kimi_cli/plugin/manager.py:54-59) containing the full plugin.json, config_file, and tool scripts. At install time, host credentials (api_key, base_url) are injected into the plugin's declared config_file via inject_config() (src/kimi_cli/plugin/__init__.py:67-97). Docs: docs/en/configuration/data-locations.md:13-38 and docs/en/customization/plugins.md:307-309.",
+    "discovery": "Discovery is pure folder-scan, two touch-points. (1) At startup, app.py calls refresh_plugin_configs(get_plugins_dir(), host_values) to re-inject fresh OAuth tokens/credentials into every already-installed plugin's config_file (src/kimi_cli/app.py:275-287). (2) When the agent loads, soul/agent.py load_agent() calls load_plugin_tools(get_plugins_dir(), runtime.config, approval=runtime.approval) which iterates sorted children of the plugins dir, reads each 'plugin.json', parses it into PluginSpec, and wraps each declared PluginToolSpec in a PluginTool subprocess wrapper (src/kimi_cli/plugin/tool.py:133-173). Plugin tools are added to the toolset with conflict-skipping (warns if a plugin tool name clashes with an existing tool, src/kimi_cli/soul/agent.py:453-465). Plugins are ALSO included as a skill-discovery root (extra scope) so they can contribute SKILL.md guidance; see skill/__init__.py:211,278-284 and the test at tests/core/test_plugin_manager.py:193. No import hooks, no entry points, no central registry.",
+    "mcp_integration": "kimi-cli is an MCP CLIENT (not a server) — it connects to external MCP servers to harvest their tools. Managed via `kimi mcp add | list | remove | auth | reset-auth | test` (src/kimi_cli/cli/mcp.py). MCP server config is stored in ~/.kimi/mcp.json using the standard FastMCP 'mcpServers' schema (src/kimi_cli/cli/mcp.py:10-14, validated via fastmcp.mcp_config.MCPConfig at lines 17-35). Two transports: 'stdio' (command+args, with per-server env vars) and 'http' (URL, headers, optional --auth oauth). OAuth auth method: HTTP servers added with '--auth oauth' use a browser OAuth flow via `kimi mcp auth <name>`; tokens are cached in ~/.kimi/mcp-oauth/ using fastmcp's FileTreeStore/TokenStorageAdapter (create_mcp_oauth, kimi_cli/mcp_oauth.py:37-61; has_mcp_oauth_tokens checks at lines 43-55). At agent load, mcp_configs (from mcp.json + --mcp-config-file + --mcp-config CLI flags) are validated and loaded async in the background via toolset.load_mcp_tools() (src/kimi_cli/soul/toolset.py:744+), with status tracked in MCPStatusSnapshot/MCPServerSnapshot (wire/types.py:158-174) and shown in the shell status bar. MCP tools share the same approval gate as built-in and plugin tools."
+  },
+  "proposal": "Pydantic-v2 plugin model: replace the raw folder-scan+JSON contract with a hybrid registry — use a setuptools entry-point group (e.g. 'kimi.plugins') for package-level plugin discovery while keeping the existing Pydantic v2 PluginSpec BaseModel as the validated plugin contract. Plugins would publish a small entry-point that returns their PluginSpec (validated with @field_validator), giving deterministic import-time registration and de-duplication, while the manifest-driven plugin.json and atomic staging install are retained for unpackaged/local plugins. This keeps the current 'declare tools in a JSON manifest parsed by pydantic' philosophy (PluginSpec/PluginToolSpec already subclass BaseModel with model_config = ConfigDict(extra='ignore') at src/kimi_cli/plugin/__init__.py:33) but adds an importable, entry-point-resolved discovery path alongside the folder scan, matching the pydantic v2 plugin-spec pattern of a validated BaseModel contract rather than duck-typed classes.",
+  "status": "done",
+  "assigned_agent": 8,
+  "dependencies": [
+    "KC-01"
+  ],
+  "notes": [
+    "Read-only research of /home/yapilwsl/arthityap/github/kimi-cli/kimi-cli; output written only to ai-factory docs/kimi-cli/KC-08.json.",
+    "Verified: NO Python entry points in pyproject.toml — plugins are purely folder-scanned via ~/.kimi/plugins/ with plugin.json manifests.",
+    "Plugin types confirmed: only 'tools' (executable commands); optional SKILL.md bundled for knowledge — no providers/themes/sessions/commands.",
+    "MCP confirmed client-side (fastmcp.Client) connecting to stdio/http servers; OAuth tokens cached in ~/.kimi/mcp-oauth/.",
+    "Startup plugin credential refresh path: app.py:275-287 -> refresh_plugin_configs -> inject_config per plugin."
+  ],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-03T00:00:00Z"
+}

@@ -1,0 +1,110 @@
+{
+  "id": "KC-02",
+  "title": "CLI Framework & Command Layer",
+  "scope": "Identify the CLI framework used and map the full command tree (commands, subcommands, flags).",
+  "folders": [
+    "kimi-cli/src",
+    "kimi-cli/scripts"
+  ],
+  "findings": {
+    "framework": ["typer 0.21.1", "click (underlying runtime, invoked by typer)"],
+    "entrypoint": {
+      "module": "kimi_cli/__main__.py",
+      "console_script": "kimi",
+      "aliases": ["kimi-cli"],
+      "target": "kimi_cli.__main__:main",
+      "app_object": { "module": "kimi_cli/cli/__init__.py", "name": "cli" }
+    },
+    "command_model": "Top-level app is a `typer.Typer` instance named `cli` (in kimi_cli/cli/__init__.py) whose `cls` is the custom `LazySubcommandGroup` (subclass of `typer.core.TyperGroup`) defined in `kimi_cli/cli/_lazy_group.py`. Eager top-level commands are registered with `@cli.command()` decorators (e.g. login, logout, term, acp, __background-task-worker, __web-worker). Additional sub-command groups (info, export, mcp, plugin, vis, web) are NOT registered with `add_typer`; instead they are lazily dispatched from a `LazySubcommandGroup.lazy_subcommands` class-level dict mapping group name -> (module_path, attribute_name='cli', help_text). Each entry imports the matching module's `cli` Typer app on first access via `typer.main.get_command(...)`. Within each sub-module, the group itself is a plain `typer.Typer`; leaf subcommands use `@cli.command('name')` while groups that act as single-leaf commands use `@cli.callback(invoke_without_command=True)` (info, vis, web) or `@cli.command(name='export')` (export).",
+    "commands": [
+      {
+        "name": "kimi",
+        "help": "Kimi, your next CLI agent. (root callback, runs the agent in shell mode when no subcommand)",
+        "subcommands": ["login", "logout", "term", "acp", "info", "export", "mcp", "plugin", "vis", "web", "__background-task-worker", "__web-worker"],
+        "flags": ["--version/-V", "--verbose", "--debug", "--work-dir/-w", "--add-dir", "--session/--resume/-S/-r", "--continue/-C", "--config", "--config-file", "--model/-m", "--thinking/--no-thinking", "--yolo/--yes/-y/--auto-approve", "--plan", "--afk", "--prompt/-p/--command/-c", "--print", "--acp", "--wire", "--input-format", "--output-format", "--final-message-only", "--quiet", "--agent", "--agent-file", "--mcp-config-file", "--mcp-config", "--skills-dir", "--max-steps-per-turn", "--max-retries-per-step", "--max-ralph-iterations", "-h/--help"]
+      },
+      { "name": "login", "help": "Login to your Kimi account.", "flags": ["--json"] },
+      { "name": "logout", "help": "Logout from your Kimi account.", "flags": ["--json"] },
+      { "name": "term", "help": "Run Toad TUI backed by Kimi Code CLI ACP server.", "flags": ["(extra args passed through; context_settings allow_extra_args/ignore_unknown_options)"] },
+      { "name": "acp", "help": "Run Kimi Code CLI ACP server.", "flags": [] },
+      { "name": "__background-task-worker", "help": "Run background task worker subprocess (internal, hidden).", "flags": ["--task-dir", "--heartbeat-interval-ms", "--control-poll-interval-ms", "--kill-grace-period-ms"] },
+      { "name": "__web-worker", "help": "Run web worker subprocess (internal, hidden).", "flags": ["session_id (argument)"] },
+      { "name": "info", "help": "Show version and protocol information.", "flags": ["--json"] },
+      { "name": "export", "help": "Export a session as a ZIP archive.", "flags": ["--output/-o", "--yes/-y"], "args": ["session_id (optional; defaults to previous session)"] },
+      {
+        "name": "mcp",
+        "help": "Manage MCP server configurations.",
+        "subcommands": ["add", "remove", "list", "auth", "reset-auth", "test"]
+      },
+      { "name": "mcp add", "help": "Add an MCP server.", "args": ["name", "TARGET_OR_COMMAND..."], "flags": ["--transport/-t", "--env/-e", "--header/-H", "--auth/-a"], "examples": ["kimi mcp add --transport http context7 https://mcp.context7.com/mcp --header \"CONTEXT7_API_KEY: ctx7sk-your-key\"", "kimi mcp add --transport http --auth oauth linear https://mcp.linear.app/mcp", "kimi mcp add --transport stdio chrome-devtools -- npx chrome-devtools-mcp@latest"] },
+      { "name": "mcp remove", "help": "Remove an MCP server.", "args": ["name"], "flags": [] },
+      { "name": "mcp list", "help": "List all MCP servers.", "flags": [] },
+      { "name": "mcp auth", "help": "Authorize with an OAuth-enabled MCP server.", "args": ["name"], "flags": [] },
+      { "name": "mcp reset-auth", "help": "Reset OAuth authorization for an MCP server (clear cached tokens).", "args": ["name"], "flags": [] },
+      { "name": "mcp test", "help": "Test connection to an MCP server and list available tools.", "args": ["name"], "flags": [] },
+      {
+        "name": "plugin",
+        "help": "Manage plugins.",
+        "subcommands": ["install", "list", "remove", "info"]
+      },
+      { "name": "plugin install", "help": "Install a plugin and inject host configuration.", "args": ["target (directory, .zip, .zip URL, or git URL)"], "flags": [] },
+      { "name": "plugin list", "help": "List installed plugins.", "flags": [] },
+      { "name": "plugin remove", "help": "Remove an installed plugin.", "args": ["name"], "flags": [] },
+      { "name": "plugin info", "help": "Show plugin details.", "args": ["name"], "flags": [] },
+      { "name": "vis", "help": "Run Kimi Agent Tracing Visualizer.", "flags": ["--host/-h", "--network/-n", "--port/-p", "--open/--no-open", "--reload"] },
+      { "name": "web", "help": "Run Kimi Code CLI web interface.", "flags": ["--host/-h", "--network/-n", "--port/-p", "--reload", "--open/--no-open", "--auth-token", "--allowed-origins", "--dangerously-omit-auth", "--restrict-sensitive-apis/--no-restrict-sensitive-apis", "--lan-only/--public"] }
+    ],
+    "group_structure": {
+      "root": "kimi (typer.Typer, cls=LazySubcommandGroup; root callback `kimi` runs the agent in shell mode)",
+      "top_level_eager_commands": ["login", "logout", "term", "acp", "__background-task-worker", "__web-worker"],
+      "lazy_subgroups": ["info", "export", "mcp", "plugin", "vis", "web"],
+      "tree": [
+        "kimi",
+        "├── login [--json]",
+        "├── logout [--json]",
+        "├── term (passes extra args)",
+        "├── acp",
+        "├── __background-task-worker [--task-dir, --heartbeat-interval-ms, --control-poll-interval-ms, --kill-grace-period-ms] (hidden)",
+        "├── __web-worker [session_id] (hidden)",
+        "├── info [--json]",
+        "├── export [session_id] [--output/-o, --yes/-y]",
+        "├── mcp (group)",
+        "│   ├── add (name, TARGET_OR_COMMAND...) [--transport/-t, --env/-e, --header/-H, --auth/-a]",
+        "│   ├── remove (name)",
+        "│   ├── list",
+        "│   ├── auth (name)",
+        "│   ├── reset-auth (name)",
+        "│   └── test (name)",
+        "├── plugin (group)",
+        "│   ├── install (target)",
+        "│   ├── list",
+        "│   ├── remove (name)",
+        "│   └── info (name)",
+        "├── vis [--host/-h, --network/-n, --port/-p, --open/--no-open, --reload]",
+        "└── web [--host/-h, --network/-n, --port/-p, --reload, --open/--no-open, --auth-token, --allowed-origins, --dangerously-omit-auth, --restrict-sensitive-apis/--no-restrict, --lan-only/--public]"
+      ]
+    },
+    "aliasing": {
+      "enabled": true,
+      "command_aliases": false,
+      "mechanism": "Option/flag aliases are declared via multiple flag strings in `typer.Option` (e.g. `--session`/`--resume`/`-S`/`-r`, `--prompt`/`-p`/`--command`/`-c`, `--work-dir`/`-w`, `--yolo`/`--yes`/`-y`/`--auto-approve`, `--model`/`-m`, `--continue`/`-C`, `-h`/`--help`). No Click-style command-name aliases dict or typer `name=[...]` aliases are used. Command dispatch for lazy groups is a custom registry map (LazySubcommandGroup.lazy_subcommands) rather than name aliasing."
+    }
+  },
+  "proposal": {
+    "pydantic_v2_pattern": "ai-factory can mirror kimi-cli's declarative + lazy-registration pattern using pydantic-v2 as the source of truth: define one pydantic BaseModel per command whose fields are `Annotated[..., typer.Option(...)/typer.Argument(...)]` (so pydantic validates flag types while Typer reads the annotations for parsing); a registry walks each model to synthesize a `typer.Typer` sub-app (`@sub_app.command()` over the model class) and registers it on a root `Typer(cls=...)` group (a `LazySubcommandGroup`-style subclass that overrides `get_command`/`list_commands` to import each sub-app module on first access from a config-driven list, e.g. a `pydantic-settings` `CliPluginSettings` model listing enabled sub-app modules). Flag aliases are then just repeated flag strings in the `typer.Option` metadata, and command aliases (if desired) can be derived from an extra `aliases` pydantic field read at registration time."
+  },
+  "status": "done",
+  "assigned_agent": 2,
+  "dependencies": [
+    "KC-01"
+  ],
+  "notes": [
+    "Root entrypoint `kimi`/`kimi-cli` console_script -> kimi_cli.__main__:main -> `cli` Typer app in kimi_cli/cli/__init__.py.",
+    "Two __main__.py exist: kimi_cli/__main__.py (package, console_script) and kimi_cli/cli/__main__.py (module-level, python -m kimi_cli.cli); both delegate to the same `cli` app.",
+    "Lazy load avoids importing heavyweight deps (e.g. toad, web/vis FastAPI servers) until subcommand is invoked.",
+    "23 command entries total (1 root + 6 eager + 1 group-as-leaf info + 1 group-as-leaf export + 6 mcp + 4 plugin + 1 vis + 1 web); 2 of the eager commands are hidden internal workers."
+  ],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T00:00:00Z"
+}
