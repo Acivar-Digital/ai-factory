@@ -15,7 +15,7 @@ from factory.infra.models import (
 from factory.infra.context import (
     estimate_task_tokens, _stage_copies, stage_path,
     stage_paths, _edit_mode_block, _build_tier_b_map, _write_harness_patches,
-    _quarantine_coder_artifacts, staged_zero_diff, _dep_pointers_for,
+    _quarantine_intern_artifacts, staged_zero_diff, _dep_pointers_for,
     _real_source_paths, TaskNeedsSplitError, TASK_TOKEN_THRESHOLD, TIER_B_SLICE_THRESHOLD
 )
 from factory.infra.exchange import (
@@ -578,7 +578,7 @@ async def run_execute_phase(
         files = obj.get("files_changed") or obj.get("files") or []
         if obj.get("status") == "done":
             written, real_changes = _write_harness_patches(t.id, files, bd)
-            _quarantine_coder_artifacts(bd)
+            _quarantine_intern_artifacts(bd)
             if real_changes == 0:
                 # B3: fake-done — claimed done but changed nothing
                 log_operator(f"[PATCH] task {t.id} status=done but ZERO real changes -> blocked", level="WARNING")
