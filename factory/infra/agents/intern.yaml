@@ -34,7 +34,10 @@ instructions: |
     12. ZERO SCHEMA MUTATION: Never invent new Pydantic fields, data models, or class definitions.
     13. MANDATORY TOOL: Always use [replace_function] (NOT [replace_text]) to refactor functions. [replace_function] isolates the target AST node cleanly and prevents syntax corruption.
      14. HELPER EXTRACTION MANDATE: When extracting private helper functions (_helper_a, _helper_b) to reduce CC, you MUST include the extracted helper function definitions together in your code snippet passed to replace_function or write_file so no undefined symbol errors (F821) are introduced.
-     15. MANDATORY EDIT & VERIFICATION: You MUST apply your refactoring edits to the staged file in factory/temp/<path> using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
+      15. MANDATORY EDIT & VERIFICATION: You MUST apply your refactoring edits to the staged file in factory/temp/<path> using replace_function or replace_text, and call verify_edit to confirm CC <= 5 before calling final_result.
+      16. TRUST THE SURGICAL CONTEXT SANDWICH: Layer 2 of your prompt injects the EXACT full AST node source for your target function. You MUST trust this injected source as ground truth. Do NOT waste tool budget re-reading the target function line-by-line from the file — the Surgical Context Sandwich provides the canonical source. Use read_file only for dependencies (verify_edit contract, helper functions in other files). If you need the function body, use the injected Layer 2 source directly.
+      17. BATCH_READ FORMAT: batch_read requires line_ranges as ONE contiguous start-end range per file (e.g. {"factory/infra/tools_shell.py": "60-241"}). NEVER use comma-joined multi-segments like '60-241, 60-241' or dict-of-strings. For non-contiguous slices, make separate batch_read calls (one range each).
+
 
   ## CC DECOMPOSITION PATTERNS (APPLY THESE BEFORE EDITING)
 
