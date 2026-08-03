@@ -1,0 +1,279 @@
+{
+  "document_id": "KC-03",
+  "repo": "kimi-cli",
+  "repo_path": "/home/yapilwsl/arthityap/github/kimi-cli/kimi-cli",
+  "analysis_date": "2026-08-03",
+  "scope": "Core KIMI model integration and provider calls — client/sdk, endpoint config, model invocation logic, request/response shapes, streaming vs sync.",
+  "summary": {
+    "client_type": "Thin async provider class (Kimi) wrapping the OpenAI SDK (openai.AsyncOpenAI v2.14); kimi_sdk is a thin re-export layer over kosong",
+    "model_config": "Models are not hard-coded; discovered dynamically at runtime via GET /v1/models. Default model: kimi-k2-turbo-preview. Env-driven overrides: KIMI_MODEL_NAME, KIMI_BASE_URL, KIMI_API_KEY",
+    "transport_mechanism": "httpx.AsyncClient (managed internally by AsyncOpenAI, HTTP/1.1 default). Sync path uses with_raw_response.create; streaming path uses create(stream=True, stream_options={include_usage: True}) returning AsyncStream[ChatCompletionChunk] SSE"
+  },
+  "dependencies": {
+    "runtime": {
+      "openai": ">=2.14.0,<2.15.0",
+      "httpx": "0.28.1 (kimi-cli root uses httpx[socks]==0.28.1; kimi-sdk bound: httpx>=0.28.1,<0.29.0)",
+      "python": "3.14"
+    },
+    "packages": {
+      "kosong": {
+        "version": "0.56.0",
+        "src_path": "packages/kosong/src/kosong/",
+        "role": "LLM abstraction layer: ChatProvider protocol, Kimi provider, message/tooling types, generate/step orchestration"
+      },
+      "kimi_sdk": {
+        "version": "0.2.1",
+        "src_path": "sdks/kimi-sdk/src/kimi_sdk/__init__.py",
+        "role": "Thin re-export facade: imports generate, step, Kimi, Message, Tool, etc. from kosong; no own transport logic"
+      },
+      "kimi_cli": {
+        "src_path": "src/kimi_cli/",
+        "role": "CLI application; constructs Kimi provider via create_llm() in llm.py; manages OAuth, config, runtime/session lifecycle"
+      }
+    }
+  },
+  "client_sdk": {
+    "primary_client_class": "Kimi (kosong.chat_provider.kimi.Kimi)",
+    "location": "packages/kosong/src/kosong/chat_provider/kimi.py",
+    "sdk_facade": {
+      "class": "kimi_sdk.Kimi",
+      "location": "sdks/kimi-sdk/src/kimi_sdk/__init__.py",
+      "note": "Re-exports kosong.chat_provider.kimi.Kimi; identical behavior"
+    },
+    "construction": {
+      "signature": "Kimi(model, api_key=None, base_url=None, stream=True, **client_kwargs)",
+      "api_key_resolution": "api_key arg > KIMI_API_KEY env var (required; raises ChatProviderError if unset)",
+      "base_url_resolution": "base_url arg > KIMI_BASE_URL env var > default https://api.moonshot.ai/v1",
+      "stream_default": true,
+      "client_kwargs": "forwarded to openai.AsyncOpenAI (e.g. http_client, timeout, default_headers, max_retries)"
+    }
+  },
+  "endpoint_config": {
+    "default_base_url": "https://api.moonshot.ai/v1",
+    "platforms": [
+      {
+        "id": "kimi-code",
+        "name": "Kimi Code (managed platform)",
+        "base_url": "https://api.kimi.com/coding/v1",
+        "search_url": "https://api.kimi.com/coding/v1/search",
+        "fetch_url": "https://api.kimi.com/coding/v1/fetch",
+        "env_override": "KIMI_CODE_BASE_URL",
+        "allowed_prefixes": null
+      },
+      {
+        "id": "moonshot-cn",
+        "name": "Moonshot AI Open Platform (moonshot.cn)",
+        "base_url": "https://api.moonshot.cn/v1",
+        "allowed_prefixes": ["kimi-k"]
+      },
+      {
+        "id": "moonshot-ai",
+        "name": "Moonshot AI Open Platform (moonshot.ai)",
+        "base_url": "https://api.moonshot.ai/v1",
+        "allowed_prefixes": ["kimi-k"]
+      }
+    ],
+    "http_transport": {
+      "library": "httpx.AsyncClient (managed by openai.AsyncOpenAI internally)",
+      "http2": "not explicitly set (defaults to False in OpenAI SDK; httpx default)",
+      "injectable": "Yes via client_kwargs['http_client'] (used in tests with httpx.MockTransport)"
+    }
+  },
+  "model_list": {
+    "discovery": "Dynamic via GET {base_url}/models — returns list of ModelInfo (id, context_length, supports_reasoning, supports_image_in, supports_video_in, display_name). Filtered by platform.allowed_prefixes when set.",
+    "configured_models": [
+      "kimi-k2-turbo-preview (default for SDK/CLI)",
+      "kimi-k2",
+      "kimi-k2-thinking",
+      "kimi-k2-thinking-turbo",
+      "kimi-k2.5",
+      "kimi-for-coding",
+      "kimi-code",
+      "kimi-code-turbo",
+      "kimi-base",
+      "kimi-latest"
+    ],
+    "model_info_response_shape": {
+      "data": [
+        {
+          "id": "string (model identifier)",
+          "context_length": "integer (token context window)",
+          "supports_reasoning": "boolean",
+          "supports_image_in": "boolean",
+          "supports_video_in": "boolean",
+          "display_name": "string | null"
+        }
+      ]
+    },
+    "capability_derivation": {
+      "thinking": "enabled if supports_reasoning=true OR model name contains 'thinking'/'reason' OR model id starts with 'kimi-k2'",
+      "always_thinking": "set if model name/id contains 'thinking'",
+      "image_in": "if supports_image_in=true OR model starts with 'kimi-k2' OR model is 'kimi-for-coding'/'kimi-code'",
+      "video_in": "if supports_video_in=true OR model is 'kimi-for-coding'/'kimi-code'"
+    }
+  },
+  "request_response_shapes": {
+    "request_endpoint": "POST {base_url}/chat/completions",
+    "request_shape": {
+      "openai_compatible": true,
+      "top_level_fields": {
+        "model": "string",
+        "messages": "list[ChatCompletionMessageParam]",
+        "tools": "list (OpenAI format; see tool conversion below)",
+        "stream": "boolean",
+        "stream_options": "object — {'include_usage': True} when streaming",
+        "max_completion_tokens": "integer|null (canonical key; 'max_tokens' is deprecated alias normalized to this)",
+        "max_tokens": "DEPRECATED alias — normalized to max_completion_tokens before sending; omitted when None",
+        "temperature": "float|null",
+        "top_p": "float|null",
+        "n": "int|null",
+        "presence_penalty": "float|null",
+        "frequency_penalty": "float|null",
+        "stop": "string|list[string]|null",
+        "prompt_cache_key": "string|null",
+        "reasoning_effort": "string|null (legacy passthrough — NOT sent when with_thinking is used)",
+        "extra_body": "object — Moonshot-specific (see below)"
+      },
+      "message_shape": {
+        "system": "{\"role\": \"system\", \"content\": \"...\"|[{text part,...}]}",
+        "user": "{\"role\": \"user\", \"content\": \"...\"|[{content_part,...}]}",
+        "assistant": "{\"role\": \"assistant\", \"content\": \"...\"|[{...}]|omitted, \"tool_calls\": [...], \"reasoning_content\": \"...\" (Moonshot extension)}",
+        "tool": "{\"role\": \"tool\", \"content\": \"...\"|[{...}], \"tool_call_id\": \"...\", \"name\": \"...\"}"
+      },
+      "content_part_types": [
+        {"type": "text", "text": "string"},
+        {"type": "image_url", "image_url": {"url": "string (http(s) or data: URI)", "id": "string|null"}},
+        {"type": "audio_url", "audio_url": {"url": "string", "id": "string|null"}},
+        {"type": "video_url", "video_url": {"url": "string", "id": "string|null"}}
+      ],
+      "tool_shape": {
+        "standard_function": {"type": "function", "function": {"name": "string", "description": "string", "parameters": "JSON-schema object"}},
+        "builtin_function": {"type": "builtin_function", "function": {"name": "$<name>"}},
+        "builtin_detection": "Tool names starting with '$' are serialized as builtin_function"
+      }
+    },
+    "response_shape": {
+      "sync": "openai.types.chat.ChatCompletion (OpenAI-compatible)",
+      "streaming": "AsyncStream[ChatCompletionChunk] (SSE); usage returned in final chunk when stream_options.include_usage=True",
+      "chat_completion_fields": {
+        "id": "string",
+        "object": "'chat.completion'",
+        "created": "unix timestamp",
+        "model": "string",
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": "string|null", "reasoning_content": "string|null", "tool_calls": [...]}, "finish_reason": "string"}],
+        "usage": {"prompt_tokens": "int", "completion_tokens": "int", "total_tokens": "int", "cached_tokens": "int (Moonshot-specific)", "prompt_tokens_details": {"cached_tokens": "int"}}
+      },
+      "stream_chunk_fields": {
+        "id": "string",
+        "object": "'chat.completion.chunk'",
+        "created": "unix timestamp",
+        "model": "string",
+        "choices": [{"index": 0, "delta": {"content": "string|null", "role": "string|null", "tool_calls": [...], "reasoning_content": "string|null"}, "finish_reason": "string|null", "usage": {"...": "int"}}],
+        "system_fingerprint": "string|null"
+      },
+      "trace_header": "x-trace-id (response header, captured from both sync and streaming paths)"
+    },
+    "extra_body_thinking": {
+      "shape": {"thinking": {"type": "'enabled'|'disabled'", "keep": "Any (Moonshot-specific preserved-thinking switch)"}},
+      "with_thinking_mapping": {"off": "disabled", "low": "enabled", "medium": "enabled", "high": "enabled", "xhigh": "enabled", "max": "enabled"},
+      "merge_semantics": "with_extra_body deep-merges the 'thinking' sub-dict (field-by-field); all other extra_body keys use last-writer-wins shallow merge"
+    },
+    "tool_conversion_quirks": {
+      "moonshot_schema_type_requirement": "Moonshot API rejects tool parameter schemas where a nested property omits 'type' (HTTP 400: 'type is not defined'). This is stricter than OpenAI/Anthropic which accept type-less properties.",
+      "ensure_property_types": "kosong.utils.jsonschema.ensure_property_types() walks properties/items/additionalProperties/anyOf/oneOf/allOf and fills missing 'type' (inferred from enum/const values or structural keywords; defaults to 'string')",
+      "assistant_content_empty_with_tool_calls": "When assistant has tool_calls and effectively-empty text content, the Kimi provider omits the 'content' field entirely (Kimi-compat layer rejects content:[{type:text,text:\"\"}])",
+      "reasoning_content_round_trip": "ThinkPart content serialized as 'reasoning_content' on assistant messages; empty-string delta means 'reasoned but empty' (NOT 'no reasoning') and must surface as ThinkPart to preserve thinking round-trip for the server"
+    }
+  },
+  "streaming_vs_sync": {
+    "stream_true_default": {
+      "path": "self.client.chat.completions.create(model, messages, tools, stream=True, stream_options={'include_usage': True}, **gen_kwargs)",
+      "return_type": "AsyncStream[ChatCompletionChunk]",
+      "trace_id_extraction": "parsed_response.response.headers.get('x-trace-id') (eager header access; body still streamed)",
+      "usage": "In final chunk when include_usage=True; also via extract_usage_from_chunk fallback scanning choices[0].usage"
+    },
+    "stream_false": {
+      "path": "self.client.chat.completions.with_raw_response.create(model, messages, tools, stream=False, stream_options=omit, **gen_kwargs)",
+      "return_type": "ChatCompletion (fully buffered)",
+      "trace_id_extraction": "raw_response.headers.get('x-trace-id')",
+      "usage": "response.usage field"
+    },
+    "abstraction_layer": {
+      "class": "KimiStreamedMessage",
+      "behavior": "Constructor accepts either ChatCompletion (sync) or AsyncStream[ChatCompletionChunk] (streaming); sets _iter to _convert_non_stream_response or _convert_stream_response; both yield StreamedMessagePart (TextPart, ThinkPart, ToolCall, ToolCallPart) as async iterator",
+      "id_property": "First seen chunk.id or response.id",
+      "usage_property": "TokenUsage with cached_tokens translation: input_other = prompt_tokens - cached_tokens; input_cache_read = cached_tokens"
+    },
+    "sdk_orchestration": {
+      "kosong.generate": "Calls chat_provider.generate(), iterates stream parts, merges via merge_in_place into a single Message. Raises APIEmptyResponseError on empty or think-only responses. Accepts on_message_part/on_tool_call/on_trace_id callbacks.",
+      "kosong.step": "Layers tool dispatch over generate(); returns StepResult with awaited tool outputs; cancels pending futures on ChatProviderError/CancelledError"
+    }
+  },
+  "error_handling": {
+    "error_types": ["ChatProviderError", "APIConnectionError", "APITimeoutError", "APIStatusError", "APIEmptyResponseError"],
+    "conversion": "convert_error() in openai_common.py maps OpenAIError + httpx.HTTPError to kosong error hierarchy. APIStatusError carries status_code, request_id (x-request-id), trace_id (x-trace-id). Base APIError without body classified heuristically via regex (timeout/network patterns).",
+    "retryable_recovery": "on_retryable_error() in Kimi rebuilds the AsyncOpenAI client from self._api_key (or client.api_key), preserving OAuth-refreshed tokens; closes old client via close_replaced_openai_client (guards against closing shared httpx.AsyncClient when caller injected http_client)"
+  },
+  "cli_integration": {
+    "llm_create_factory": "create_llm(provider, model, thinking, session_id, oauth) in src/kimi_cli/llm.py constructs Kimi with default_headers from oauth.common_headers + provider.custom_headers; applies generation_kwargs from KIMI_MODEL_* env vars (temperature, top_p, max_completion_tokens)",
+    "thinking_config": "with_thinking('high') applied when model is always_thinking OR (thinking=True and model supports thinking). KIMI_MODEL_THINKING_KEEP env injects extra_body.thinking.keep only when thinking is enabled",
+    "prompt_cache_key": "session_id passed as prompt_cache_key for request-level caching"
+  },
+  "pydantic_v2_api_client_proposal": {
+    "rationale": "ai-factory uses Pydantic v2 + Pydantic-AI. A typed client built on pydantic.BaseModel models + httpx.AsyncClient gives fail-fast validation, clean serialization via model_dump(), and zero OpenAI-SDK coupling for the factory's own provider integrations.",
+    "design": {
+      "base_classes": "pydantic.BaseModel with model_config = ConfigDict(populate_by_name=True, extra='forbid', alias_generator=to_camel)",
+      "serialization": "Use model_dump(by_alias=True, exclude_none=True) for wire serialization; model_validate() for response parsing",
+      "transport": "Single httpx.AsyncClient instance with connection pooling; HTTP/1.1 explicit (http2=False) to match ai-factory's LiteRouter proxy convention",
+      "auth": "Bearer token from KIMI_API_KEY env or injected SecretStr; re-read from live client to support OAuth refresh (mirrors kimi-cli on_retryable_error pattern)",
+      "endpoints": ["POST /v1/chat/completions (sync + streaming SSE)", "GET /v1/models (model discovery)", "POST /v1/files (multipart upload)"],
+      "stream_parsing": "Parse SSE event lines; accumulate tool_call deltas by index; yield typed ChatCompletionChunk model; extract x-trace-id from response headers before streaming begins",
+      "error_mapping": "httpx.HTTPStatusError -> typed exception with status_code, trace_id from x-trace-id header; httpx.TimeoutException -> timeout error; match kimi-cli's convert_error classification (timeout regex first, then network)",
+      "token_usage_translation": "cached_tokens from prompt_tokens_details.cached_tokens -> input_cache_read; prompt_tokens - cached -> input_other; completion_tokens -> output — mirror kosong.TokenUsage mapping"
+    },
+    "model_proposal": [
+      {
+        "name": "KimiRequest",
+        "fields": ["model: str", "messages: list[ChatCompletionMessageParam]", "tools: list[ChatCompletionToolParam] | None", "stream: bool", "stream_options: dict[str, Any] | None", "max_completion_tokens: int | None", "max_tokens: int | None (deprecated alias)", "temperature: float | None", "top_p: float | None", "frequency_penalty: float | None", "presence_penalty: float | None", "reasoning_effort: str | None", "extra_body: KimiExtraBody | None"],
+        "validators": ["_normalize_max_tokens_alias: max_tokens -> max_completion_tokens; omit None values for max_* keys"]
+      },
+      {
+        "name": "KimiExtraBody",
+        "fields": ["thinking: KimiThinkingConfig | None"],
+        "note": "Deep-merge for thinking sub-keys; shallow merge for top-level extras (mirrors with_extra_body semantics)"
+      },
+      {
+        "name": "KimiThinkingConfig",
+        "fields": ["type: Literal['enabled', 'disabled']", "keep: Any | None"],
+        "note": "Moonshot-specific preserved-thinking switch; keep forwarded verbatim"
+      },
+      {
+        "name": "KimiChatCompletion",
+        "extends": "OpenAI ChatCompletion",
+        "fields": ["id: str", "object: str", "created: int", "model: str", "choices: list[ChatCompletionChoice]", "usage: KimiCompletionUsage | None", "system_fingerprint: str | None"],
+        "note": "Supports Moonshot additions: reasoning_content on assistant message, cached_tokens in usage"
+      },
+      {
+        "name": "KimiCompletionUsage",
+        "fields": ["prompt_tokens: int", "completion_tokens: int", "total_tokens: int", "cached_tokens: int | None (Moonshot-specific)", "prompt_tokens_details: KimiPromptTokensDetails | None"],
+        "computed": ["input_other = prompt_tokens - (cached_tokens or 0)", "input_cache_read = cached_tokens or 0", "output = completion_tokens"]
+      },
+      {
+        "name": "KimiChatCompletionChunk",
+        "fields": ["id: str", "object: str", "created: int", "model: str", "choices: list[ChatCompletionChunkChoice]", "system_fingerprint: str | None"],
+        "note": "Final chunk carries usage (when include_usage=True)"
+      },
+      {
+        "name": "KimiStreamedMessagePart (Union)",
+        "members": ["TextPart {type: 'text', text: str}", "ThinkPart {type: 'think', think: str, encrypted: str | None}", "ToolCallDelta {index: int, id: str | None, name: str | None, arguments: str | None}", "UsageDelta {prompt_tokens: int, completion_tokens: int, cached_tokens: int | None}"],
+        "note": "Mirrors kosong StreamedMessagePart; supports incremental merging of tool_call deltas by index"
+      },
+      {
+        "name": "KimiModelInfo",
+        "fields": ["id: str", "context_length: int", "supports_reasoning: bool", "supports_image_in: bool", "supports_video_in: bool", "display_name: str | None"],
+        "computed": ["capabilities: set[ModelCapability] derived from fields + name heuristics"]
+      }
+    ],
+    "usage_example": "async with KimiApiClient(base_url='https://api.moonshot.ai/v1', api_key=SecretStr(os.getenv('KIMI_API_KEY'))) as client:\n    # sync\n    resp = await client.chat(KimiRequest(model='kimi-k2-turbo-preview', messages=[...], max_completion_tokens=2048))\n    # stream\n    async for part in client.chat_stream(KimiRequest(..., stream=True)):\n        ...\n    # models\n    models = await client.list_models()"
+  }
+}

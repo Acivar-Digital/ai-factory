@@ -102,7 +102,10 @@ The upgrade guarantees fail-fast/fail-loud verification gates, strict Pydantic v
 
 | Setting | Value | Purpose |
 |---|---|---|
-| `TOOL_BUDGET` | 20 | Max tool calls per tier |
+| `TOOL_BUDGET` | *Dynamic* (see rows below) | Max tool calls per tier — computed from target function line count |
+| `WRITE_BUDGET` | `max(35, line_count // 2)` | Write tool budget scaled by target function AST line span |
+| `READ_BUDGET` | 2x `WRITE_BUDGET` | Read tool budget = 2x write budget |
+| `SOFT_NUDGE_THRESHOLD` | 80% | Soft warning emitted at 80% before fatal exhaustion |
 | `MAX_RETRIES` | 10 | Max execution attempts per tier |
 | `CIRCUIT_BREAKER_THRESHOLD` | 3 | Consecutive failures before opening circuit breaker |
 | `CIRCUIT_BREAKER_HALF_OPEN` | 30s | Cooldown period before half-open attempt |

@@ -1,0 +1,76 @@
+{
+  "repo": "kimi-cli",
+  "root": "/home/yapilwsl/arthityap/github/kimi-cli/kimi-cli",
+  "canonical_name": "Kimi Code CLI (migrating from 'kimi-cli')",
+  "vendor": "MoonshotAI",
+  "project_type": "Multi-package Python monorepo (uv workspace) terminal AI agent CLI with two React/Vite frontends and a standalone-binary build option. NOT Pydantic-AI based — uses a custom lightweight abstraction layer (kosong) + a pydantic-style provider/tooling/message model stack; the AGENTS.md explicitly states 'LLM framework: kosong'.",
+  "languages": { "primary": "Python 3.12+ (type-checked at 3.14)", "frontend": "TypeScript/React/Vite (web + vis)", "frontend_lint": "Biome (web), TailwindCSS v4" },
+  "entry_points": {
+    "console": "kimi / kimi-cli / kimi-code -> kimi_cli.__main__:main -> kimi_cli.cli:cli (Typer)",
+    "subcommands": ["run (default, interactive agent)", "acp (Agent Client Protocol server over stdio)", "web (FastAPI web UI server)", "vis (tracing visualizer server)", "info", "export", "mcp", "plugin"],
+    "hidden_workers": ["__background-task-worker", "__web-worker"],
+    "binary": "PyInstaller one-file/one-dir build via kimi.spec (entry: src/kimi_cli/cli/__main__.py)"
+  },
+  "package_json_scripts": {
+    "web": "dev|build|preview|lint(biome)|typecheck(tsc -b)|format(biome)",
+    "vis": "dev|build|preview|typecheck(tsc -b)",
+    "docs": "VitePress site (docs/)"
+  },
+  "build_tooling": "uv + uv_build backend (module-name per package); PyInstaller (kimi.spec); npm/vite for web+vis; Makefile facade (make build/build-web/build-vis/build-kimi-cli/build-kosong/build-pykaos/build-kimi-sdk/build-bin)",
+  "lint_typecheck": "ruff (lint+format) · pyright (strict) · ty (non-blocking, project-level) · biome (web/vis)",
+  "test_tooling": "pytest + pytest-asyncio (asyncio_mode=auto). Suites: tests/ (unit), tests_e2e/ (Wire JSON-RPC + ACP protocol end-to-end), tests_ai/ (LLM accuracy smoke / terminal-bench), per-workspace-package tests (kosong incl. doctests, pykaos, kimi-sdk).",
+  "release_tooling": "Per-package GitHub Actions release workflows gated by tag prefix: release-kimi-cli.yml (numeric tag == pyproject version), release-kosong.yml (kosong-*), release-pykaos.yml (pykaos-*), release-kimi-sdk.yml. scripts/check_version_tag.py validates tag==pyproject.version. Pre-commit hooks format-kimi-cli / check-kimi-cli via Makefile. CI: ci-kimi-cli.yml / ci-kosong.yml / ci-pykaos.yml / ci-kimi-sdk.yml / ci-docs.yml.",
+  "workspace_members": {
+    "kimi-cli": "root package; src/kimi_cli — the terminal agent CLI, entry point kimi.",
+    "packages/kosong": "kosong==0.56.0 — LLM abstraction layer (chat_provider [kimi|openai_common|chaos|echo|mock], messaging ContentPart/Message, tooling Tool/Toolset/SimpleToolset, generate/step primitives). kimi-sdk re-exports it.",
+    "packages/kaos": "pykaos==0.9.0 (published name) — abstracted async filesystem + SSH process layer (LocalKaos/SSHKaos, KaosContextVar). Enables the agent to operate locally or over SSH via a single path API.",
+    "sdks/kimi-sdk": "kimi-sdk — thin Python SDK re-exporting kosong primitives + a Kimi ChatProvider + `step`/`generate` agent-loop helpers; used by external integrators.",
+    "web": "React/Vite SPA (kimi-cli-web) served by an embedded FastAPI backend (src/kimi_cli/web/app.py) with session/chat/workdir/config/open-in routers; OpenAPI generated clients.",
+    "vis": "React/Vite agent-tracing visualizer (kimi-vis) served by src/kimi_cli/vis/app.py (FastAPI + uvicorn)."
+  },
+  "modules": [
+    { "name": "kimi_cli/cli/", "purpose": "Typer entry group: main run command + lazy subcommands (info/export/mcp/plugin/vis/web) and hidden background workers." },
+    { "name": "kimi_cli/app.py", "purpose": "KimiCLI runtime bootstrap: config load, model/provider selection, agent spec loading, Runtime+Context+KimiSoul wiring, UI-mode routing (shell/print/acp/wire)." },
+    { "name": "kimi_cli/soul/", "purpose": "Agent core: KimiSoul.run loop, Context history+checkpoints, compaction, slash commands, D-Mail (DenwaRenji) checkpoint messaging, BTW side-questions, approval facade, system prompts." },
+    { "name": "kimi_cli/soul/agent.py", "purpose": "Runtime dataclass (config/session/builtins), Agent (system prompt + toolset), LaborMarket registering builtin subagent types." },
+    { "name": "kimi_cli/soul/kimisoul.py", "purpose": "KimiSoul: main LLM<->tool loop, slash dispatch, Wire emission, context budget/compaction, step accounting." },
+    { "name": "kimi_cli/wire/", "purpose": "Bidirectional soul<->UI event protocol: typed message model (TurnBegin/End, ToolCallRequest, StatusUpdate, etc.), JSON-RPC transport, file-backed recording, RootWireHub broadcast, ACP JSON-RPC server." },
+    { "name": "kimi_cli/soul/toolset.py", "purpose": "KimiToolset: loads tools by import path, injects deps, dispatches tool calls, bridges fastmcp MCP tools; WireExternalTool for remote tool results." },
+    { "name": "kimi_cli/tools/", "purpose": "Built-in tool library: agent (spawn subagents Task/Agent), shell (bash), file (read/write/replace/grep/glob), web (fetch/search), todo, think, plan, dmail, ask_user, background." },
+    { "name": "kimi_cli/agents/", "purpose": "Declarative agent specs (agent.yaml+coder/explore/plan.yaml, system.md) loaded by agentspec.py; extendable with tool selection + subagent types." },
+    { "name": "kimi_cli/ui/", "purpose": "UI renderers: shell/ (interactive TUI: console, keyboard, slash autocomplete, session_picker, startup, migration), acp/, print/, theme." },
+    { "name": "kimi_cli/config.py", "purpose": "Pydantic config model: LLMProvider/LLMModel, OAuthRef, HookDef; load/save toml + AGENTS.md scanning." },
+    { "name": "kimi_cli/auth/", "purpose": "OAuth2 device-flow login + managed-model metadata fetch (platform refresh) for the Kimi Code platform." },
+    { "name": "kimi_cli/llm.py", "purpose": "Provider factory: maps config to kosong ChatProvider instances (kimi/openai/anthropic/google/vertexai/echo/chaos), capability derivation, token budgeting." },
+    { "name": "kimi_cli/subagents/", "purpose": "Subagent lifecycle: registry (AgentTypeDefinition), builder, core (prepare_soul), runner (foreground/background), output writer, persistent store under session/subagents." },
+    { "name": "kimi_cli/hooks/", "purpose": "Hook engine: event-based config hooks (config.py/HookDef/HookEventType) executed via runner (shell scripts); wire subscription support." },
+    { "name": "kimi_cli/skill/", "purpose": "Skill discovery & loading from builtin/user/project/extra roots; format_skills_for_prompt; flow skills via mermaid/d2 parsing (skill/flow)." },
+    { "name": "kimi_cli/acp/", "purpose": "Agent Client Protocol integration: ACPServer (negotiation + session lifecycle), ACPKaos path adapter, mcp<->config conversion, ACPSession." },
+    { "name": "kimi_cli/web/", "purpose": "Baked-in FastAPI web backend: session management, config API, open-in, git diff stats; spawns shell/server worker processes." },
+    { "name": "kimi_cli/vis/", "purpose": "Tracing visualizer backend (create_app/run_vis_server) backed by the wire file log replay." },
+    { "name": "packages/kosong/src/kosong/", "purpose": "LLM abstraction: chat_provider (kimi.py OpenAI-compatible, openai_common, chaos, echo, mock), message.py (ContentPart hierarchy with pydantic custom core schema registry), tooling (Tool/Toolset/CallableTool2, ToolOk/ToolError/HandleResult), _generate.py (generate/step)." },
+    { "name": "packages/kaos/src/kaos/", "purpose": "Abstracted filesystem+SSH: KaosContextVar, LocalKaos, SSHKaos, KaosPath abstraction; lets kosong/kimi-cli target remote hosts uniformly." },
+    { "name": "sdks/kimi-sdk/src/kimi_sdk/", "purpose": "Public SDK re-export of kosong primitives + Kimi ChatProvider + convenience `step`/`generate` agent loop for external consumers." }
+  ],
+  "pydantic_v2_emulation_proposal_for_ai_factory": {
+    "summary": "kimi-cli uses Pydantic v2 (pydantic==2.12.5) pervasively and idiomatically. ai-factory's harness should emulate/verify these patterns when refactoring kimi-cli targets so generated code stays contract-faithful. This is a verification-side concern, not a refactor target.",
+    "key_patterns_observed": [
+      "Discriminated union via custom __get_pydantic_core_schema__ + __content_part_registry / __display_block_registry ClassVar dicts, dispatching on a `type: str` field (Message.content parts, DisplayBlock subclasses, ToolReturn values).",
+      "model_validator(mode='after') for schema validation (Tool.parameters jsonschema-validate, DisplayBlock dispatch).",
+      "field_validator(mode='before') + field_serializer for list<Message> normalization on the Message model.",
+      "GetCoreSchemaHandler + core_schema for polymorphic self-deserializing base classes (ContentPart/DisplayBlock) that fall back to Unknown* blocks.",
+      "TypeAdapter for runtime parsing/validation of non-BaseModel protocol-shaped types (wire/jsonrpc.py JSONRPCInMessageAdapter).",
+      "field_serializer(exclude_none=True) and model_dump() in API layers; SecretStr for api_key; model_validate() for dict->model coercion."
+    ],
+    "emulation/verification_plan": {
+      "1_contracts_keep": "When ai-factory refactors any kimi-cli function touching message/wire/tooling models, the 7-layer AST verifier must additionally assert: (a) no .dict()/.json() calls (only model_dump/model_validate), (b) no removed registry keys in __init_subclass__, (c) Tool.parameters still passes jsonschema validation after edits.",
+      "2_guardrail_addition": "Add a Pydantic-v2 sniff gate to the harness: grep AST for `.dict(`, `.json(`, `parse_obj`, `parse_raw`, `parse_file` in edited files -> hard fail (F811-style 'use model_dump'). Enforce pydantic v2 only (pydantic==2.12.5 pinned).",
+      "3_polymorphic_deserialization_contract": "Any refactor that touches ContentPart/DisplayBlock/UnknownDisplayBlock must keep __content_part_registry / __display_block_registry ClassVar dispatch intact; the verifier should assert `type` field present on every subclass and that Unknown* fallback exists.",
+      "4_typeadapter_usage": "wire/jsonrpc.py uses TypeAdapter — the verifier should treat these as contract boundaries: edits here must preserve JSON-RPC message shape; add a regression test that round-trips a sample message through the adapter.",
+      "5_no_new_models": "Per anti-hallucination rule, never introduce new pydantic models/Union dispatch dicts; compare against .orig. New model classes only if the .py baseline already declares them.",
+      "6_proposal_integration": "Implement as a new optional verifier pass (factory/tools/... ) invoked after ruff/pyright in _run_verify_edit, gated by file path under kimi-cli target scope. Keeps ai-factory's Pydantic-AI focus unchanged while reusing the Pydantic-v2 skill rules already injected into intern/engineer/senior.yaml."
+    },
+    "ai_factory_venv_note": "This proposal targets ai-factory's refactor of kimi-cli sources staged in factory/temp/. kimi-cli itself uses kosong (its own provider/tool layer), NOT Pydantic-AI agents — so ai-factory's pydantic-ai-coding skill applies to its OWN agents, while the pydantic-coding skill v2 rules apply to kimi-cli's pydantic v2 models."
+  },
+  "top3_modules": ["kimi_cli/soul/ (agent loop + context + compaction)", "kimi_cli/wire/ (soul<->UI event protocol + ACP JSON-RPC)", "kimi_cli/tools/ (built-in tool library)"]
+}

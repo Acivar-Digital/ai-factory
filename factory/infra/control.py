@@ -644,11 +644,41 @@ class TodoList(BaseModel):
 # =====================================================================
 MAX_AGENTS = 20
 
-READ_BUDGET = 35
+READ_BUDGET = 62
 CODER_READ_FILE_BUDGET = 20
 REMEMBER_BUDGET = 999
 compact_model = ling_flash
 REQUIRE_HUMAN_GATE = False
+
+# =====================================================================
+# 6b. DYNAMIC BUDGET SCALING (per-file line-count-based budgets)
+# =====================================================================
+# Dynamic budgets scale with the target file's line count:
+#   write_budget = max(35, line_count // 2)  — floor = DEFAULT_TOOL_BUDGET (35)
+#   read_budget   = max(62, line_count)     — ~2x write_budget, floor = READ_BUDGET (62)
+# DEFAULT_TOOL_BUDGET (35) and READ_BUDGET (62) are the verified static floors;
+# the functions below apply them per-file when ``line_count`` is known at
+# agent-creation time.  Existing CODER_BUDGET_* constants (per-file-count-based)
+# remain intact for the file-count path — this is an orthogonal line-count path.
+
+def line_count_budgets(line_count: int) -> tuple[int, int]:
+    """Dynamic per-file budget scaling based on target file line count.
+
+    Returns ``(write_budget, read_budget)`` where:
+      - ``write_budget = max(35, line_count // 2)``
+        Floor of 35 matches ``DEFAULT_TOOL_BUDGET`` in ``tools_guard.py``.
+      - ``read_budget = max(62, line_count)``
+        Floor of 62 matches ``READ_BUDGET`` (updated from 35 to 62 for alignment).
+        Approximately 2× write_budget when line_count is large.
+
+    When ``line_count`` is small (e.g. ≤ 70) both budgets resolve to their
+    static floors (35, 62).  As ``line_count`` grows the budgets scale
+    linearly, keeping a ~2:1 read-to-write ratio so larger files get
+    proportionally more scanning headroom without starving edit capacity.
+    """
+    write_budget = max(35, line_count // 2)
+    read_budget = max(READ_BUDGET, line_count)
+    return write_budget, read_budget
 
 # =====================================================================
 # 7. SKILL_MAP (M2) — role -> template + ROLE model key + output_type + tools

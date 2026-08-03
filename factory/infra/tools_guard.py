@@ -23,7 +23,7 @@ from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets import FunctionToolset, WrapperToolset
 from pydantic_ai.toolsets.abstract import ToolsetTool
 from pydantic_core import SchemaValidator
-from factory.infra.control import CODER_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REMEMBER_BUDGET, REPO_ROOT
+from factory.infra.control import CODER_READ_FILE_BUDGET, ORCH_ROOT, PYDANTIC_AI_INSTRUCTIONS, READ_BUDGET, REMEMBER_BUDGET, REPO_ROOT, line_count_budgets
 from factory.infra.tools_const import _BATCH_READ_DEFAULT_HEAD, _BATCH_READ_NO_PATHS
 from factory.infra.tools_file import _parse_range, batch_read, delete_file, normalize_read_path, read_file, rename_file, write_file
 from factory.infra.tools_memory import remember
@@ -103,6 +103,7 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
     budget: int = DEFAULT_TOOL_BUDGET
     read_budget: int = READ_BUDGET
     read_file_budget: int = CODER_READ_FILE_BUDGET
+    line_count: int | None = None
 
     def __post_init__(self) -> None:
         self._used: int = 0
@@ -119,6 +120,13 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         self._blocked_count: int = 0
         self._has_edited: bool = False
         self._remember_used: int = 0
+        # Dynamic per-file budget scaling (§6b): when line_count is known at
+        # guard construction time, override budget/read_budget with values
+        # computed from the file's size.  write_budget = max(35, lc//2),
+        # read_budget = max(62, lc) (~2x write).  Falls back to static
+        # defaults when line_count is None.
+        if self.line_count is not None:
+            self.budget, self.read_budget = line_count_budgets(self.line_count)
 
     def _warning(self, name: str) -> str:
         keys = sorted(self._known_tools.keys())
@@ -289,9 +297,19 @@ def _coder_budget_for(num_files: int) -> int:
 def _tool_budget_instruction(budget: int) -> str:
     return f"\n\nTOOL BUDGET: You are allocated {budget} tool calls for this task. After every tool call you will see a '[TOOL CALL a/{budget}]' marker reporting how many calls you have used. When you approach or reach {budget}, STOP calling tools and emit your final result immediately."
 
-def guard_tools(tools: list[Callable[..., Any]], budget: int=DEFAULT_TOOL_BUDGET, read_budget: int=READ_BUDGET, read_file_budget: int=CODER_READ_FILE_BUDGET) -> GuardToolset:
+def guard_tools(tools: list[Callable[..., Any]], budget: int=DEFAULT_TOOL_BUDGET, read_budget: int=READ_BUDGET, read_file_budget: int=CODER_READ_FILE_BUDGET, line_count: int | None=None) -> GuardToolset:
+    """Create a :class:`GuardToolset` wrapping the given tools.
+
+    When ``line_count`` is provided (target file's line count), both
+    ``budget`` (write_budget) and ``read_budget`` are computed dynamically:
+    ``write_budget = max(35, line_count // 2)``,
+    ``read_budget = max(62, line_count)`` (~2× write).  When ``line_count`` is
+    ``None`` the static ``budget`` / ``read_budget`` defaults are used unchanged.
+    """
+    if line_count is not None:
+        budget, read_budget = line_count_budgets(line_count)
     base = FunctionToolset(tools, max_retries=20) if tools else FunctionToolset([], max_retries=20)
-    return GuardToolset(wrapped=base, budget=budget, read_budget=read_budget, read_file_budget=read_file_budget)
+    return GuardToolset(wrapped=base, budget=budget, read_budget=read_budget, read_file_budget=read_file_budget, line_count=line_count)
 
 def pydantic_ai_default_block() -> str:
     return PYDANTIC_AI_INSTRUCTIONS

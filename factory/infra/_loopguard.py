@@ -41,6 +41,7 @@ from factory.infra.models import CompactedContext
 
 MAX_LOOPGUARD_TURNS = 20  # hard backstop; per-run UsageLimits resets each agent.run() so the outer loop is otherwise unbounded
 MAX_TOTAL_TOOL_CALLS = 40  # hard ceiling on total tool calls across all turns; after this force RECOVER
+BUDGET_WARNING_FRACTION = 0.8  # soft-nudge threshold: fraction of the per-role write budget
 
 AGENT_RUN_TIMEOUT = 600.0  # hard per-run() backstop so an unresponsive model fails loudly instead of hanging forever
 
@@ -281,6 +282,14 @@ async def run_with_loopguard(
         "senior": 30,
     }
     limits = UsageLimits(request_limit=role_request_cap.get(role, 30))
+    # Dynamic per-role write budget (tool-call units). pydantic-ai charges ~2 model
+    # requests per tool call, so the tool-call budget is request_limit // 2. Capped by
+    # the global MAX_TOTAL_TOOL_CALLS backstop so the soft nudge always lands before
+    # whichever ceiling (this backstop or the request_limit circuit breaker upstream)
+    # actually halts the run. The nudge is advisory only -- it NEVER hard-halts.
+    write_budget = min(role_request_cap.get(role, 30) // 2, MAX_TOTAL_TOOL_CALLS)
+    budget_warn_threshold = int(BUDGET_WARNING_FRACTION * write_budget)
+    budget_warned = False
     fail_dir = ORCH_ROOT / "logs" / "runtime"
     fail_dir.mkdir(parents=True, exist_ok=True)
     io_dir = fail_dir / "io"
@@ -434,6 +443,20 @@ async def run_with_loopguard(
             # ── Total tool call ceiling ────────────────────────────────────────
             if calls:
                 total_tool_calls += len(calls)
+                # Soft budget nudge: WARN (do NOT halt) when tool calls cross 80% of
+                # the role's dynamic write budget. The circuit breaker (request_limit
+                # -> UsageLimitExceeded, plus the MAX_TOTAL_TOOL_CALLS backstop below)
+                # still owns the hard halt -- this is purely an advisory channel.
+                if (
+                    not budget_warned
+                    and write_budget > 0
+                    and total_tool_calls >= budget_warn_threshold
+                ):
+                    budget_warned = True
+                    print(
+                        f"[budget] Soft warning: 80% threshold reached for {role}",
+                        flush=True,
+                    )
                 if total_tool_calls > MAX_TOTAL_TOOL_CALLS:
                     print(f"[{phase or 'RUN'}] turn {turn}: {total_tool_calls} tool calls exceeded limit → force RECOVER", flush=True)
                     _scrub_old_read_returns(res.all_messages())
