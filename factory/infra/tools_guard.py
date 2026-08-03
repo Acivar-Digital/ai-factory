@@ -85,7 +85,7 @@ class _GuardDict(dict):
             return super().get(key)
         return self._guard._make_guard_tool(key)
 
-DEFAULT_TOOL_BUDGET = 15
+DEFAULT_TOOL_BUDGET = 35
 CODER_BUDGET_BASE = 12
 CODER_BUDGET_PER_FILE = 4
 CODER_BUDGET_MIN = 16

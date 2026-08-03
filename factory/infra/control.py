@@ -644,8 +644,8 @@ class TodoList(BaseModel):
 # =====================================================================
 MAX_AGENTS = 20
 
-READ_BUDGET = 15
-CODER_READ_FILE_BUDGET = 10
+READ_BUDGET = 35
+CODER_READ_FILE_BUDGET = 20
 REMEMBER_BUDGET = 999
 compact_model = ling_flash
 REQUIRE_HUMAN_GATE = False
