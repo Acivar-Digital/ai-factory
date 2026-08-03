@@ -146,11 +146,11 @@ def test_models_require_non_empty_list(valid_fn, empty_fn):
         empty_fn()
 
 
-def test_red_team_passed_truth_table():
-    assert runner.red_team_passed([], [{"severity": "blocker", "passed": False}]) is False
-    assert runner.red_team_passed([{"severity": "blocker", "task_id": "t1"}], []) is False
-    assert runner.red_team_passed([{"severity": "warn"}], [{"severity": "blocker", "passed": True}]) is True
-    assert runner.red_team_passed([], []) is False  # empty audit = no data = fail
+def test_security_checks_passed_truth_table():
+    assert runner.security_checks_passed([], [{"severity": "blocker", "passed": False}]) is False
+    assert runner.security_checks_passed([{"severity": "blocker", "task_id": "t1"}], []) is False
+    assert runner.security_checks_passed([{"severity": "warn"}], [{"severity": "blocker", "passed": True}]) is True
+    assert runner.security_checks_passed([], []) is False  # empty audit = no data = fail
 
 
 

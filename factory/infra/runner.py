@@ -33,7 +33,7 @@ from factory.infra.context import (  # noqa: F401
     TASK_TOKEN_THRESHOLD, _real_source_paths,
 )
 from factory.infra.validation import (  # noqa: F401
-    red_team_passed, check_plan_invariants, MAX_RETRIES,
+    security_checks_passed, check_plan_invariants, MAX_RETRIES,
     _feedback_from_review_findings, _blocker_findings_from_risks,
     _feedback_from_audit,
 )
@@ -192,6 +192,8 @@ async def main() -> None:
         print(f"\n=== [conductor] --from {args.from_}: SKIPPING intern ===", flush=True)
         batch = None
     else:
+        if scope:
+            _stage_copies(scope, [f"factory/temp/{s}" for s in scope])
         await run_tier(
             "intern", task, bd, history, exchange, pass_counter, prior,
             {"brief": task, "seeded": False},

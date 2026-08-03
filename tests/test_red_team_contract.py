@@ -8,7 +8,7 @@ Two layers:
   * Layer A: every red_team prompt (template + customised) states the SAME
     contract — the gate is findings-driven AND a global blocker with no
     matching findings is unresolvable -> HARD FAIL.
-  * Layer B: the runner's `red_team_passed` actually implements that contract
+  * Layer B: the runner's `security_checks_passed` actually implements that contract
     (global blocker + empty findings => fail; clean => pass; task-keyed
     blocker finding => fail).
 
@@ -45,7 +45,7 @@ from factory.infra.models import (
 )
 from factory.infra.exchange import ExchangeTurn
 from factory.infra.pipeline import run_red_team_gate
-from factory.infra.validation import red_team_passed
+from factory.infra.validation import security_checks_passed
 
 PKG = Path(__file__).resolve().parents[1]  # factory
 TEMPLATE = PKG / "factory" / "templates" / "red_team.yaml"
@@ -79,18 +79,18 @@ def test_prompt_states_red_team_contract(path):
 def test_runner_implements_unresolvable_global_blocker():
     # Global blocker cell, but NO task-keyed findings -> unresolvable -> fail.
     blocker_cell = {"dimension": "security", "severity": "blocker", "passed": False}
-    assert red_team_passed([], [blocker_cell]) is False
+    assert security_checks_passed([], [blocker_cell]) is False
 
 
 def test_runner_passes_when_clean():
     passed_cell = {"dimension": "ruff", "severity": "blocker", "passed": True}
-    assert red_team_passed([], [passed_cell]) is True
+    assert security_checks_passed([], [passed_cell]) is True
 
 
 def test_runner_fails_on_task_keyed_blocker_finding():
     finding = {"task_id": "A", "severity": "blocker"}
     passed_cell = {"dimension": "ruff", "severity": "blocker", "passed": True}
-    assert red_team_passed([finding], [passed_cell]) is False
+    assert security_checks_passed([finding], [passed_cell]) is False
 
 
 def _plan() -> ExecutablePlan:
