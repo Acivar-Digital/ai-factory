@@ -173,3 +173,26 @@ A shared Dolt SQL server (MySQL protocol) on port 15432 solves this — one serv
 2. Change phases to continue pipeline: `start_phase: intern`, `stop_phase: senior` (or whichever tier is needed).
 3. Confirm before any edit. The user must specify exact file and exact edit.
 4. DO NOT TOUCH OTHER REPOS. Work stays in AI-FACTORY (`/home/yapilwsl/arthityap/ai-factory/`). Target repo (`baziforecaster`) is ONLY accessed via `TARGET_REPO` in user_prompt.md. No direct edits to target repo files unless exact file + exact edit given.
+
+## PHASE NAMES — STRICT (NO LEGACY ROLES)
+
+The ONLY valid agent roles in this repo are **`intern`**, **`engineer`**, **`senior`**.
+
+The legacy names below are **PHANTOM / DEAD CODE** carried over from an earlier
+design. **Never emit them.** If any agent, prompt, or tool sees them, it MUST flag
+the file for review — the code should either be **refactored to reuse the
+existing intern/engineer/senior plumbing** or **deleted outright**.
+
+| Phantom name | Replacement | Where the ghosts currently linger (review targets) |
+|:---|:---|:---|
+| `coder` / `coder01` / `coderN` | `intern` | `factory/prompt/coder.py`, `factory/common/md_bridge.py`, `factory/infra/artefacts.py`, `factory/common/registry.py` |
+| `planner` / `planner_supervisor` | `senior` (tier-1 orchestration logic) | `factory/common/registry.py`, `factory/common/md_bridge.py` |
+| `coder_supervisor` / `supervisor` | `senior` | `factory/prompt/coder.py`, `factory/infra/artefacts.py` |
+| `red_team` / `red_team_passed` | `senior` (audit gate logic) | `factory/infra/artefacts.py`, docs references, legacy `docs/21_Factory_Workflow_jobids.json` field |
+
+### Detection rule (enforced by `ruff check`)
+
+A `grep -rn "coder\|planner\|red_team\|supervisor" factory/ tests/ docs/` must
+return **zero** results in `.py`, `.yaml`, `.json`, `.md` under `factory/` and `tests/`.
+Documentation prose in `docs/*.md` may mention them **only** when describing this
+rule. Any production code reference is a lint failure.
