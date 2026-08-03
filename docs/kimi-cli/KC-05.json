@@ -1,0 +1,233 @@
+{
+  "id": "KC-05",
+  "title": "Output Rendering & UI Layer",
+  "scope": "Catalog the UX niceties: terminal formatting, colors, progress indicators, interactive prompts, markdown/code rendering.",
+  "folders": [
+    "kimi-cli/src",
+    "kimi-cli/web",
+    "kimi-cli/vis",
+    "kimi-cli/scripts"
+  ],
+  "findings": {
+    "ui_framework": {
+      "terminal": {
+        "primary_rendering": "rich 14.2.0 (Console, Live, Panel, Table, Progress, Syntax, Markdown, Columns, Group, Text)",
+        "interactive_input": "prompt-toolkit 3.0.52 (PromptSession, Application, Container, KeyBindings, Completions)",
+        "cli_framework": "typer 0.21.1 (command dispatch; typer.echo for simple text, plain mode output)",
+        "terminal_notes": [
+          "prompt_toolkit is used for interactive prompts/completions and full-screen TUI forms (Application objects with Container layout).",
+          "rich is the workhorse for all structured console output: panels, tables, live streaming views, code syntax highlighting, markdown, spinners, progress bars.",
+          "A custom prompt_toolkit Application is used for full-screen modal overlays (approval/question prompts) via _BtwModalDelegate.",
+          "A dedicated background keyboard-thread listener (_KeyboardListener in interactive_input.py) bypasses prompt_toolkit for global hotkeys during streaming (arrows, digits 1-6, ctrl-e, escape, space, enter).",
+          "kimi-cli is embedded as a web worker subprocess in --wire stdio mode (see runner/process.py KimiCLIRunner); the web UI is a React frontend that consumes the JSON-RPC 2.0 WebSocket feed."
+        ]
+      },
+      "web": {
+        "framework": "React 19 + TypeScript",
+        "markdown": "streamdown (streaming markdown with remark-gfm, rehype-katex, rehype-highlight via shiki)",
+        "syntax_highlighting": "shiki (lazy dynamic import; one-light / one-dark-pro themes; HighlightCache avoids async reflow; line-number ShikiTransformer)",
+        "math": "katex (rendered inline and block via rehype-katex in streamdown)",
+        "icons": "lucide-react",
+        "virtualization": "react-virtuoso (Virtuoso) for the message list",
+        "styling": "Tailwind CSS v4 (oklch design tokens, custom dark variant @custom-variant dark, shadcn/ui patterns)",
+        "ui_primitives": "radix-ui (@radix-ui/react-dialog, tooltip, tabs, progress, scroll-area, dropdown-menu, select)",
+        "layout": "CSS flexbox/grid with responsive breakpoints; sidepanel (threads, mcp, hooks), main chat area, bottom input composer",
+        "state": "React hooks (useState/useLayoutEffect/useEffect), ResizeObserver for overflow detection, useRef for scroll anchoring"
+      },
+      "toad_tui": {
+        "framework": "Textual (batrachian-toad==0.5.23)",
+        "availability": "Python 3.14+ only (kimi term subcommand); optional dependency",
+        "architecture": "Full-screen Textual TUI that connects to kimi-cli via the ACP server subprocess (kimi acp), not used in standard shell mode"
+      }
+    },
+    "interaction_modes": {
+      "prompt_toolkit_input": {
+        "file": "src/kimi_cli/ui/shell/prompt.py (CustomPromptSession)",
+        "features": [
+          "Multi-line input via Enter (default) or Ctrl-J / Alt-Enter (to accept), configurable",
+          "Slash command completion via SlashCommandCompleter (fuzzy-matched, grouped by category in BulletColumns)",
+          "File mention completion via @ prefix (LocalFileMentionCompleter with path resolution and fuzzy matching)",
+          "Ctrl-O to open response in external $EDITOR (editor picker via typer)",
+          "Bracketed-paste support, bracketed undo history, multiline undo",
+          "Vi/emacs editing mode with config toggle"
+        ]
+      },
+      "interactive_menus": [
+        {
+          "type": "Full-screen TUI App (prompt_toolkit Application)",
+          "file": "src/kimi_cli/ui/shell/task_browser.py (TaskBrowserApp)",
+          "uses": "RadioList, formatted with rich rendering, modal overlay via _BtwModalDelegate"
+        },
+        {
+          "type": "Full-screen TUI App (prompt_toolkit Application)",
+          "file": "src/kimi_cli/ui/shell/session_picker.py (SessionPicker)",
+          "uses": "Application with Container layout, Arrow/home/end navigation, Enter to confirm, Escape to cancel"
+        },
+        {
+          "type": "Setup/confirm prompt (prompt_toolkit Application)",
+          "file": "src/kimi_cli/ui/shell/prompt.py (ChoiceInput)",
+          "uses": "Single-choice prompt with y/n, arrow keys, rendered with Rich Panel header"
+        },
+        {
+          "type": "Modal overlay forms",
+          "file": "src/kimi_cli/ui/shell/visualize/_approval_panel.py, _question_panel.py",
+          "uses": "_BtwModalDelegate replacing the prompt line with a modal dialog body"
+        }
+      ],
+      "approval_prompt": {
+        "file": "src/kimi_cli/ui/shell/visualize/_approval_panel.py",
+        "options": ["Approve once", "Approve for session", "Reject", "Reject+describe (free text input)"],
+        "renderer": "prompt_toolkit Application embedded as a modal overlay, body rendered with rich Panel + Markdown"
+      },
+      "question_prompt": {
+        "file": "src/kimi_cli/ui/shell/visualize/_question_panel.py",
+        "modes": ["single-select (radio)", "multi-select (checkboxes)", "choose-or-write (ChoiceInput with 'Other' text entry)"],
+        "renderer": "prompt_toolkit Application modal overlay with Rich Panel, scrollable option list, type-to-filter"
+      },
+      "slash_command_mode": {
+        "file": "src/kimi_cli/ui/shell/slash.py",
+        "completer": "SlashCommandCompleter (fuzzy, grouped; BulletColumns for help display)",
+        "forms": ["ChoiceInput (single/multi/choice-or-text), slash-specific validation/error feedback"]
+      },
+      "non_interactive_modes": {
+        "file": "src/kimi_cli/ui/print/__init__.py (Print app)",
+        "formats": ["plain (streaming text)", "json (JSONL with type+message envelope)", "stream-json (JSONL streaming)", "final-message-only"],
+        "notes": "Bypasses all rich formatting; outputs raw committed text or structured JSONL via the WireMessageEnvelope"
+      },
+      "keyboard_listener": {
+        "file": "src/kimi_cli/ui/shell/interactive_input.py (_KeyboardListener)",
+        "purpose": "Dedicated background thread reading raw terminal input; handles global hotkeys that must work during rich Live rendering (prompt_toolkit is paused during streaming)",
+        "keys": ["arrow up/down (prev/next suggestion)", "digits 1-6 (quick approval)", "ctrl-e (edit current response)", "space (toggle pause)", "enter (send)", "escape (cancel)", "ctrl-c (interrupt)"]
+      }
+    },
+    "rendering_patterns": {
+      "streaming_token_flow": {
+        "file": "src/kimi_cli/ui/shell/visualize/_blocks.py",
+        "pattern": [
+          "Incremental ContentBlock accumulates markdown text; markdown-it parser detects complete block boundaries;",
+          "Confirmed blocks are flushed to console.print() (committed to scrollback);",
+          "Uncommitted 'tail' remains in a transient rich Live area for cursor-like live update;",
+          "Block type dispatch (TextPart, ToolCallPart, ToolResult, etc.) via content-block-type -> renderer mapping;"
+        ]
+      },
+      "rich_live_event_loop": {
+        "file": "src/kimi_cli/ui/shell/visualize/_live_view.py (LiveView)",
+        "pattern": [
+          "Rich Live context running a manual refresh loop (spinner animation ~0.08s interval);",
+          "live.stop() before pager/synchronous console.print(); live.start() after to avoid flicker;",
+          "compose() returns a Group/Align/Padding rendered into the Live canvas;"
+        ]
+      },
+      "commit_and_scroll": {
+        "pattern": "Committed output written via console.print(); on newline overflow, Console's built-in pager (_KimiPager) or auto-scroll keeps the viewport at the latest committed content.",
+        "pager": "src/kimi_cli/ui/shell/console.py (_KimiPager) - subclasses rich.pager.Pager, forces MANPAGER unset and uses the default system pager only when --pager flag is set"
+      },
+      "panel_table_layout": {
+        "components": ["rich.panel.Panel (bordered, title_align='left')", "rich.table.Table (diff rendering)", "rich.columns.Columns (via BulletColumns wrapper)", "rich.console.Group (composite vertical layout)"],
+        "diff_rendering": "src/kimi_cli/utils/rich/diff_render.py (DiffRender) - produces rich Table/Panel with line numbers, color-coded +/- via theme-aware DiffColors, git-style unified diff"
+      },
+      "custom_markdown": {
+        "file": "src/kimi_cli/utils/rich/markdown.py",
+        "impl": "Custom Markdown class subclassing rich.markdown.Markdown with a forked markdown-it parser; adds strikethrough and table extensions; renders via custom CodeBlock/Syntax highlighting; NEUTRAL_MARKDOWN_THEME applied; render_to_ansi() bridges to prompt_toolkit via render() with ANSI stripping"
+      },
+      "syntax_highlighting": {
+        "file": "src/kimi_cli/utils/rich/syntax.py (KimiSyntax)",
+        "impl": "Subclass of rich.syntax.Syntax; loads a custom KIMI_ANSI_THEME (Pygments Style) via a custom Theme; line_numbers toggle; background_color and word_wrap config; used in all code block rendering"
+      },
+      "bullet_columns": {
+        "file": "src/kimi_cli/utils/rich/columns.py (BulletColumns)",
+        "impl": "Custom Columns subclass that renders a leading bullet (•) before each rendered item, used for help/option listings and slash command hints"
+      },
+      "spinner_progress": {
+        "spinner": "rich.spinner.Spinner ('dots', 'moon', etc.) animated at ~12fps alongside Live refresh",
+        "status": "console.status() with custom Spinner + bottom_toolbar for MCP connection status",
+        "progress_bar": "src/kimi_cli/ui/shell/usage.py (rich.progress.ProgressBar wrapper showing token usage with label, total, completed, and spinner)"
+      },
+      "web_streaming_render": {
+        "file": "web/src/components/ai-elements/streamdown.tsx",
+        "impl": "streamdown component consumes streaming JSON tokens; renders markdown; applies remark-gfm, rehype-katex, shiki highlighting; maintains message list in react-virtuoso Virtuoso"
+      },
+      "web_code_block": {
+        "file": "web/src/components/ai-elements/code-block.tsx (CodeBlock)",
+        "impl": "Async shiki highlighter with lazy dynamic import; caches highlight results to avoid reflow (ResizeObserver/measure); dual theme (one-light/one-dark-pro via CSS var toggle); collapsible overflow (COLLAPSE_THRESHOLD=300 lines); line numbers via ShikiTransformer; copy-to-clipboard button"
+      },
+      "web_virtualization": {
+        "file": "web/src/features/chat/components/virtualized-message-list.tsx",
+        "impl": "react-virtuoso Virtuoso with sticky footer at bottom; messages keyed by wire message id; auto-scroll on new content; scroll-lock detection for history browse"
+      }
+    },
+    "colors_themes": {
+      "terminal": {
+        "file": "src/kimi_cli/ui/theme.py",
+        "impl": [
+          "set_active_theme() returns a bundle of prompt_toolkit.styles.Style (for prompt, task browser, slash completion, MCP status, toolbar) and rich.style.Style (for diff colors);",
+          "two built-in schemes: 'dark' and 'light', selected via --theme flag / THEME env var;",
+          "theme-aware color constants exported: DiffColors, ToolbarColors, MCPPromptColors, TaskBrowserStyle, QuestionStyle, ApprovalStyle, SlashCompletionsStyle;"
+        ]
+      },
+      "terminal_markdown_theme": {
+        "file": "src/kimi_cli/ui/shell/console.py (NEUTRAL_MARKDOWN_THEME)",
+        "impl": "rich.theme.Theme mapping markdown element names (e.g. 'markdown.h1', 'markdown.code', 'markdown.code_block') to style strings; neutral colors that work on both dark and light terminal backgrounds;"
+      },
+      "syntax_theme": {
+        "file": "src/kimi_cli/utils/rich/syntax.py (KIMI_ANSI_THEME)",
+        "impl": "Custom Pygments-based Style for KimiSyntax; token-level color mapping for language constructs (keywords, strings, comments, operators);"
+      },
+      "web_theme": {
+        "file": "web/src/index.css (Design System)",
+        "impl": [
+          "Tailwind CSS v4 with @apply layers and shadcn/tailwind.css reset;",
+          "OKLCH design-token CSS variables (--background, --foreground, --card, --primary, etc.) with @theme inline mapping to Tailwind;",
+          "Custom dark variant: @custom-variant dark (&:is(.dark *)); theme toggled via <html class='dark'>;",
+          "shadcn/ui component patterns (button, input, card, dialog, dropdown-menu) using cva + clsx;",
+          "Shiki code themes: one-light (light mode) / one-dark-pro (dark mode), swapped via CSS class;"
+        ]
+      }
+    },
+    "special": [
+      {
+        "topic": "Full-screen prompt_toolkit TUI applications",
+        "files": ["task_browser.py", "session_picker.py", "prompt.py"],
+        "detail": "prompt_toolkit Application objects with full-screen Container layouts (not just input widgets); used for task browsing (RadioList), session picking, and the interactive setup wizard; rendered modally via _BtwModalDelegate which overlays the entire prompt line"
+      },
+      {
+        "topic": "Background keyboard listener thread",
+        "file": "interactive_input.py (_KeyboardListener)",
+        "detail": "Raw stdin fd read in a dedicated thread so hotkeys work even when the rich Live display owns the terminal; bypasses prompt_toolkit entirely during agent streaming turns"
+      },
+      {
+        "topic": "OSC 8 hyperlink passthrough",
+        "file": "src/kimi_cli/ui/shell/visualize/_links.py",
+        "detail": "_wrap_osc8_as_zero_width wraps OSC 8 hyperlink escape sequences as prompt_toolkit ZeroWidthEscape so terminal emulators that support it can render clickable links without breaking rich/prompt_toolkit layout calculations"
+      },
+      {
+        "topic": "Cursor-aware newline insertion",
+        "file": "src/kimi_cli/ui/shell/visualize/_cursor.py",
+        "detail": "Detects terminal cursor column position (Unix via ANSI device-status-report / Windows fallback) to insert line breaks that align subsequent text under the current prompt column"
+      },
+      {
+        "topic": "Custom pager",
+        "file": "src/kimi_cli/ui/shell/console.py (_KimiPager)",
+        "detail": "Subclasses rich.pager.Pager; strips MANPAGER env var in the pager subprocess to prevent garbled output from nested pagers; only activates on explicit --pager flag"
+      },
+      {
+        "topic": "Web JSON-RPC 2.0 over WebSocket",
+        "files": ["web/api/sessions.py", "web/runner/process.py"],
+        "detail": "@router.websocket('/{session_id}/stream') endpoint authenticates by session token + LAN-only check, then pipes JSON-RPC 2.0 messages (type + payload via WireMessageEnvelope) to the browser; KimiCLIRunner runs kimi-cli in --wire stdio mode in a subprocess, parses stdout JSON-RPC, and broadcasts via the WebSocket; supports replay from wire.jsonl"
+      },
+      {
+        "topic": "Pydantic-v2 message envelope pattern",
+        "files": ["wire/types.py", "wire/serde.py", "utils/typing.py"],
+        "detail": "Wire protocol uses Pydantic-v2 BaseModel discriminated unions: type Event = TurnBegin | SteerInput | ... | BtwEnd (19 variants); type Request = ApprovalRequest | ToolCallRequest | QuestionRequest | HookRequest; type WireMessage = Event | Request. A WireRequestEnvelope wraps the typed payload with a string 'type' discriminator + 'payload' dict; serialize via msg.model_dump(mode='json'), deserialize via WireMessageEnvelope.model_validate({...}) then envelope.to_wire_message(). TypeAliasType unions are reflected at runtime via flatten_union() (resolves PEP 604 / Union / TypeAliasType into a flat tuple of classes) so isinstance() dispatch + TypeAdapter validation works without manual discriminator fields on every variant. Literal-typed action fields (e.g. ApprovalResponse.type.Kind = Literal['approve','approve_for_session','reject']) act as a second-level discriminator inside request/response payloads."
+      }
+    ]
+  },
+  "proposal": "The most reusable Pydantic-v2 UX pattern in kimi-cli is its wire message envelope: define every interaction as a flat BaseModel, compose them into discriminated-union type aliases (type X = A | B | C), then serialize to {type: ClassName, payload: model_dump(mode='json')} for the transport layer and round-trip with model_validate() + TypeAdapter. The flatten_union() helper bridges PEP 604 unions to runtime isinstance() dispatch — so a single message handler can receive one envelope, validate its type discriminator, and downcast via the right variant with full Pydantic validation on the payload. For ai-factory, adopt this same envelope pattern for the agent-to-conductor / agent-to-agent control signals (StepBegin, StepInterrupted, ApprovalRequest, QuestionRequest) so UI renderers (TUI or web) can consume a uniform JSON-RPC-like stream without the renderer knowing the upstream agent framework. This mirrors KC-02's discovery that kimi-cli emits rich interactive prompts (ApprovalResponse, QuestionRequest) over a typed union — the same union can drive ai-factory's own interactive approval gates by swapping the renderer (prompt_toolkit modal vs Web modal) while keeping the Pydantic contract identical.",
+  "status": "done",
+  "assigned_agent": 5,
+  "dependencies": ["KC-01"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T00:00:00Z"
+}

@@ -1,0 +1,191 @@
+{
+  "status": "done",
+  "frameworks": {
+    "python": {
+      "runner": "pytest>=9.0.2",
+      "async": "pytest-asyncio>=1.3.0",
+      "assertion_libs": [
+        "inline-snapshot (snapshot() for deterministic e2e assertions)"
+      ],
+      "http_mocking": "httpx.MockTransport (sdk smoke tests)"
+    },
+    "web": {
+      "linter_formatter": "biome (extend ultracite/core, ultracite/react)",
+      "typecheck": "tsc -b --noEmit",
+      "note": "No dedicated test-runner script in web/package.json; biome check + tsc serve as quality gates"
+    }
+  },
+  "test_dirs": [
+    {
+      "path": "tests/",
+      "purpose": "Unit tests with rich conftest.py fixtures (config, llm, session, runtime, all individual tools, temp work/home dirs, mock chat provider)"
+    },
+    {
+      "path": "tests_e2e/",
+      "purpose": "End-to-end tests exercising the CLI as a subprocess over a JSON-RPC wire protocol, with inline-snapshot assertions on normalized message sequences"
+    },
+    {
+      "path": "tests_ai/accuracy_smoke/",
+      "purpose": "AI accuracy smoke tests run via 'make ai-test' (uv run tests_ai/scripts/run.py)"
+    },
+    {
+      "path": "sdks/kimi-sdk/tests/",
+      "purpose": "SDK-level smoke test using httpx.MockTransport to fake chat-completions endpoint"
+    }
+  ],
+  "e2e_tests": {
+    "enabled": true,
+    "method": "subprocess",
+    "description": "The CLI is launched as a subprocess (uv run kimi --wire) and driven via stdin/stdout JSON-RPC 2.0. wire_helpers.py provides start_wire/send_initialize/collect_until_response helpers. A scripted echo chat provider (kosong _scripted_echo) reads JSON script files to produce deterministic LLM responses.",
+    "assertions": "inline-snapshot snapshot() on summarized/normalized event-message sequences",
+    "normalization": "Path replacement (tmp/home/work dirs), UUID normalization, line-ending normalization, shell-language normalization for cross-platform determinism",
+    "env_overrides": "KIMI_E2E_WIRE_CMD (override CLI command), KIMI_TEST_TRACE (debug stdout)"
+  },
+  "fixtures": {
+    "conftest_path": "tests/conftest.py (339 lines)",
+    "summary": "Heavyweight fixture factory pattern: a 'runtime' fixture composes Config, LLM (MockChatProvider), Session, BuiltinSystemPromptArgs, DenwaRenji, Approval, LaborMarket, Environment, NotificationManager, BackgroundTaskManager, OAuthManager into a fully-wired Runtime. Individual tool fixtures (AgentTool, Shell, ReadFile, WriteFile, etc.) each wrap the runtime fixture. LLM is mocked via kosong.chat_provider.mock.MockChatProvider([]) returning predefined StreamedMessagePart lists.",
+    "key_fixtures": [
+      "config",
+      "llm (MockChatProvider)",
+      "temp_work_dir",
+      "temp_share_dir",
+      "builtin_args",
+      "denwa_renji",
+      "session",
+      "approval",
+      "environment",
+      "runtime",
+      "toolset",
+      "agent_tool",
+      "shell_tool",
+      "read_file_tool",
+      "write_file_tool",
+      "search_web_tool",
+      "fetch_url_tool"
+    ],
+    "mocking_providers": "Unit tests use MockChatProvider([]) (kosong). E2E tests use a scripted echo provider (type=_scripted_echo) driven by JSON script files specifying text/tool_call/usage lines."
+  },
+  "coverage": {
+    "config": "None found",
+    "thresholds": "None found",
+    "note": "No [tool.coverage] table, no addopts with --cov, no pytest-cov dependency in pyproject.toml. Coverage is not collected or gated in CI."
+  },
+  "ci": {
+    "workflow": ".github/workflows/ci-kimi-cli.yml",
+    "jobs": {
+      "check": "make check-kimi-cli => ruff check, ruff format --check, pyright, (ty check || true)",
+      "test": "make test-kimi-cli => uv run pytest tests -vv && uv run pytest tests_e2e -vv",
+      "build": "PyInstaller one-file binary smoke test (--help) across ubuntu/macos/windows, then upload artifacts"
+    },
+    "quality_gates": [
+      "ruff check",
+      "ruff format --check",
+      "pyright (standard mode, strict on src/kimi_cli)"
+    ],
+    "python_matrix": "3.12, 3.13, 3.14"
+  },
+  "proposal": "ai-factory could emulate kimi-cli's deterministic subprocess-e2e + inline-snapshot pattern: launch the factory orchestrator as a subprocess with a scripted mock LLM provider that replays predefined tool-call/reply sequences from JSON, then assert against normalized snapshot() of the emitted event stream (turn/step/tool-call/approval ordering) to lock down multi-agent handover behavior and catch regressions in orchestration logic without touching real LLM APIs.",
+  "findings": {
+    "frameworks": {
+      "python": {
+        "runner": "pytest>=9.0.2",
+        "async": "pytest-asyncio>=1.3.0",
+        "assertion_libs": [
+          "inline-snapshot (snapshot() for deterministic e2e assertions)"
+        ],
+        "http_mocking": "httpx.MockTransport (sdk smoke tests)"
+      },
+      "web": {
+        "linter_formatter": "biome (extend ultracite/core, ultracite/react)",
+        "typecheck": "tsc -b --noEmit",
+        "note": "No dedicated test-runner script in web/package.json; biome check + tsc serve as quality gates"
+      }
+    },
+    "test_dirs": [
+      {
+        "path": "tests/",
+        "purpose": "Unit tests with rich conftest.py fixtures (config, llm, session, runtime, all individual tools, temp work/home dirs, mock chat provider)"
+      },
+      {
+        "path": "tests_e2e/",
+        "purpose": "End-to-end tests exercising the CLI as a subprocess over a JSON-RPC wire protocol, with inline-snapshot assertions on normalized message sequences"
+      },
+      {
+        "path": "tests_ai/accuracy_smoke/",
+        "purpose": "AI accuracy smoke tests run via 'make ai-test' (uv run tests_ai/scripts/run.py)"
+      },
+      {
+        "path": "sdks/kimi-sdk/tests/",
+        "purpose": "SDK-level smoke test using httpx.MockTransport to fake chat-completions endpoint"
+      }
+    ],
+    "e2e_tests": {
+      "enabled": true,
+      "method": "subprocess",
+      "description": "The CLI is launched as a subprocess (uv run kimi --wire) and driven via stdin/stdout JSON-RPC 2.0. wire_helpers.py provides start_wire/send_initialize/collect_until_response helpers. A scripted echo chat provider (kosong _scripted_echo) reads JSON script files to produce deterministic LLM responses.",
+      "assertions": "inline-snapshot snapshot() on summarized/normalized event-message sequences",
+      "normalization": "Path replacement (tmp/home/work dirs), UUID normalization, line-ending normalization, shell-language normalization for cross-platform determinism",
+      "env_overrides": "KIMI_E2E_WIRE_CMD (override CLI command), KIMI_TEST_TRACE (debug stdout)"
+    },
+    "fixtures": {
+      "conftest_path": "tests/conftest.py (339 lines)",
+      "summary": "Heavyweight fixture factory pattern: a 'runtime' fixture composes Config, LLM (MockChatProvider), Session, BuiltinSystemPromptArgs, DenwaRenji, Approval, LaborMarket, Environment, NotificationManager, BackgroundTaskManager, OAuthManager into a fully-wired Runtime. Individual tool fixtures (AgentTool, Shell, ReadFile, WriteFile, etc.) each wrap the runtime fixture. LLM is mocked via kosong.chat_provider.mock.MockChatProvider([]) returning predefined StreamedMessagePart lists.",
+      "key_fixtures": [
+        "config",
+        "llm (MockChatProvider)",
+        "temp_work_dir",
+        "temp_share_dir",
+        "builtin_args",
+        "denwa_renji",
+        "session",
+        "approval",
+        "environment",
+        "runtime",
+        "toolset",
+        "agent_tool",
+        "shell_tool",
+        "read_file_tool",
+        "write_file_tool",
+        "search_web_tool",
+        "fetch_url_tool"
+      ],
+      "mocking_providers": "Unit tests use MockChatProvider([]) (kosong). E2E tests use a scripted echo provider (type=_scripted_echo) driven by JSON script files specifying text/tool_call/usage lines."
+    },
+    "coverage": {
+      "config": "None found",
+      "thresholds": "None found",
+      "note": "No [tool.coverage] table, no addopts with --cov, no pytest-cov dependency in pyproject.toml. Coverage is not collected or gated in CI."
+    },
+    "ci": {
+      "workflow": ".github/workflows/ci-kimi-cli.yml",
+      "jobs": {
+        "check": "make check-kimi-cli => ruff check, ruff format --check, pyright, (ty check || true)",
+        "test": "make test-kimi-cli => uv run pytest tests -vv && uv run pytest tests_e2e -vv",
+        "build": "PyInstaller one-file binary smoke test (--help) across ubuntu/macos/windows, then upload artifacts"
+      },
+      "quality_gates": [
+        "ruff check",
+        "ruff format --check",
+        "pyright (standard mode, strict on src/kimi_cli)"
+      ],
+      "python_matrix": "3.12, 3.13, 3.14"
+    }
+  },
+  "id": "KC-06",
+  "title": "Testing Strategy & Quality Gates",
+  "scope": "Survey the test suite, coverage approach, quality gates, and CI expectations.",
+  "folders": [
+    "kimi-cli/tests",
+    "kimi-cli/tests_ai",
+    "kimi-cli/tests_e2e",
+    "kimi-cli/.github"
+  ],
+  "assigned_agent": 6,
+  "dependencies": [
+    "KC-01"
+  ],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T00:00:00Z"
+}

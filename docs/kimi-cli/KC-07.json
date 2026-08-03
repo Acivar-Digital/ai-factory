@@ -1,0 +1,457 @@
+{
+  "status": "done",
+  "build_tools": {
+    "build": [
+      {
+        "tool": "uv",
+        "role": "primary package/workflow manager",
+        "version_pin": ">=0.8.5,<0.10.0"
+      },
+      {
+        "tool": "uv_build",
+        "role": "PEP 517 build backend",
+        "config_key": "tool.uv.build-backend",
+        "features": [
+          "module-name",
+          "source-exclude"
+        ]
+      },
+      {
+        "tool": "make",
+        "role": "build orchestrator (Makefile targets)",
+        "targets": [
+          "build",
+          "build-kimi-cli",
+          "build-kosong",
+          "build-pykaos",
+          "build-kimi-sdk",
+          "build-bin",
+          "build-bin-onedir",
+          "build-web",
+          "build-vis"
+        ]
+      }
+    ],
+    "standalone_binary": {
+      "tool": "pyinstaller==6.18.0",
+      "config": "kimi.spec",
+      "modes": [
+        "one-file (default)",
+        "one-dir (PYINSTALLER_ONEDIR=1)"
+      ]
+    },
+    "lint": [
+      {
+        "tool": "ruff",
+        "version": ">=0.14.10",
+        "features": [
+          "check",
+          "format --check",
+          "isort (I)"
+        ]
+      },
+      {
+        "tool": "biome",
+        "scope": "web",
+        "commands": [
+          "npm run lint"
+        ]
+      },
+      {
+        "tool": "pre-commit / prek",
+        "config": ".pre-commit-config.yaml",
+        "behavior": "invokes make format-kimi-cli / make check-kimi-cli"
+      }
+    ],
+    "typecheck": [
+      {
+        "tool": "pyright",
+        "version": ">=1.1.407",
+        "mode": "standard",
+        "strict_paths": [
+          "src/kimi_cli/**/*.py"
+        ]
+      },
+      {
+        "tool": "ty",
+        "version": ">=0.0.9",
+        "behavior": "non-blocking (|| true in check targets)"
+      },
+      {
+        "tool": "tsc",
+        "scope": "web",
+        "command": "npm run typecheck"
+      }
+    ]
+  },
+  "packaging": {
+    "types": [
+      "wheel",
+      "sdist",
+      "binary (pyinstaller onefile/onedir)",
+      "nix"
+    ],
+    "workspace_packages": [
+      "kimi-cli",
+      "kimi-code",
+      "kosong",
+      "kaos (pykaos)",
+      "kimi-sdk"
+    ],
+    "entry_points": [
+      {
+        "package": "kimi-cli",
+        "scripts": {
+          "kimi": "kimi_cli.__main__:main",
+          "kimi-cli": "kimi_cli.__main__:main"
+        }
+      },
+      {
+        "package": "kimi-code",
+        "scripts": {
+          "kimi-code": "kimi_cli.__main__:main"
+        }
+      }
+    ],
+    "python_wheel_build": "uv build --package <pkg> --no-sources --out-dir dist",
+    "binary_packaging": {
+      "artifact_archive": [
+        "kimi-{tag}-{target}-onedir.tar.gz/zip",
+        "kimi-{tag}-{target}.tar.gz/zip (onefile)"
+      ],
+      "sha256_sums": true
+    },
+    "nix": "flake.nix with uv2nix; package output = nix run .#kimi-cli -> wrapped 'kimi' binary with ripgrep in PATH"
+  },
+  "version_management": {
+    "strategy": "static",
+    "source": "pyproject.toml [project] table (e.g. version = \"1.49.0\")",
+    "dynamic": false,
+    "setuptools_scm": false,
+    "align_checks": [
+      "scripts/check_kimi_dependency_versions.py (--root-pyproject, --kosong-pyproject, --pykaos-pyproject)",
+      "scripts/check_version_tag.py (--pyproject packages/kimi-code/pyproject.toml, --expected-version <tag>)"
+    ],
+    "build_sha_injection": "scripts/inject_build_sha.py -> writes src/kimi_cli/_build_info.py (commit SHA + normalized remote origin) before wheel and pyinstaller builds",
+    "nix_version": "derived via lib.importTOML ./pyproject.toml -> pyproject.project.version"
+  },
+  "release_process": {
+    "changelog_format": "Keep a Changelog; CHANGELOG.md; entries '## X.Y.Z (YYYY-MM-DD)' with categorized bullets (Security:, Shell:, Core:, ACP:, MCP:, File:, etc.)",
+    "git_tag_prefix": "numeric-only ([0-9]*); tags pushed via 'push: tags: - \"[0-9]*\"'",
+    "publishing_target": "PyPI (pypa/gh-action-pypi-publish@release/v1, PYPI_API_TOKEN, user __token__, packages-dir dist) AND GitHub Release (softprops/action-gh-release@v2, generate_release_notes: true)",
+    "version_alignment_gate": "kimi-code must depend on kimi-cli==<tag>; dependency versions pinned across root/kosong/pykaos checked on release"
+  },
+  "ci_workflows": [
+    {
+      "path": ".github/workflows/ci-kimi-cli.yml",
+      "workflow_name": "CI (kimi-cli)",
+      "trigger": "push branches main, pull_request paths (src, packages, sdks, Makefile, pyproject, uv.lock, web, vis, .github)",
+      "jobs": [
+        "check",
+        "test",
+        "build",
+        "release-validate",
+        "nix-test"
+      ]
+    },
+    {
+      "path": ".github/workflows/release-kimi-cli.yml",
+      "workflow_name": "Release (kimi-cli)",
+      "trigger": "push tags [0-9]*",
+      "jobs": [
+        "validate",
+        "build",
+        "release",
+        "publish-python"
+      ]
+    },
+    {
+      "path": ".github/workflows/ci-kimi-sdk.yml",
+      "workflow_name": "CI (kimi-sdk)",
+      "jobs": [
+        "check",
+        "test"
+      ]
+    },
+    {
+      "path": ".github/workflows/ci-kosong.yml",
+      "workflow_name": "CI (kosong)"
+    },
+    {
+      "path": ".github/workflows/ci-pykaos.yml",
+      "workflow_name": "CI (pykaos)"
+    },
+    {
+      "path": ".github/workflows/release-kimi-sdk.yml",
+      "workflow_name": "Release (kimi-sdk)"
+    },
+    {
+      "path": ".github/workflows/release-kosong.yml",
+      "workflow_name": "Release (kosong)"
+    },
+    {
+      "path": ".github/workflows/release-pykaos.yml",
+      "workflow_name": "Release (pykaos)"
+    },
+    {
+      "path": ".github/workflows/docs-pages.yml",
+      "workflow_name": "Docs (GitHub Pages)",
+      "job": [
+        "deploy"
+      ],
+      "trigger": "push branches main"
+    },
+    {
+      "path": ".github/workflows/pr-title-checker.yml",
+      "workflow_name": "PR Title Checker",
+      "trigger": "pull_request [opened, edited, labeled]"
+    },
+    {
+      "path": ".github/workflows/typos.yml",
+      "workflow_name": "Typos",
+      "scope": "all files"
+    },
+    {
+      "path": ".github/workflows/translator.yml"
+    }
+  ],
+  "proposal": {
+    "topic": "pydantic-v2 build/release pattern for ai-factory",
+    "paragraph": "ai-factory should adopt a kimi-cli-style single-source-of-truth release pattern built on `uv` + `uv_build` backend pinned to a Pydantic v2 ecosystem. Version is kept static and canonical in each sub-package's `pyproject.toml` `[project] version`, with an automated PR-gate checker (`scripts/check_version_tag.py` analog) asserting cross-package alignment; the build stage injects a provenance build-SHA into a generated `_build_info.py` (via a small `uv run python scripts/inject_build_sha.py` step) so telemetry can distinguish official vs fork/dirty builds, then `uv build --package <pkg> --no-sources --out-dir dist` emits sdist+wheel. Publishing fires only on numeric git tags (`push: tags: [0-9]*`) through `pypa/gh-action-pypi-publish` using OIDC/`__token__`, with per-file SHA256 sums and a generated GitHub Release (softprops/action-gh-release, generate_release_notes) as a secondary artifact; `make check-kimi-cli`-style `check`/`test`/`build`/`build-bin` Makefile targets plus prek hooks keep CI deterministic. For binary/standalone delivery, mirror the `kimi.spec` PyInstaller pattern: a single spec file producing both onefile (default) and onedir (PYINSTALLER_ONEDIR) executables, archived as `{product}-{tag}-{target}.tar.gz/.zip` with sha256 sidecars, and a Nix flake (uv2nix overlay) exposing `nix run .#<product>`. Lint/type is `ruff check`+format + `pyright` (strict on src) + `ty` (non-blocking, `|| true`), all driven by `uv run` so the toolchain is reproducible from `uv.lock`."
+  },
+  "findings": {
+    "build_tools": {
+      "build": [
+        {
+          "tool": "uv",
+          "role": "primary package/workflow manager",
+          "version_pin": ">=0.8.5,<0.10.0"
+        },
+        {
+          "tool": "uv_build",
+          "role": "PEP 517 build backend",
+          "config_key": "tool.uv.build-backend",
+          "features": [
+            "module-name",
+            "source-exclude"
+          ]
+        },
+        {
+          "tool": "make",
+          "role": "build orchestrator (Makefile targets)",
+          "targets": [
+            "build",
+            "build-kimi-cli",
+            "build-kosong",
+            "build-pykaos",
+            "build-kimi-sdk",
+            "build-bin",
+            "build-bin-onedir",
+            "build-web",
+            "build-vis"
+          ]
+        }
+      ],
+      "standalone_binary": {
+        "tool": "pyinstaller==6.18.0",
+        "config": "kimi.spec",
+        "modes": [
+          "one-file (default)",
+          "one-dir (PYINSTALLER_ONEDIR=1)"
+        ]
+      },
+      "lint": [
+        {
+          "tool": "ruff",
+          "version": ">=0.14.10",
+          "features": [
+            "check",
+            "format --check",
+            "isort (I)"
+          ]
+        },
+        {
+          "tool": "biome",
+          "scope": "web",
+          "commands": [
+            "npm run lint"
+          ]
+        },
+        {
+          "tool": "pre-commit / prek",
+          "config": ".pre-commit-config.yaml",
+          "behavior": "invokes make format-kimi-cli / make check-kimi-cli"
+        }
+      ],
+      "typecheck": [
+        {
+          "tool": "pyright",
+          "version": ">=1.1.407",
+          "mode": "standard",
+          "strict_paths": [
+            "src/kimi_cli/**/*.py"
+          ]
+        },
+        {
+          "tool": "ty",
+          "version": ">=0.0.9",
+          "behavior": "non-blocking (|| true in check targets)"
+        },
+        {
+          "tool": "tsc",
+          "scope": "web",
+          "command": "npm run typecheck"
+        }
+      ]
+    },
+    "packaging": {
+      "types": [
+        "wheel",
+        "sdist",
+        "binary (pyinstaller onefile/onedir)",
+        "nix"
+      ],
+      "workspace_packages": [
+        "kimi-cli",
+        "kimi-code",
+        "kosong",
+        "kaos (pykaos)",
+        "kimi-sdk"
+      ],
+      "entry_points": [
+        {
+          "package": "kimi-cli",
+          "scripts": {
+            "kimi": "kimi_cli.__main__:main",
+            "kimi-cli": "kimi_cli.__main__:main"
+          }
+        },
+        {
+          "package": "kimi-code",
+          "scripts": {
+            "kimi-code": "kimi_cli.__main__:main"
+          }
+        }
+      ],
+      "python_wheel_build": "uv build --package <pkg> --no-sources --out-dir dist",
+      "binary_packaging": {
+        "artifact_archive": [
+          "kimi-{tag}-{target}-onedir.tar.gz/zip",
+          "kimi-{tag}-{target}.tar.gz/zip (onefile)"
+        ],
+        "sha256_sums": true
+      },
+      "nix": "flake.nix with uv2nix; package output = nix run .#kimi-cli -> wrapped 'kimi' binary with ripgrep in PATH"
+    },
+    "version_management": {
+      "strategy": "static",
+      "source": "pyproject.toml [project] table (e.g. version = \"1.49.0\")",
+      "dynamic": false,
+      "setuptools_scm": false,
+      "align_checks": [
+        "scripts/check_kimi_dependency_versions.py (--root-pyproject, --kosong-pyproject, --pykaos-pyproject)",
+        "scripts/check_version_tag.py (--pyproject packages/kimi-code/pyproject.toml, --expected-version <tag>)"
+      ],
+      "build_sha_injection": "scripts/inject_build_sha.py -> writes src/kimi_cli/_build_info.py (commit SHA + normalized remote origin) before wheel and pyinstaller builds",
+      "nix_version": "derived via lib.importTOML ./pyproject.toml -> pyproject.project.version"
+    },
+    "release_process": {
+      "changelog_format": "Keep a Changelog; CHANGELOG.md; entries '## X.Y.Z (YYYY-MM-DD)' with categorized bullets (Security:, Shell:, Core:, ACP:, MCP:, File:, etc.)",
+      "git_tag_prefix": "numeric-only ([0-9]*); tags pushed via 'push: tags: - \"[0-9]*\"'",
+      "publishing_target": "PyPI (pypa/gh-action-pypi-publish@release/v1, PYPI_API_TOKEN, user __token__, packages-dir dist) AND GitHub Release (softprops/action-gh-release@v2, generate_release_notes: true)",
+      "version_alignment_gate": "kimi-code must depend on kimi-cli==<tag>; dependency versions pinned across root/kosong/pykaos checked on release"
+    },
+    "ci_workflows": [
+      {
+        "path": ".github/workflows/ci-kimi-cli.yml",
+        "workflow_name": "CI (kimi-cli)",
+        "trigger": "push branches main, pull_request paths (src, packages, sdks, Makefile, pyproject, uv.lock, web, vis, .github)",
+        "jobs": [
+          "check",
+          "test",
+          "build",
+          "release-validate",
+          "nix-test"
+        ]
+      },
+      {
+        "path": ".github/workflows/release-kimi-cli.yml",
+        "workflow_name": "Release (kimi-cli)",
+        "trigger": "push tags [0-9]*",
+        "jobs": [
+          "validate",
+          "build",
+          "release",
+          "publish-python"
+        ]
+      },
+      {
+        "path": ".github/workflows/ci-kimi-sdk.yml",
+        "workflow_name": "CI (kimi-sdk)",
+        "jobs": [
+          "check",
+          "test"
+        ]
+      },
+      {
+        "path": ".github/workflows/ci-kosong.yml",
+        "workflow_name": "CI (kosong)"
+      },
+      {
+        "path": ".github/workflows/ci-pykaos.yml",
+        "workflow_name": "CI (pykaos)"
+      },
+      {
+        "path": ".github/workflows/release-kimi-sdk.yml",
+        "workflow_name": "Release (kimi-sdk)"
+      },
+      {
+        "path": ".github/workflows/release-kosong.yml",
+        "workflow_name": "Release (kosong)"
+      },
+      {
+        "path": ".github/workflows/release-pykaos.yml",
+        "workflow_name": "Release (pykaos)"
+      },
+      {
+        "path": ".github/workflows/docs-pages.yml",
+        "workflow_name": "Docs (GitHub Pages)",
+        "job": [
+          "deploy"
+        ],
+        "trigger": "push branches main"
+      },
+      {
+        "path": ".github/workflows/pr-title-checker.yml",
+        "workflow_name": "PR Title Checker",
+        "trigger": "pull_request [opened, edited, labeled]"
+      },
+      {
+        "path": ".github/workflows/typos.yml",
+        "workflow_name": "Typos",
+        "scope": "all files"
+      },
+      {
+        "path": ".github/workflows/translator.yml"
+      }
+    ]
+  },
+  "id": "KC-07",
+  "title": "Build & Release Pipeline",
+  "scope": "Map how the project builds, packages, versions, and releases (CI/CD, changelog, publishing).",
+  "folders": [
+    "kimi-cli/.github",
+    "kimi-cli/packages",
+    "kimi-cli/scripts",
+    "kimi-cli/docs"
+  ],
+  "assigned_agent": 7,
+  "dependencies": [
+    "KC-01",
+    "KC-06"
+  ],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T00:00:00Z"
+}

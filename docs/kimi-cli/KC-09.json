@@ -1,0 +1,291 @@
+{
+  "id": "KC-09",
+  "title": "Error Handling, Logging & Observability",
+  "scope": "Analyze error classes, retry semantics, logging conventions, and observability (vis/).",
+  "folders": [
+    "kimi-cli/src",
+    "kimi-cli/vis",
+    "kimi-cli/tests",
+    "kimi-cli/scripts"
+  ],
+  "findings": {
+    "error_model": {
+      "base_exception": "KimiCLIException(Exception) - root for all kimi-cli-specific errors",
+      "custom_exception_classes": {
+        "exception.py": [
+          "ConfigError(KimiCLIException, ValueError)",
+          "AgentSpecError(KimiCLIException, ValueError)",
+          "InvalidToolError(KimiCLIException, ValueError)",
+          "SystemPromptTemplateError(KimiCLIException, ValueError)",
+          "MCPConfigError(KimiCLIException, ValueError)",
+          "MCPRuntimeError(KimiCLIException, RuntimeError)"
+        ],
+        "soul/__init__.py": [
+          "LLMNotSet(Exception) - raised when no LLM configured",
+          "LLMNotSupported(Exception) - raised when LLM lacks required capabilities (carries llm, capabilities)",
+          "MaxStepsReached(Exception) - raised when max_steps limit exceeded (carries n_steps)",
+          "RunCancelled(Exception) - raised on cancellation"
+        ],
+        "soul/kimisoul.py": [
+          "BackToTheFuture(Exception) - raise to revert context to a previous checkpoint"
+        ],
+        "wire/types.py": [
+          "QuestionNotSupported(Exception) - web mode does not support the Question tool"
+        ],
+        "tools/utils.py": [
+          "ToolRejectedError(ToolError) - from kosong.tooling, wraps rejected tool results",
+          "ToolError / ToolOk / ToolRuntimeError - inherited from kosong.tooling"
+        ]
+      },
+      "external_kosong_errors": [
+        "APIConnectionError - network/connection failures (retryable)",
+        "APITimeoutError - LLM API timeouts (retryable)",
+        "APIStatusError - HTTP status errors (carries status_code)",
+        "APIEmptyResponseError - empty response from provider (retryable)",
+        "ChatProviderError - generic chat provider error",
+        "RetryableChatProvider - protocol marker for retryable providers"
+      ],
+      "structured_error_codes": {
+        "location": "soul/kimisoul.py: classify_api_error()",
+        "description": "Maps an exception to (error_type, status_code) tuple for structured telemetry",
+        "error_types": [
+          "rate_limit (HTTP 429)",
+          "auth (HTTP 401/403)",
+          "overloaded (HTTP 529)",
+          "5xx_server (HTTP >=500)",
+          "context_overflow (4xx with context-length/max-tokens keywords)",
+          "4xx_client (other 4xx client errors)",
+          "network (APIConnectionError)",
+          "timeout (APITimeoutError / TimeoutError)",
+          "empty_response (APIEmptyResponseError)",
+          "other (fallback)"
+        ],
+        "retryable_status_codes": [
+          408,
+          409,
+          429,
+          500,
+          502,
+          503,
+          504,
+          529
+        ]
+      },
+      "pydantic_validation_handling": {
+        "description": "ValidationError (pydantic v2) caught at deserialization/serialization boundaries and wrapped into typed KimiCLIException subclasses",
+        "catch_sites": [
+          "acp/mcp.py:479 - ValidationError -> MCPConfigError",
+          "soul/context.py (~490) - Message.model_validate from JSONL, logs error + line number, skips record",
+          "agent.py - ValidationError on agent spec -> AgentSpecError",
+          "session_state.py - ValidationError on session loading",
+          "background/store.py - ValidationError on background task state",
+          "cli/mcp.py - ValidationError -> MCPConfigError"
+        ]
+      },
+      "error_propagation": {
+        "cli_entrypoint": "cli/__init__.py:848-875 - catches all exceptions; typer.BadParameter/typer.Exit re-raised; click.ClickException re-raised; logger.exception('Fatal error when running CLI'); debug mode shows full traceback, non-debug shows concise message + log path",
+        "mcp_config": "acp/__init__.py / cli/mcp.py - ValidationError caught, wrapped as MCPConfigError",
+        "system_prompt": "agent.py - Jinja2 errors caught, wrapped as SystemPromptTemplateError",
+        "tool_results": "ToolResult with is_error=True boolean flag - surfaced as ToolReturnValue for error attribution in telemetry and vis"
+      }
+    },
+    "retry_policy": {
+      "library": "tenacity==9.1.2 (pinned in pyproject.toml)",
+      "httpx": "httpx==0.28.1 - used in cli/plugin.py for plugin downloads (httpx.stream, 60s timeout, catches httpx.HTTPError)",
+      "llm_step_retry": {
+        "location": "soul/kimisoul.py - @tenacity.retry on _kosong_step_with_retry()",
+        "retry_condition": "retry_if_exception(self._is_retryable_error)",
+        "backoff": "wait_exponential_jitter(initial=0.3, max=5, jitter=0.5)",
+        "max_retries": "stop_after_attempt(max_attempts) where max_attempts = self._loop_control.max_retries_per_step (configurable)",
+        "reraise": true,
+        "before_sleep_hook": "_before_step_retry_sleep -> _retry_log + _emit_step_retry (emits StepRetry wire event)",
+        "retryable_errors": "APIConnectionError, APITimeoutError, APIEmptyResponseError, APIStatusError with status in _RETRYABLE_STATUS_CODES {408,409,429,500,502,503,504,529} or RetryableChatProvider; 429 with Retry-After"
+      },
+      "compaction_retry": {
+        "location": "soul/kimisoul.py - @tenacity.retry on _compact_with_retry()",
+        "retry_condition": "retry_if_exception(self._is_retryable_error)",
+        "backoff": "wait_exponential_jitter(initial=0.3, max=5, jitter=0.5)",
+        "max_retries": "stop_after_attempt(self._loop_control.max_retries_per_step)",
+        "before_sleep_hook": "_retry_log_compaction"
+      },
+      "connection_recovery": {
+        "location": "soul/kimisoul.py: _run_with_connection_recovery()",
+        "description": "Layered recovery: (1) 401 -> OAuth token refresh + retry (single attempt, gated on provider.oauth), (2) APIConnectionError/APITimeoutError -> recreate chat provider + retry (single attempt), (3) fallback to retry-exhausted error",
+        "logging": "logger.warning/logger.exception at each recovery path"
+      },
+      "oauth_token_refresh_retry": {
+        "location": "auth/oauth.py",
+        "cross_process_lock": "acquire_with_retry() - _CROSS_PROCESS_LOCK_RETRIES attempts with random backoff (1 + random.random() seconds)",
+        "rejected_refresh_token": "_can_retry_rejected_refresh_token() - cooldown-based (UNAUTHORIZED_REFRESH_RETRY_COOLDOWN_SECONDS), retries 401 on refresh token if cooldown elapsed",
+        "anonymous_fallback": "on 401 -> retry request without auth token (anonymous)"
+      },
+      "telemetry_transport_retry": {
+        "location": "telemetry/transport.py",
+        "backoff": "RETRY_BACKOFFS_S = (1.0, 4.0, 16.0) - exponential backoff, 4 total attempts max",
+        "fallback": "transient failures exhausted -> disk persistence (failed_*.jsonl), retried on next startup"
+      }
+    },
+    "logging": {
+      "library": "loguru>=0.6.0,<0.8",
+      "lazy_import": {
+        "location": "kimi_cli/__init__.py",
+        "mechanism": "_LazyLogger class - defers loguru import until first use; logger.disable('kimi_cli') by default for library usage; app entrypoints call logger.enable('kimi_cli')"
+      },
+      "sinks": {
+        "file": {
+          "path": "get_share_dir() / 'logs' / 'kimi.log'",
+          "level": "TRACE (debug) / INFO (normal)",
+          "format": "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} | {extra[sid]} - {message}",
+          "rotation": "06:00 (daily at 6 AM)",
+          "retention": "10 days"
+        },
+        "stderr_redirect": {
+          "location": "utils/logging.py: StderrRedirector",
+          "mechanism": "dup2 swap of process fd=2 to pipe read by background thread ('kimi-stderr-redirect') -> logged at ERROR level by default",
+          "purpose": "captures C-level and unpythonic stderr output into loguru file sink"
+        },
+        "console_stderr_web": {
+          "location": "web/app.py",
+          "config": "logger.remove(); logger.add(sys.stderr, level=LOG_LEVEL env var, default WARNING) for uvicorn server logging"
+        }
+      },
+      "log_levels": {
+        "debug_mode": "logger.enable('kosong') additionally enabled; TRACE level for log file",
+        "normal_mode": "INFO level for log file; stderr redirect catches only ERROR",
+        "structured_fields": "extra['sid'] injected via _patch_session_id patcher (ContextVar from soul.toolset.get_session_id)"
+      },
+      "structured_logging": {
+        "fields": "loguru extra fields: sid (session_id), standard {time, level, name, function, line, message}",
+        "interpolation": "loguru keyword interpolation: logger.info('msg', key=value, name=name)",
+        "opt_pattern": "logger.opt(depth=N) for call-site attribution; logger.log(level, msg, **kwargs) for dynamic levels"
+      }
+    },
+    "observability": {
+      "telemetry_system": {
+        "module": "kimi_cli/telemetry/",
+        "design": "Zero-dependency core: track() works before sink is attached; events buffered in deque(maxlen=1000) flushed once Sink is ready",
+        "event_flow": "track() -> _event_queue (deque, thread-safe) -> EventSink.accept() -> AsyncTransport.send() -> HTTP POST to https://telemetry-logs.kimi.com/v1/event",
+        "flush_policy": "EventSink - FLUSH_INTERVAL_S=30s timer OR FLUSH_THRESHOLD=50 events (whichever first), batched POST",
+        "transport": "AsyncTransport using aiohttp POST with 10s timeout (SEND_TIMEOUT); 401 -> retry without auth token; on failure -> disk persistence (failed_*.jsonl, 0o600 perms, 7-day max age, retried on next startup via retry_disk_events())",
+        "trace_id": "ContextVar _trace_id_var in kimisoul.py - set by _set_trace_id() from kosong trace_callback; included in all telemetry events and wire messages",
+        "privacy": "events contain no user message content, no file paths in exception messages - crash handler sends only exception class name"
+      },
+      "event_types_tracked": [
+        "session_started, first_launch, init_complete, yolo_toggle, afk_toggle",
+        "skill_invoked, flow_invoked",
+        "tool_call (outcome: success/error/cancelled, tool_name, tool_call_id, step_no, duration_ms, error_type, error_class, dup_type)",
+        "tool_call_dedup_detected, tool_call_repeat",
+        "permission_approval_result (approved/denied, tool_name, timeout, reason)",
+        "turn_force_stopped",
+        "api_error (error_type, model, retryable, duration_ms, status_code, trace_id, input_tokens)",
+        "compaction_failed (source, tokens_before, duration_ms, round, retry_count, thinking_effort, error_type, trace_id)",
+        "compaction_finished",
+        "session_load_failed (trace_id, error_type, error_class, step_no, n_steps)",
+        "background_task_created / completed / failed (outcome, duration_s, error_class, error_type)"
+      ],
+      "crash_telemetry": {
+        "location": "telemetry/crash.py",
+        "mechanism": "install_crash_handlers() - overrides sys.excepthook and loop.set_exception_handler; captures crash phase: startup/runtime/shutdown",
+        "privacy": "only exception class name emitted (no message, no traceback, no file paths, no user input) to avoid PII"
+      },
+      "hook_system": {
+        "location": "hooks/engine.py, hooks/events.py, hooks/config.py, hooks/runner.py",
+        "event_types": "PreToolUse, PostToolUse, PostToolUseFailure, UserPromptSubmit, Stop, StopFailure, SessionStart, SessionEnd, SubagentStart, SubagentStop, PreCompact, PostCompact",
+        "payload_builders": "hooks/events.py - typed dict builders (pre_tool_use, post_tool_use, post_tool_use_failure, user_prompt_submit, user_prompt_tool_mix, stop, session_start, session_end, subagent_start, subagent_stop, pre_compact, post_compact)",
+        "execution": "HookEngine triggers hooks -> HookResult (action: allow/deny, duration_ms, matched_rule) -> wire events HookTriggered / HookResolved emitted with OnTriggered/OnResolved callbacks"
+      },
+      "wire_protocol": {
+        "transport": "JSONL over stdout/stdio (web runner) or file (wire.jsonl)",
+        "message_envelope": "WireMessageEnvelope { type: str (ClassName), payload: dict } - model_dump(mode='json') on send, model_validate() on receive; flatten_union() resolves Union/TypeAliases to flat class tuple for isinstance dispatch",
+        "event_types": "TurnBegin, TurnEnd, SteerInput, StepBegin, StepEnd, StepInterrupted, StepRetry, ToolCall, ToolResult, HookTriggered, HookResolved, CompactionBegin, CompactionEnd, MCPLoadingBegin, MCPLoadingEnd, StatusUpdate, Notification, ApprovalRequest, ApprovalResponse, QuestionRequest, QuestionResponse, SubagentEvent, PlanDisplay, BtwBegin, BtwEnd, ToolReturnValue, MCPStatusSnapshot",
+        "step_retry_wire": "StepRetry(n, next_attempt, max_attempts, wait_s, error_type, status_code) - emitted during tenacity retry before sleep",
+        "status_update": "StatusUpdate { context_usage, context_tokens, max_context_tokens, token_usage: {input, output, cache_read, cache_creation, other}, plan_mode, mcp_status, agent_state, current_step }"
+      },
+      "vis_application": {
+        "server": "src/kimi_cli/vis/app.py - FastAPI app (port 5495, DEFAULT_PORT), GZip + CORS middleware, StaticFiles mount, scalar-fastapi docs",
+        "api_routers": {
+          "sessions": "src/kimi_cli/vis/api/sessions.py - GET /sessions (list, project grouping), GET /sessions/{id}/events (wire JSONL), GET /sessions/{id}/context-messages, GET /sessions/{id}/state, GET /sessions/{id}/subagent/{scope}/events, POST /sessions/import (ZIP), DELETE /sessions/{id}",
+          "statistics": "src/kimi_cli/vis/api/statistics.py - GET /statistics (aggregate: total_sessions, total_turns, total_tokens, total_duration_sec, tool_usage[{name, count, error_count}], daily_usage, per_project), 60s in-memory cache (TTL)",
+          "system": "src/kimi_cli/vis/api/system.py - GET /capabilities (open_in_supported)"
+        },
+        "frontend_stack": "React 19 + TypeScript + Vite, lucide-react, Tailwind CSS, react-virtuoso"
+      },
+      "vis_frontend_features": {
+        "tab_routing": "App.tsx - Tab type: 'wire' | 'context' | 'state' | 'dual' | 'agents'",
+        "wire_viewer": {
+          "file": "vis/src/features/wire-viewer/wire-viewer.tsx",
+          "modes": "events (list), timeline, decisions, tool-stats, turn-efficiency",
+          "error_detection": "isErrorEvent() in wire-event-card.tsx - ToolResult with return_value.is_error===true, StepInterrupted, ApprovalResponse with response==='reject'",
+          "error_navigation": "'e' keypress jumps to next error; error filter toggle; red border highlight",
+          "integrity_scoring": "computeIntegrity() in integrity-check.tsx - checks pairing of TurnBegin/TurnEnd, CompactionBegin/End, ToolCall/ToolResult, ApprovalRequest/ApprovalResponse, QuestionRequest/QuestionResponse, BtwBegin/End, MCPLoadingBegin/End; returns {score: 0-100, totalPairable, orphans: OrphanedEvent[]}"
+        },
+        "tool_stats_dashboard": {
+          "file": "vis/src/features/wire-viewer/tool-stats-dashboard.tsx",
+          "metrics": "per-tool: totalCalls, successCount, failureCount, successRate, avgDurationSec/min/max; sortable by failureRate or callCount; color-coded (green >80%, amber >=50%, red <50%)"
+        },
+        "turn_efficiency": {
+          "file": "vis/src/features/wire-viewer/turn-efficiency.tsx",
+          "anomaly_detection": "mean + 2*stddev threshold on step_count and token_usage deltas; flags turns beyond 2 sigma; reasons array per anomaly"
+        },
+        "usage_chart": {
+          "file": "vis/src/features/wire-viewer/usage-chart.tsx",
+          "visualization": "SVG line chart of cumulative context usage (input tokens) over time; 80% danger zone marker; per-tool token breakdown bars"
+        },
+        "decision_path": {
+          "file": "vis/src/features/wire-viewer/decision-path.tsx",
+          "visualization": "chains of DecisionStep: thinking -> tool call -> tool result (isError, duration, agent call detection); turns grouped into DecisionChain; collapsible"
+        },
+        "context_viewer": {
+          "file": "vis/src/features/context-viewer/context-viewer.tsx",
+          "visualization": "side-by-pane message rendering (user/assistant/tool); content type badges (TextPart, ThinkPart, ImageURLPart); context space map"
+        },
+        "state_viewer": {
+          "file": "vis/src/features/state-viewer/state-viewer.tsx",
+          "visualization": "recursive JSON tree for session state: approval settings, subagents, additional_dirs; color-coded by type; collapsible"
+        },
+        "dual_view": {
+          "file": "vis/src/features/dual-view/dual-view.tsx",
+          "visualization": "side-by-side: left = wire events, right = context messages; cross-highlight; type-color-coded; nest-level indentation for subagent"
+        },
+        "sessions_explorer": {
+          "file": "vis/src/features/sessions-explorer/sessions-explorer.tsx + session-card.tsx",
+          "features": "session list (cards/table), project grouping, search filter, sort by time/turns/tokens, filter by all/recent/errors, import ZIP, delete; formatBytes for session dir size"
+        },
+        "statistics_view": {
+          "file": "vis/src/features/statistics/statistics-view.tsx",
+          "features": "summary cards, daily usage SVG chart, tool usage table (calls + errors), per-project breakdown; uses getAggregateStats"
+        },
+        "agents_panel": "Subagent scope selector (AgentScopeBar) with scope bar to filter wire events by subagent; displays agent type and description per scope",
+        "api_client": {
+          "file": "vis/src/lib/api.ts",
+          "features": "fetchJSON with AbortController timeout (30s), ConcurrencyLimiter (3), apiCache with TTL, typed interfaces, session import via ZIP"
+        }
+      },
+      "debug_hooks": {
+        "trace_callback": "soul/kimisoul.py - trace_callback that sets ContextVar trace_id from kosong x-trace-id header response; passed to kosong.step()",
+        "step_retry_emission": "StepRetry wire event emitted via wire_send() before each tenacity sleep: attempt n, max, wait_s, error_type, status_code",
+        "hook_subscription": "WireHookSubscription {id, event, matcher, timeout} - clients subscribe to hook events via wire initialize; events routed through HookEngine with OnWireHookRequest callback"
+      }
+    }
+  },
+  "proposal": {
+    "summary": "kimi-cli uses loguru (lazy-imported via _LazyLogger) for structured logging with log-level interpolation and session-ID context injection, tenacity for LLM/compaction retry with exponential-jitter backoff, a zero-dependency in-memory-buffered telemetry module (track->EventSink->AsyncTransport) that sends batched events to an external endpoint with disk persistence fallback, and an embedded FastAPI + React 19 vis/ sub-application that renders wire-protocol events into five interactive observability views (wire events, context messages, session state, dual-view, agents panel) with built-in integrity scoring (event pairing validation), tool-level success/failure metric dashboards, anomaly detection, and error navigation.",
+    "pydantic_v2_pattern": "The codebase leverages pydantic v2's model_dump(mode='json') and model_validate() on a WireMessageEnvelope {type: ClassName, payload: dict} to serialize/deserialize a polymorphic event stream of 20+ typed BaseModel subclasses (e.g., ToolCall, ToolResult, StepRetry, StatusUpdate), using flatten_union() from utils/typing.py to resolve Union/TypeAliasType into a flat tuple of concrete classes for runtime isinstance() dispatch and deserialization. ValidationError is caught at deserialization boundaries (soul/context.py loading Message.model_validate from JSONL, acp/mcp.py wrapping as MCPConfigError, session state loading) with structured logging of the error and the skipped record's line number - this pattern keeps validation failures visible in the error/observability pipeline without crashing the session, while the structured (type, payload) wire format enables the vis/ frontend to render rich, typed event cards, compute integrity scores, and emit tool-level error attribution (ToolResult with is_error=True detected by isErrorEvent()).",
+    "recommendations": [
+      "Standardize error code taxonomy across KimiCLIException subclasses - currently error types are implicitly encoded in telemetry event names; an explicit ErrorCode enum (mirroring the classify_api_error error_type set) would allow the CLI and vis/ frontend to correlate structured errors consistently.",
+      "Consider adding loguru structured serialization (logger.serialize=True) as an opt-in debug sink alongside the plain-text file sink to enable log aggregation tools to consume JSON log records.",
+      "The tenacity retry configuration (max_retries_per_step, wait exponential-jitter min/max) is centralized in soul/kimisoul.py; documenting these as explicit constants or a RetryConfig pydantic model would make the retry policy discoverable and testable.",
+      "Add unit tests for classify_api_error() and _is_retryable_error() - currently no dedicated test coverage for the error classification mapping that drives both retry decisions and telemetry event payloads.",
+      "Consider adding a 'network_errors' view in the vis/ wire viewer to visualize APIConnectionError/APITimeoutError patterns and their correlation with StepRetry events across turns."
+    ]
+  },
+  "status": "done",
+  "assigned_agent": 9,
+  "dependencies": [
+    "KC-01"
+  ],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T00:00:00Z"
+}
