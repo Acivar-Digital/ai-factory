@@ -321,6 +321,12 @@
   "dependencies": [
     "KC-01"
   ],
+  "pydantic_ai_2_impl": {
+    "pattern": "Typed AGENTS.md frontmatter + Pydantic TaskState model as strict handoff contract between phases",
+    "code": "class TaskState(BaseModel):\n    phase: str\n    todos: list[str]\n    completed: list[str]\n    blockers: list[str]\n\nagent = Agent('openai:gpt-4o-mini', output_type=TaskState)\nresult = agent.run_sync(\"Continue from phase=intern, todos=['search','edit'], completed=[]\")",
+    "why_now": "LLMs keep failing — they lose task state between turns, forget completed todos, and drift off-scope. kimi-cli examples embed YAML frontmatter in specs; ai-factory must do the same with pydantic-models to enforce typed state at every phase handoff.",
+    "harness_gap": "bd issues are unstructured text; no typed state handoff between tiers (intern->engineer->senior). LLMs mutate free-text todos without validation, causing context loss. A Pydantic TaskState output_type forces every agent turn to emit structured, validated state — fail loud on drift."
+  },
   "notes": [],
   "created_by": "opencode-research-phase",
   "mode": "collaboration",

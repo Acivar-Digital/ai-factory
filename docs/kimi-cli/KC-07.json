@@ -436,6 +436,12 @@
       }
     ]
   },
+  "pydantic_ai_2_impl": {
+    "pattern": "typed-build-settings-gate",
+    "code": "from pydantic_ai import Agent\nfrom pydantic_ai.models.openai import OpenAIChatModel\nfrom pydantic_ai.providers.openai import OpenAIProvider\ncfg = BuildConfig()\nagent = Agent(OpenAIChatModel(cfg.model_name, provider=OpenAIProvider(base_url=cfg.base_url, api_key=cfg.api_key)))",
+    "why_now": "ai-factory injects no _build_info.py provenance and reads model/base_url/api_key via raw os.getenv with zero validation; a typo'd env var or stale base_url fails the LLM run mid-turn and the team blames the model. A pydantic-settings BuildConfig (== kimi-cli's static pyproject.toml version + inject_build_sha + check_version_tag gate) validates types/URLs/keys at startup via fail-fast, so config rot dies before the first token. LLMs stop failing on bad wiring.",
+    "harness_gap": "No typed BuildConfig, no _build_info.py build-SHA injection, no cross-package version-alignment gate (check_version_tag analog) before runs; model selection still via admin/controls os.getenv with no pydantic-settings validation or provenance tag."
+  },
   "id": "KC-07",
   "title": "Build & Release Pipeline",
   "scope": "Map how the project builds, packages, versions, and releases (CI/CD, changelog, publishing).",

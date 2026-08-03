@@ -93,6 +93,12 @@
   "proposal": {
     "pydantic_v2_pattern": "ai-factory can mirror kimi-cli's declarative + lazy-registration pattern using pydantic-v2 as the source of truth: define one pydantic BaseModel per command whose fields are `Annotated[..., typer.Option(...)/typer.Argument(...)]` (so pydantic validates flag types while Typer reads the annotations for parsing); a registry walks each model to synthesize a `typer.Typer` sub-app (`@sub_app.command()` over the model class) and registers it on a root `Typer(cls=...)` group (a `LazySubcommandGroup`-style subclass that overrides `get_command`/`list_commands` to import each sub-app module on first access from a config-driven list, e.g. a `pydantic-settings` `CliPluginSettings` model listing enabled sub-app modules). Flag aliases are then just repeated flag strings in the `typer.Option` metadata, and command aliases (if desired) can be derived from an extra `aliases` pydantic field read at registration time."
   },
+  "pydantic_ai_2_impl": {
+    "pattern": "Declarative command registry of pydantic-v2 models, each carrying a pydantic-ai FunctionToolset; Agent(output_type=...) replaces YAML prompt-parsing (the #1 failure point — LLMs keep failing to emit parseable YAML from free text).",
+    "code": "from pydantic_ai import Agent\nfrom pydantic import BaseModel, Field\nclass CmdResult(BaseModel):\n    name: str = Field(...)\n    exit_code: int = Field(default=0)\nagent = Agent('openai:gpt-4.1', output_type=CmdResult)  # typed handoff, no YAML parsing",
+    "why_now": "ai-factory's YAML-driven orchestrator forces LLMs to parse/emit YAML in every prompt — the single biggest crash vector ('LLMs keep failing' to produce parseable structure). Pydantic-ai 2.0 Agent + structured output_type collapses prompt-parsing into a validated model handoff; FunctionToolset lets each command own a typed tool surface instead of stringly-typed YAML flags, matching kimi-cli's model-as-source-of-truth + lazy dispatch.",
+    "harness_gap": "No Agent/FunctionToolset/structured-output registry exists yet; commands are raw YAML dicts parsed ad-hoc. Missing: (1) per-command pydantic model → Agent wiring, (2) typed output handoff between phases, (3) lazy subcommand dispatch from a model registry instead of eager typer.add_typer."
+  },
   "status": "done",
   "assigned_agent": 2,
   "dependencies": [

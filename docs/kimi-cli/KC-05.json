@@ -223,6 +223,12 @@
     ]
   },
   "proposal": "The most reusable Pydantic-v2 UX pattern in kimi-cli is its wire message envelope: define every interaction as a flat BaseModel, compose them into discriminated-union type aliases (type X = A | B | C), then serialize to {type: ClassName, payload: model_dump(mode='json')} for the transport layer and round-trip with model_validate() + TypeAdapter. The flatten_union() helper bridges PEP 604 unions to runtime isinstance() dispatch — so a single message handler can receive one envelope, validate its type discriminator, and downcast via the right variant with full Pydantic validation on the payload. For ai-factory, adopt this same envelope pattern for the agent-to-conductor / agent-to-agent control signals (StepBegin, StepInterrupted, ApprovalRequest, QuestionRequest) so UI renderers (TUI or web) can consume a uniform JSON-RPC-like stream without the renderer knowing the upstream agent framework. This mirrors KC-02's discovery that kimi-cli emits rich interactive prompts (ApprovalResponse, QuestionRequest) over a typed union — the same union can drive ai-factory's own interactive approval gates by swapping the renderer (prompt_toolkit modal vs Web modal) while keeping the Pydantic contract identical.",
+  "pydantic_ai_2_impl": {
+    "pattern": "Discriminated-union control envelopes via TypeAdapter output_type",
+    "code": "from pydantic import BaseModel, TypeAdapter\nfrom pydantic_ai import Agent\nclass TurnBegin(BaseModel): type: Literal['turn_begin']\nclass ToolCallRequest(BaseModel): type: Literal['tool_call']; call_id: str\nclass ApprovalRequest(BaseModel): type: Literal['approval']; ask: str\nEnv = TypeAdapter[Union[TurnBegin, ToolCallRequest, ApprovalRequest]]\nrender = Agent('anthropic:claude-3-5-sonnet-20241022', output_type=Env)\nenv = render.run_sync('emit next control signal').output  # Pydantic-validated envelope",
+    "why_now": "ai-factory's conductor must ingest typed control signals from renderers without trusting free-form LLM prose; pydantic-ai 2.0 validates the discriminated union at the agent boundary via output_type=TypeAdapter, enforcing kimi-cli's wire envelope contract inside the structured run_sync output.",
+    "harness_gap": "LLMs keep failing free-form control-signal emission (hallucinated type names, missing payload keys, stray prose). A Pydantic-validated envelope rejects malformed outputs at run_sync instead of silently corrupting the TUI/web render stream - Fail Loudly, Fail Cheaply."
+  },
   "status": "done",
   "assigned_agent": 5,
   "dependencies": ["KC-01"],

@@ -276,10 +276,16 @@
       "Consider adding loguru structured serialization (logger.serialize=True) as an opt-in debug sink alongside the plain-text file sink to enable log aggregation tools to consume JSON log records.",
       "The tenacity retry configuration (max_retries_per_step, wait exponential-jitter min/max) is centralized in soul/kimisoul.py; documenting these as explicit constants or a RetryConfig pydantic model would make the retry policy discoverable and testable.",
       "Add unit tests for classify_api_error() and _is_retryable_error() - currently no dedicated test coverage for the error classification mapping that drives both retry decisions and telemetry event payloads.",
-      "Consider adding a 'network_errors' view in the vis/ wire viewer to visualize APIConnectionError/APITimeoutError patterns and their correlation with StepRetry events across turns."
-    ]
-  },
-  "status": "done",
+       "Consider adding a 'network_errors' view in the vis/ wire viewer to visualize APIConnectionError/APITimeoutError patterns and their correlation with StepRetry events across turns."
+     ]
+   },
+   "pydantic_ai_2_impl": {
+     "pattern": "Typed Error Envelope + Model-Retry Feedback Loop",
+     "code": "class LLMErrorEnvelope(BaseModel):\n    error_type: str; error_message: str; status_code: int | None; retryable: bool\n\n@agent.tool(retries=3)\ndef risky_tool(ctx: RunContext, q: str) -> str:\n    try: return api_call(q)\n    except Exception as e:\n        raise ToolError(LLMErrorEnvelope(error_type=type(e).__name__, error_message=str(e), status_code=getattr(e, 'status_code', None), retryable=_is_retryable(e)).model_dump_json())",
+     "why_now": "kimi-cli's tenacity retry on _kosong_step_with_retry re-sends the SAME prompt N times without feeding error context to the model. LLMs keep failing because errors are swallowed by the retry layer - the model never sees what went wrong, so each retry is a blind roll of the dice. Pydantic-ai v2's ToolError surfaces structured error envelopes (error_type, status_code, retryable) directly in the model's message history, enabling self-correction on each retry attempt instead of blind re-execution.",
+     "harness_gap": "Current approach in soul/kimisoul.py: @tenacity.retry on _kosong_step_with_retry() with classify_api_error() mapping exceptions -> error_types, _before_step_retry_sleep emitting StepRetry wire events. Gap: no typed error envelope enters the model context. ToolResult with is_error=True is only for telemetry/vis rendering (wire/types.py ToolResult), not for model feedback. The tenacity retry re-invokes the LLM API call but never injects 'you got HTTP 429 rate_limit' into the conversation. Pydantic-ai v2 fix: ToolError(LLMErrorEnvelope.model_dump_json()) makes the error visible as a structured tool result; retries=3 on @agent.tool triggers framework-managed retry where the model sees the error_type and retryable flag and self-corrects. This closes the silent-error-swallow gap between kosong.step() and the kimisoul retry loop."
+   },
+   "status": "done",
   "assigned_agent": 9,
   "dependencies": [
     "KC-01"
