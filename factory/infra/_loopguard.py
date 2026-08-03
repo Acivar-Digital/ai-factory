@@ -40,7 +40,7 @@ from factory.infra.control import (
 from factory.infra.models import CompactedContext
 
 MAX_LOOPGUARD_TURNS = 20  # hard backstop; per-run UsageLimits resets each agent.run() so the outer loop is otherwise unbounded
-MAX_TOTAL_TOOL_CALLS = 10  # hard ceiling on total tool calls across all turns; after this force RECOVER
+MAX_TOTAL_TOOL_CALLS = 40  # hard ceiling on total tool calls across all turns; after this force RECOVER
 
 AGENT_RUN_TIMEOUT = 600.0  # hard per-run() backstop so an unresponsive model fails loudly instead of hanging forever
 
@@ -272,11 +272,11 @@ async def run_with_loopguard(
     result_repeat: int = 0
     # Align the hard request cap with each role's GuardToolset tool budget.
     # pydantic-ai counts MODEL REQUESTS (~2 per tool call: call + result), so the
-    # cap is budget * 2. Engineer (75) -> 150; intern (10) -> 20; senior (15) -> 30.
-    # Replaces the old fixed 40 that killed tool-looping coders before they could
-    # emit final_result (see session_crash.md coder_4 UsageLimitExceeded).
+    # cap is budget * 2. Engineer (75) -> 150; senior (15) -> 30.
+    # intern cap raised to 60 to give CC=49+ refactoring tasks more headroom
+    # (see session_crash.md coder_4 UsageLimitExceeded).
     role_request_cap = {
-        "intern": 20,
+        "intern": 60,
         "engineer": 150,
         "senior": 30,
     }
