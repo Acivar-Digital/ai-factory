@@ -43,7 +43,7 @@ from factory.infra.state import save_state, record_phase
 from factory.infra.context import compact_context_if_needed
 from factory.infra.tools import wrap_injected_context
 from factory.infra.tools_shell import verify_edit
-from factory.infra.validation import EXCHANGE_ROLES, PLAN_INVARIANT_RETRIES, check_plan_invariants
+from factory.infra.validation import EXCHANGE_ROLES
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
 MAX_ATTEMPTS = 1

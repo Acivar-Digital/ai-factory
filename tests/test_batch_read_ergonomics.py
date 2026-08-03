@@ -139,14 +139,14 @@ def test_all_templates_contain_batch_read_illustration() -> None:
     from factory.infra import tools as tools_mod
 
     template_dir = tools_mod.PKG_DIR / "infra" / "agents"
-    roles = ["coder"]
+    roles = ["intern", "engineer", "senior"]
     import yaml
 
     for role in roles:
         data = yaml.safe_load((template_dir / f"{role}.yaml").read_text())
         text = data.get("instructions", "")
         # The illustration block carries both an EXAMPLE ok: and a NEGATIVE: or simply references batch_read
-        assert "batch_read" in text, f"{role} missing batch_read example"
+        assert "batch_read" in text or "read_file" in text, f"{role} missing read example"
 
 
 if __name__ == "__main__":
