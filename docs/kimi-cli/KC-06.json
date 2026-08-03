@@ -187,5 +187,11 @@
   "notes": [],
   "created_by": "opencode-research-phase",
   "mode": "collaboration",
-  "timestamp": "2026-08-04T00:00:00Z"
+  "timestamp": "2026-08-04T00:00:00Z",
+  "pydantic_ai_2_impl": {
+    "pattern": "TestModel + InFakeModel mock to replay scripted tool-call/reply sequences per tier handover",
+    "code": "from pydantic_ai import Agent, TestModel\ntest_model = TestModel([ToolCall('tool', {'arg':1}), Text('ok')])\nagent = Agent(test_model, output_type=Schema)\nresult = agent.run_sync('phase_prompt')\nassert result.all_messages == snapshot()  # inline-snapshot",
+    "why_now": "ai-factory conductor dispatches real LLMs per intern\u2192engineer\u2192senior phase; flaky non-determinism corrupts handover sequences; TestModel locks turn/step/tool-call ordering so evals catch orchestration regressions instead of hallucination noise",
+    "harness_gap": "factory/tests has no eval harness or inline-snapshot assertions; kimi-cli subprocess-e2e + scripted-echo + snapshot() catches handover regression that unit tests miss"
+  }
 }
