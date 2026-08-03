@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -43,7 +44,7 @@ from factory.infra.execution import (  # noqa: F401
 from factory.infra.agent import (  # noqa: F401
     build_role_agent, _run_agent_retry, _coder_agent_id,
 )
-from factory.infra.artefacts import persist_role  # noqa: F401
+from factory.infra.artefacts import artefacts_dir, persist_role  # noqa: F401
 from factory.infra._runtime import RAW_OUTPUTS, SCOPE_CONTEXT, _PHASE_ORDER  # noqa: F401
 import subprocess  # noqa: F401
 
@@ -117,6 +118,13 @@ def read_prompt(prompt_file: Path) -> tuple[bool, str, list[str], str | None, st
     return resume, task_body, scope, start_phase, stop_phase
 
 
+def _cleanup_stale_artefacts() -> None:
+    """Remove stale workplan artefacts when starting a fresh run (Resume: false)."""
+    workplan_dir = artefacts_dir() / "workplan"
+    shutil.rmtree(workplan_dir, ignore_errors=True)
+    print("[clean] Removed stale artefacts from factory/artefacts/workplan/")
+
+
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bd", default="default", help="bd ticket id (keys the exchange file)")
@@ -128,6 +136,8 @@ async def main() -> None:
 
     resume, task, scope, start_phase, stop_phase = read_prompt(Path(args.prompt_file))
     bd = args.bd
+    if not resume and not args.resume_flag:
+        _cleanup_stale_artefacts()
 
     _cli_from = args.from_
     _cli_resume = args.resume_flag
