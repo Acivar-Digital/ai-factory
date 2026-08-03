@@ -17,8 +17,8 @@ scope:
 Reduce Cyclomatic Complexity (CC) to <= 5 for all listed target functions across factory/infra/ modules:
 
 ## CONTEXT
-The CC scanner identified high-complexity violation:
-1. red_team_passed (CC=6)
+The CC scanner identified high-complexity violation in factory/infra/pipeline.py:
+1. _run_verify_edit (CC=49)
 
 Refactor using guard clauses, early returns, helper extraction, and single-responsibility decomposition. Do NOT alter public function signatures or break existing contracts.
 
