@@ -68,7 +68,7 @@ async def test_modify_tool_blocked_before_planning() -> None:
     )
     assert "SYSTEM ERROR" in res
     assert gt._has_planned is False
-    assert gt._plan_nudges == 1
+    assert gt._blocked_count == 1
     assert ("write_file", {"relative_path": "x.py", "content": "..."}) not in gt.wrapped.calls
 
 
@@ -78,7 +78,7 @@ async def test_read_file_allowed_before_planning() -> None:
         "read_file", {"relative_path": "x.py"}, None, _FakeTool()
     )
     assert "SYSTEM ERROR" not in res
-    assert gt._plan_nudges == 0
+    assert gt._blocked_count == 0
 
 
 async def test_batch_read_allowed_before_planning() -> None:
@@ -87,7 +87,7 @@ async def test_batch_read_allowed_before_planning() -> None:
         "batch_read", {"paths": ["a.py"]}, None, _FakeTool()
     )
     assert "SYSTEM ERROR" not in res
-    assert gt._plan_nudges == 0
+    assert gt._blocked_count == 0
 
 
 async def test_remember_sets_has_planned() -> None:
@@ -102,7 +102,7 @@ async def test_exempt_tools_not_blocked_before_planning() -> None:
     for name in ("remember", "final_result", "keep_memory"):
         res = await gt.call_tool(name, {"note": "plan"}, None, _FakeTool())
         assert "SYSTEM ERROR" not in res
-        assert gt._plan_nudges == 0
+        assert gt._blocked_count == 0
 
 
 async def test_non_exempt_tool_allowed_after_planning() -> None:
@@ -129,23 +129,23 @@ async def test_three_strikes_halts_with_runtime_error() -> None:
         assert "[HALT]" in str(e)
 
 
-async def test_plan_nudges_incremented_for_modify_tools() -> None:
+async def test_blocked_count_incremented_for_modify_tools() -> None:
     gt = _make_guard()
     await gt.call_tool("write_file", {"relative_path": "x.py", "content": "..."}, None, _FakeTool())
-    assert gt._plan_nudges == 1
+    assert gt._blocked_count == 1
 
 
 async def test_final_result_exempt_does_not_increment_nudges() -> None:
     gt = _make_guard()
     await gt.call_tool("final_result", {"output": "done"}, None, _FakeTool())
-    assert gt._plan_nudges == 0
+    assert gt._blocked_count == 0
     assert gt._has_planned is False
 
 
 async def test_keep_memory_exempt_does_not_increment_nudges() -> None:
     gt = _make_guard()
     await gt.call_tool("keep_memory", {"note": "plan"}, None, _FakeTool())
-    assert gt._plan_nudges == 0
+    assert gt._blocked_count == 0
     assert gt._has_planned is False
 
 
@@ -168,12 +168,12 @@ async def test_replace_text_blocked_before_planning() -> None:
     assert len(gt.wrapped.calls) == 0
 
 
-async def test_has_planned_and_plan_nudges_initialized_in_post_init() -> None:
+async def test_has_planned_and_blocked_count_initialized_in_post_init() -> None:
     gt = _make_guard()
     assert hasattr(gt, "_has_planned")
-    assert hasattr(gt, "_plan_nudges")
+    assert hasattr(gt, "_blocked_count")
     assert gt._has_planned is False
-    assert gt._plan_nudges == 0
+    assert gt._blocked_count == 0
 
 
 if __name__ == "__main__":
@@ -182,10 +182,10 @@ if __name__ == "__main__":
     asyncio.run(test_exempt_tools_not_blocked_before_planning())
     asyncio.run(test_non_exempt_tool_allowed_after_planning())
     asyncio.run(test_three_strikes_halts_with_runtime_error())
-    asyncio.run(test_plan_nudges_incremented_for_modify_tools())
+    asyncio.run(test_blocked_count_incremented_for_modify_tools())
     asyncio.run(test_final_result_exempt_does_not_increment_nudges())
     asyncio.run(test_keep_memory_exempt_does_not_increment_nudges())
     asyncio.run(test_write_file_blocked_before_planning())
     asyncio.run(test_replace_text_blocked_before_planning())
-    asyncio.run(test_has_planned_and_plan_nudges_initialized_in_post_init())
+    asyncio.run(test_has_planned_and_blocked_count_initialized_in_post_init())
     print("OK")

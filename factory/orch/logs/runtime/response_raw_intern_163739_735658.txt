@@ -1,1 +1,0 @@
-[tool-call] final_result({"task_id": "unknown", "status": "blocked", "files_changed": [], "diff_summary": "No changes made", "notes": "The request budget was exhausted before the task could be completed. I am BLOCKED and unable to finish the implementation. The expected outcome and deliverable cannot be provided without knowing the specific task context."})

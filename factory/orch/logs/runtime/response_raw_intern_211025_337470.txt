@@ -1,1 +1,0 @@
-[tool-call] final_result({"task_id": "unknown", "status": "blocked", "files_changed": [], "diff_summary": "No changes made", "notes": "Request budget exhausted before completing the task. Unable to finish the work. Please provide the task details or resume the previous task for completion."})

@@ -116,7 +116,7 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         self._read_ranges: set[tuple[str, str]] = set()
         self._seen: dict[str, str] = {}
         self._has_planned: bool = False
-        self._plan_nudges: int = 0
+        self._blocked_count: int = 0
         self._has_edited: bool = False
         self._remember_used: int = 0
 
@@ -147,8 +147,8 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
         if role == 'senior' and name in _SENIOR_BLOCKED:
             return _SENIOR_GUARD_MSG
         if name in _MODIFY_TOOLS and not self._has_planned:
-            self._plan_nudges += 1
-            if self._plan_nudges >= 3:
+            self._blocked_count += 1
+            if self._blocked_count >= 3:
                 raise RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")
             return "SYSTEM ERROR: You MUST call the 'remember' tool to record your step-by-step plan BEFORE using modification tools (replace_function, replace_text, write_file, add_constant, add_import, move_symbol, delete_file, rename_file)."
         if name == 'remember':
@@ -335,9 +335,9 @@ _DISCOVERY_TOOLS = {'investigate', 'search', 'list_files', 'get_file_symbols', '
 _SENIOR_ALLOWED = _DISCOVERY_TOOLS | {'read_file', 'verify_edit', 'remember', 'final_result'}
 _SENIOR_BLOCKED = {'replace_function', 'replace_text', 'write_file', 'delete_file', 'rename_file'}
 _SENIOR_GUARD_MSG = 'SYSTEM ERROR: Senior Architect tier is an AUDIT-ONLY role. Code edits must be applied by Intern/Engineer tiers. Use verify_edit to audit files and emit final_result.'
-READ_FILE_TOOLS = READ_ONLY_TOOLS + [read_file]
+READ_FILE_TOOLS = READ_ONLY_TOOLS + [read_file, verify_edit]
 _TOOL_BY_NAME = {}
-MODIFY_TOOLS = [write_file, replace_text, replace_function, add_constant, add_import, delete_file, rename_file, move_symbol, verify_edit]
+MODIFY_TOOLS = [write_file, replace_text, replace_function, add_constant, add_import, delete_file, rename_file, move_symbol]
 TOOL_REGISTRY: dict[str, list] = {'read-only': READ_ONLY_TOOLS, 'AST-edit': READ_FILE_TOOLS + MODIFY_TOOLS, 'CLI-wrapper': READ_FILE_TOOLS + MODIFY_TOOLS, 'python-first-then-agent': READ_ONLY_TOOLS}
 TOOL_REGISTRY_KEYS = {f.__name__ for funcs in TOOL_REGISTRY.values() for f in funcs}
 _TOOL_BY_NAME.update({f.__name__: f for funcs in TOOL_REGISTRY.values() for f in funcs})
