@@ -1,11 +1,9 @@
 {
-  "task_id": "a101k",
-  "status": "done",
-  "files_changed": [
-    "factory/temp/factory/infra/validation.py"
-  ],
-  "diff_summary": "Refactored red_team_passed (CC=6→3) by extracting three private helpers: _has_blocker_findings (CC=1), _has_audit_data (CC=2), _has_unresolved_global_blocker (CC=3). Public signature unchanged.",
-  "notes": "All CC checks pass (red_team_passed=3, all helpers ≤3). No other functions modified.",
+  "task_id": "unknown",
+  "status": "blocked",
+  "files_changed": [],
+  "diff_summary": "No task was provided to work on.",
+  "notes": "The user indicated that the request budget was exhausted without finishing, but no specific task or question was provided in the conversation. There is nothing to return as a result.",
   "ruff_ok": true,
   "pyright_ok": true,
   "exec_ok": true,

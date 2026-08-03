@@ -795,23 +795,11 @@ async def run_tier(
         if fn_name in locked_functions:
             continue
 
-        fn_already_passes = False
-        for staged_path in staged_paths:
-            result = verify_edit(staged_path, fn_name)
-            if not result:
-                continue
-            parsed = json.loads(result) if result else {}
-            funcs = parsed.get("functions", [])
-            target_fn_data = next((f for f in funcs if f.get("function") == fn_name), None)
-            if target_fn_data and target_fn_data.get("passed", False) and target_fn_data.get("cc", 0) <= 5:
-                fn_already_passes = True
-                break
-        if fn_already_passes:
-            locked_functions.add(fn_name)
-            if staged_paths:
-                _persist_checkpoint(staged_paths[0], fn_name, locked_functions)
-            print(f"[conductor -> {tier}] Locked in function {fn_name} (CC <= 5)", flush=True)
-            continue
+        # FAIL-LOUDLY FIX: Do NOT auto-lock functions based on stale staged file CC.
+        # The ONLY acceptable pre-check is whether the function was ALREADY
+        # locked in via checkpoint_state.json in a prior completed job.
+        # If the agent did not explicitly edit the function in THIS run,
+        # verify_edit must confirm the current state -- not a stale file.
 
         ast_block = _build_isolated_ast_block(target_fn=fn_name)
         if ast_block:
@@ -825,6 +813,24 @@ async def run_tier(
             run_brief = await compact_context_if_needed(run_brief)
             state_dict["brief"] = run_brief
             out = await do_role(tier, task, bd, history, exchange, pass_counter, prior, state_dict)
+
+            # FAIL-LOUDLY GATE: if the agent returned a blocked/failed status, HALT immediately.
+            # The agent output must be a valid JSON dict with status == "done".
+            # If status is "blocked" or any other non-"done" value, the agent did not complete
+            # its task -- do NOT proceed to verification or escalate to the next tier.
+            import json as _json
+            try:
+                _agent_result = _json.loads(out)
+                if isinstance(_agent_result, dict) and _agent_result.get("status") != "done":
+                    _agent_notes = _agent_result.get("notes", _agent_result.get("error", ""))
+                    raise RuntimeError(
+                        f"[HALT] {tier} tier: agent returned status "
+                        f"{repr(_agent_result.get('status'))} (expected 'done'). "
+                        f"Notes: {_agent_notes}. "
+                        f"HALTING -- do not escalate to next tier or proceed with verification."
+                    )
+            except (ValueError, TypeError):
+                pass  # not JSON output -- acceptable for free-form agent output
             if record_exchange and tier in EXCHANGE_ROLES:
                 append_exchange_turn(exchange, pass_counter, tier, out, bd)
 

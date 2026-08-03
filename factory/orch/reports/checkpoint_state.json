@@ -1,7 +1,7 @@
 {
   "locked_functions": [
-    "red_team_passed"
+    "_run_verify_edit"
   ],
-  "staged_path": "factory/temp/factory/infra/validation.py",
-  "function_name": "red_team_passed"
+  "staged_path": "factory/temp/factory/infra/pipeline.py",
+  "function_name": "_run_verify_edit"
 }
