@@ -1,5 +1,0 @@
-[tool-call] read_file({"end_line":50,"start_line":1,"relative_path":"factory/temp/src2/forecast_store.py"})
-
-[tool-call] read_file({"relative_path":"factory/temp/src2/forecast_store.py","end_line":70,"start_line":50})
-
-[tool-call] final_result({"ruff_ok":true,"verdict_diff":"All 5 functions refactored to CC <= 5 with extracted helper functions and match/case dispatch.","dep_pointers":[],"notes":"All 5 target functions (_format_advisory_value, _get_fallback_narrative, _synthesize_and_save_daily_forecast, _extract_trigger_labels, validate_promo_code) and extracted helpers in src2/ have CC <= 5. Syntax, AST structure, ruff, and pyright verifications pass cleanly.","status":"done","pyright_ok":true,"task_id":"reduce-cc-5functions-3files","files_changed":["src2/agents.py","src2/forecast_store.py","src2/billing.py"],"verdict_errors":"","diff_summary":"Refactored 5 functions across agents.py, forecast_store.py, and billing.py to maintain CC <= 5 using guard clauses, match/case dispatch, and extracted helper functions.","exec_ok":true})

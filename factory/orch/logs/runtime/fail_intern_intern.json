@@ -1,7 +1,0 @@
-{
-  "phase": "intern",
-  "role": "intern",
-  "error": "UsageLimitExceeded: The next request would exceed the request_limit of 20. Consider raising the limit, or see the docs on usage limits for budget-aware patterns: https://ai.pydantic.dev/agent/#usage-limits",
-  "request_limit": 20,
-  "messages": []
-}
