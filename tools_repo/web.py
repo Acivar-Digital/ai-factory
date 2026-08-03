@@ -333,7 +333,7 @@ async def main():
     import sys
 
     if len(sys.argv) < 2:
-        print('Usage: uv run python factory/tools/web.py "query"')
+        print('Usage: uv run python tools_repo/web.py "query"')
         sys.exit(1)
 
     query = sys.argv[1]
