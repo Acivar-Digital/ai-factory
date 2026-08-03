@@ -131,3 +131,37 @@ PYTHONPATH=/home/yapilwsl/arthityap uv run python tools_repo/search.py "session 
 - **(B)** Seed `baziforecaster_docs` with .md indexing (extra `index_repository` call)
 
 Awaiting your answer to Q1 before proceeding.
+
+---
+
+## Assessment: baziforecaster/admin/tools/ → ai-factory factory/tools/
+
+**Result: Nothing to copy.** All shared files are already adapted for ai-factory.
+
+### Files already shared (adapted for ai-factory)
+| File | Status |
+|---|---|
+| `search.py` | ✅ Already adapted (uses `factory/infra/control.py`, `CONTROL_SHEET["codebase_model"]`) |
+| `investigate.py` | ✅ Already adapted |
+| `index_repository.py` | ✅ Already adapted |
+| `_codebase_common.py` | ✅ Already adapted (ai-factory version has `_resolve_target_root()` — newer than bazi) |
+| `guardrail_check.py` | ✅ ai-factory version is newer (has `diff_vs_orig()`, `_changed_line_set`) |
+| `query_knowledge_graph.py` | ✅ ai-factory version is newer (self-contained, greenfield support) |
+| `smoke_test.py` | ✅ Trivial diff (path comment only) |
+| `web.py` | ✅ Trivial diff (CONTROL_SHEET access style) |
+
+### Baziforecaster-exclusive files (NOT portable)
+| File | Reason |
+|---|---|
+| `_gen_utils.py` | Broken in source (truncated at `PYEOF`), code-gen script for baziforecaster's utils.py |
+| `load_schema_gate.py` | Coupled to `admin/orchestrator/temp` (baziforecaster-only path) |
+| `mcp_git_guardrail.py` | Imports `TEST.agent_guardrail` (baziforecaster-only) |
+| `graph_health.py` | Imports `infra.codebase.mcp_codebase.graph_health` (baziforecaster infra) |
+| `query_knowledge_graph.py` | Thin wrapper over `infra.codebase.mcp_codebase` (baziforecaster infra) |
+
+### What was actually built
+- `tools_repo/` folder created at `baziforecaster/tools_repo/` with `controls.py`, `search.py`, `index_repository.py`
+- Collection `factory` created in Qdrant (1515+ points, green, zero 422 errors)
+- BGEM3 batch-size fix applied to `infra/codebase/indexer.py` + `indexer_core.py` (`MAX_BATCH_SIZE=32`)
+- `ai-factory` added to `WATCHED_REPOS` in `config.py`, `ai-factory` → `factory` collection mapping in `EXTRA_COLLECTIONS`
+- Daemon restarted, indexing live
