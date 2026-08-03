@@ -274,7 +274,7 @@ class GuardToolset(WrapperToolset[AgentDepsT]):
             return self._warning(name)
         return _run
 
-ROLE_TOOL_BUDGET: dict[str, int] = {'planner': 10, 'planner_sup': 10, 'coder': 75}
+ROLE_TOOL_BUDGET: dict[str, int] = {'coder': 75}
 _FATAL_BUDGET = 'FATAL: Tool budget exhausted. Emit your final result now (stop calling tools).'
 
 def _tool_budget_for(role: str) -> int:
@@ -287,10 +287,6 @@ def _coder_budget_for(num_files: int) -> int:
 
 def _tool_budget_instruction(budget: int) -> str:
     return f"\n\nTOOL BUDGET: You are allocated {budget} tool calls for this task. After every tool call you will see a '[TOOL CALL a/{budget}]' marker reporting how many calls you have used. When you approach or reach {budget}, STOP calling tools and emit your final result immediately."
-
-def assert_planner_emitted(budget_exhausted: bool, produced_output: bool, role: str) -> None:
-    if budget_exhausted and (not produced_output):
-        raise RuntimeError(f'[PLANNER] tool budget exhausted ({ROLE_TOOL_BUDGET.get(role, DEFAULT_TOOL_BUDGET)}) without a final_result — HALT')
 
 def guard_tools(tools: list[Callable[..., Any]], budget: int=DEFAULT_TOOL_BUDGET, read_budget: int=READ_BUDGET, read_file_budget: int=CODER_READ_FILE_BUDGET) -> GuardToolset:
     base = FunctionToolset(tools, max_retries=20) if tools else FunctionToolset([], max_retries=20)

@@ -52,7 +52,7 @@ class UserStory(BaseModel):
 
 
 class RubricCell(BaseModel):
-    """One cell of the planner / red-team RubricCube.
+    """One cell of the 3-tier pipeline RubricCube.
 
     A `blocker` cell that is not `passed` fails the go/no-go gate.
     """
@@ -111,15 +111,15 @@ class ApprovedTask(SubTaskBrief):
 
     @model_validator(mode="after")
     def _require_coder_id(self) -> "ApprovedTask":
-        """Planner OWNS coder naming (ticket baziforecaster-tqpgf): ids MUST be
+        """The orchestrator OWNS coder naming (ticket baziforecaster-tqpgf): ids MUST be
         `coderNN` so per-coder memory files, status-board lines,
-        and planner ids are the identical string. Non-conforming ids HALT + re-plan.
+        and orchestrator ids are the identical string. Non-conforming ids HALT + re-plan.
         """
         if not _CODER_ID_RE.match(self.id):
             raise ValueError(
                 f"ApprovedTask.id {self.id!r} must match the format 'coderNN' "
                 f"(e.g. 'coder01', 'coder02'). Never 'task_N', never concatenated, "
-                f"never non-numeric. The planner owns this naming."
+                f"never non-numeric. The orchestrator owns this naming."
             )
         return self
 
@@ -133,7 +133,7 @@ class ApprovedTask(SubTaskBrief):
 class WorkGroup(BaseModel):
     id: str
     depends_on: list[str] = []  # empty = MECE; else dependent (C=A+C)
-    tasks: list[ApprovedTask] = Field(min_length=1)  # Planner asserts these are file-disjoint
+    tasks: list[ApprovedTask] = Field(min_length=1)  # The task spec asserts these are file-disjoint
 
 
 class ParallelisableWorkplan(BaseModel):
@@ -149,7 +149,7 @@ class ToolPreferenceItem(BaseModel):
     )
 
 
-class Strategy(BaseModel):  # Planner is the PM — emits this (Q2/Q8/Q9)
+class Strategy(BaseModel):  # The task spec is the PM — emits this (Q2/Q8/Q9)
     how_to_fix: str
     tool_preference: list[ToolPreferenceItem] = Field(
         default_factory=list,

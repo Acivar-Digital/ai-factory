@@ -1,0 +1,21 @@
+{
+  "bd_id": "default",
+  "run_dir": "/home/yapilwsl/arthityap/ai-factory/factory/orch/reports/run_20260802T221037_default",
+  "current_phase": "senior",
+  "phase_attempts": {
+    "intern": 1,
+    "engineer": 1,
+    "senior": 1
+  },
+  "phase_reexec": 0,
+  "tasks": {},
+  "phase_summaries": {},
+  "global_alignment": "",
+  "draft": null,
+  "approved": null,
+  "batch": null,
+  "code_passed": null,
+  "audit": null,
+  "git": null,
+  "timestamp": "20260802T221037"
+}

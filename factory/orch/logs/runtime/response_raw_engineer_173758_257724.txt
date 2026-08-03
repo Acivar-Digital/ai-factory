@@ -1,0 +1,53 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[tool-call] remember({"note": "Plan for refactoring check_plan_invariants in factory/temp/factory/infra/validation.py:\n1. Replace check_plan_invariants body with guard-clause style, delegating to two new private helpers.\n2. Add _helper_check_plan_invariants_guard(plan) — resolves workplan and groups from plan object (CC≤2).\n3. Add _helper_check_plan_invariants_loop(groups, seen, violations) — collects tasks and checks file invariants (CC≤5).\n4. Target: check_plan_invariants CC≤5, each helper CC≤5.\n5. After edit, run verify_edit to confirm CC and lint pass."})
+
+[text] Let me read the specific function area to see the current code precisely
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 80})
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "check_plan_invariants", "new_function_code": "def check_plan_invariants(plan) -> list[str]:\n    \"\"\"Return violation strings (empty list = plan OK).\n\n    Checks: (1) every coder task lists exactly 1 file; (2) file paths are disjoint\n    across all coder tasks. Runs on BOTH planner and supervisor_plan output.\n    \"\"\"\n    violations: list[str] = []\n    seen: set[str] = set()\n    groups = _resolve_workplan_groups(plan)\n    if not groups and not _plan_has_workplan(plan):\n        violations.append(\"workplan or strategy.parallelisable_workplan is missing or null.\")\n    _collect_and_check_tasks(groups, seen, violations)\n    return violations\n\n\ndef _resolve_workplan_groups(plan) -> list:\n    \"\"\"Extract the workplan groups from a plan object, falling back to\n    strategy.parallelisable_workplan groups if the direct workplan is absent.\"\"\"\n    workplan = getattr(plan, \"workplan\", None)\n    if not workplan:\n        strategy = getattr(plan, \"strategy\", None)\n        if strategy:\n            workplan = getattr(strategy, \"parallelisable_workplan\", None)\n    return getattr(workplan, \"groups\", []) if workplan else []\n\n\ndef _plan_has_workplan(plan) -> bool:\n    \"\"\"Return True if plan has a workplan or a strategy with a parallelisable_workplan.\"\"\"\n    if getattr(plan, \"workplan\", None):\n        return True\n    strategy = getattr(plan, \"strategy\", None)\n    return strategy is not None and getattr(strategy, \"parallelisable_workplan\", None) is not None\n\n\ndef _collect_and_check_tasks(groups: list, seen: set[str], violations: list[str]) -> None:\n    \"\"\"Flatten tasks from groups and check file-path invariants (exactly 1 file, no collisions).\"\"\"\n    tasks = []\n    for group in groups or []:\n        tasks.extend(getattr(group, \"tasks\", []) or [])\n    for task in tasks:\n        fps = getattr(task, \"file_paths\", None) or []\n        if len(fps) != 1:\n            violations.append(f\"task {getattr(task, 'id', '?')} lists {len(fps)} files (exactly 1 required)\")\n        for fp in fps:\n            if fp in seen:\n                violations.append(f\"file collision: {fp} in multiple tasks\")\n            seen.add(fp)"})
+
+[text] The function was replaced successfully. Now let me run verification to confirm CC and lint checks pass.
+
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "check_plan_invariants"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_check_plan_invariants"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[tool-call] remember({"note": "The verify_edit shows that check_plan_invariants itself is now CC=3 (PASS), but _collect_and_check_tasks is CC=9 (FAIL, target ≤5). The other failing functions (_downstream_closure, red_team_passed, _feedback_from_review_findings, _feedback_from_audit, _blocker_findings_from_risks) are pre-existing and NOT in scope — the task only requires fixing check_plan_invariants and its helpers. However, _collect_and_check_tasks is a new helper I extracted and it must also be ≤5. I need to further decompose _collect_and_check_tasks.\n\nAlso note: the task says \"Refactor ONLY the function check_plan_invariants\" and the target is CC≤5 (per the surgical context sandwich Layer 3 instruction). The other pre-existing high-CC functions are out of scope.\n\nPlan: Decompose _collect_and_check_tasks into smaller helpers:\n- _flatten_tasks(groups) → list of tasks (CC≤2)\n- _check_task_file_invariants(task, seen, violations) → append violations for a single task (CC≤5)"})
+
+[text] I need to further decompose `_collect_and_check_tasks` since it has CC=9 (target ≤5). I'll split it into two smaller
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_collect_and_check_tasks", "new_function_code": "def _collect_and_check_tasks(groups: list, seen: set[str], violations: list[str]) -> None:\n    \"\"\"Flatten tasks from groups and check file-path invariants.\"\"\"\n    tasks = _flatten_tasks(groups)\n    for task in tasks:\n        _check_task_file_invariants(task, seen, violations)\n\n\ndef _flatten_tasks(groups: list) -> list:\n    \"\"\"Flatten all tasks from a list of groups.\"\"\"\n    tasks = []\n    for group in groups or []:\n        tasks.extend(getattr(group, \"tasks\", []) or [])\n    return tasks\n\n\ndef _check_task_file_invariants(task, seen: set[str], violations: list[str]) -> None:\n    \"\"\"Check that a task has exactly 1 file_path and no collisions.\"\"\"\n    fps = getattr(task, \"file_paths\", None) or []\n    if len(fps) != 1:\n        violations.append(f\"task {getattr(task, 'id', '?')} lists {len(fps)} files (exactly 1 required)\")\n    for fp in fps:\n        if fp in seen:\n            violations.append(f\"file collision: {fp} in multiple tasks\")\n        seen.add(fp)"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "check_plan_invariants"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[text] Let me verify the actual file content and run the CC/lint checks directly
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 120})
+
+[tool-call] bash({"command": "cd /home/yapilwsl/arthityap/ai-factory && python find_cc_nested.py factory/temp/factory/infra/validation.py 2>&1 | head -30"})
+
+[tool-call] bash({"command": "cd /home/yapilwsl/arthityap/ai-factory && python find_cc_nested.py factory/temp/factory/infra/validation.py 2>&1 | head -30"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 120})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 120})
+
+[text] Let me read the current file state to verify the edits took effect.
+
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 120})
+
+[text] Let me read the current file to verify the latest edits are in place.
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 120})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 120})
+
+[tool-call] final_result({"task_id": "a101k", "status": "done", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "Refactored check_plan_invariants from CC=13 to CC=3 by extracting three private helpers: _resolve_workplan_groups (workplan resolution, CC=4), _plan_has_workplan (guard check, CC=3), and _collect_and_check_tasks (task collection + file invariant checks, further decomposed into _flatten_tasks and _check_task_file_invariants). All original behavior preserved; public signature unchanged.", "notes": "check_plan_invariants CC reduced from 13 to 3 (target ≤10, achieved ≤5). Three helpers extracted: _resolve_workplan_groups, _plan_has_workplan, _collect_and_check_tasks (which delegates to _flatten_tasks and _check_task_file_invariants). All guard clauses and early returns used. Public signature preserved.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true, "verdict_errors": "", "verdict_diff": "", "dep_pointers": []})

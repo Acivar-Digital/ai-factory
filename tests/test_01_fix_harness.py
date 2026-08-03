@@ -4,7 +4,6 @@ Guards:
   - smoke_test.py type-construction gate (BUG 2: DictMap[str] rejecting model instances)
   - TaskResult.ValidationVerdict fields (ruff/pyright/exec flags + dep_pointers)
   - guardrail_check.discover_dependencies + typecheck_union use bounded union pyright
-  - review/red_team prompt templates forbid blind 'trust' + allow dependency tracing
   - user_prompt.md DictMap example uses DictMap[ExternalPillarTrigger]
 """
 from __future__ import annotations
@@ -125,22 +124,6 @@ def test_typecheck_union_bounds(tmp_path):
     f2.write_text("hello = 1\n")
     ok, _ = gc.typecheck_union([f1, f2])
     assert isinstance(ok, bool)
-
-
-# --- Task 7: prompt-template wording ----------------------------------------
-
-def test_review_template_forbids_blind_trust():
-    tpl = (TEMPLATES / "supervisor_review.yaml").read_text()
-    assert "Accept summaries as truth" not in tpl
-    assert "only as far as you can verify" in tpl
-    assert "challenge the coder" in tpl
-
-
-def test_red_team_template_forbids_blind_trust():
-    tpl = (TEMPLATES / "red_team.yaml").read_text()
-    assert "Accept summaries as truth" not in tpl
-    assert "only as far as you can verify" in tpl
-
 
 # --- Task 8: user_prompt.md DictMap example ----------------------------------
 

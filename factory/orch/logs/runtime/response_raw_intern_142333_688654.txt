@@ -1,0 +1,62 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[tool-call] remember({"note": "Working on refactoring `_downstream_closure` in factory/temp/factory/infra/validation.py to reduce CC from 9 to ≤5. The full scope includes 5 functions across 3 files (validation.py, gatekeeper.py, ledger.py), but current instruction is specifically for `_downstream_closure`. Need to extract helper functions to decompose the logic into pieces with CC≤5 each."})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 200})
+
+[text] Let me read the full file to understand the exact code structure
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 60, "end_line": 86})
+
+[text] Now I have the exact function code. Let me refactor `_downstream_closure` by extracting two helpers to reduce CC to ≤5.
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_downstream_closure", "new_function_code": "def _downstream_closure(failing: set[str], groups: list[WorkGroup]) -> set[str]:\n    \"\"\"Forward-reachable task set from `failing`: each failing task plus every\n    task in any downstream (dependent) WorkGroup. Bounds re-execution so a bad\n    upstream task re-runs its dependents, but untouched work is preserved.\"\"\"\n    task_group, by_id, dependents = _build_task_group_and_dependents(groups)\n    out: set[str] = set(failing)\n    _traverse_downstream(failing, task_group, by_id, dependents, out)\n    return out\n\n\ndef _build_task_group_and_dependents(groups: list[WorkGroup]) -> tuple[dict[str, str], dict[str, WorkGroup], dict[str, list[str]]]:\n    task_group: dict[str, str] = {}\n    by_id = {g.id: g for g in groups}\n    dependents: dict[str, list[str]] = {g.id: [] for g in groups}\n    for g in groups:\n        for t in g.tasks:\n            task_group[t.id] = g.id\n        for d in g.depends_on:\n            if d in dependents:\n                dependents[d].append(g.id)\n    return task_group, by_id, dependents\n\n\ndef _traverse_downstream(\n    failing: set[str],\n    task_group: dict[str, str],\n    by_id: dict[str, WorkGroup],\n    dependents: dict[str, list[str]],\n    out: set[str],\n) -> None:\n    stack = [task_group[t] for t in failing if t in task_group]\n    seen: set[str] = set()\n    while stack:\n        gid = stack.pop()\n        if gid in seen:\n            continue\n        seen.add(gid)\n        for dep in dependents[gid]:\n            for t in by_id[dep].tasks:\n                out.add(t.id)\n            stack.append(dep)"})
+
+[text] Now let me verify the edit passes ruff and check CC for all new functions.
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_downstream_closure"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_build_task_group_and_dependents"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_traverse_downstream"})
+
+[text] The `_traverse_downstream` function has CC=6, which is still too high. I need to extract the inner loop body into another helper.
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_traverse_downstream", "new_function_code": "def _traverse_downstream(\n    failing: set[str],\n    task_group: dict[str, str],\n    by_id: dict[str, WorkGroup],\n    dependents: dict[str, list[str]],\n    out: set[str],\n) -> None:\n    stack = [task_group[t] for t in failing if t in task_group]\n    seen: set[str] = set()\n    while stack:\n        gid = stack.pop()\n        if gid in seen:\n            continue\n        seen.add(gid)\n        _process_dependents(gid, dependents, by_id, out, stack)\n\n\ndef _process_dependents(\n    gid: str,\n    dependents: dict[str, list[str]],\n    by_id: dict[str, WorkGroup],\n    out: set[str],\n    stack: list[str],\n) -> None:\n    for dep in dependents[gid]:\n        for t in by_id[dep].tasks:\n            out.add(t.id)\n        stack.append(dep)"})
+
+[text] Now let me verify all three functions and run ruff.
+
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_traverse_downstream"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_process_dependents"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_downstream_closure"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_build_task_group_and_dependents"})
+
+[text] The `_traverse_downstream` still has CC=6. I need to extract the list comprehension with its filter into a helper to reduce it
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_traverse_downstream", "new_function_code": "def _traverse_downstream(\n    failing: set[str],\n    task_group: dict[str, str],\n    by_id: dict[str, WorkGroup],\n    dependents: dict[str, list[str]],\n    out: set[str],\n) -> None:\n    stack = _init_stack(failing, task_group)\n    seen: set[str] = set()\n    while stack:\n        gid = stack.pop()\n        if gid in seen:\n            continue\n        seen.add(gid)\n        _process_dependents(gid, dependents, by_id, out, stack)\n\n\ndef _init_stack(failing: set[str], task_group: dict[str, str]) -> list[str]:\n    return [task_group[t] for t in failing if t in task_group]"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_traverse_downstream"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_init_stack"})
+
+[text] The verifier still reports CC=6 for `_traverse_downstream`. I need to extract the while-loop body into a helper to reduce it further.
+
+
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_traverse_downstream", "new_function_code": "def _traverse_downstream(\n    failing: set[str],\n    task_group: dict[str, str],\n    by_id: dict[str, WorkGroup],\n    dependents: dict[str, list[str]],\n    out: set[str],\n) -> None:\n    stack = _init_stack(failing, task_group)\n    seen: set[str] = set()\n    while stack:\n        gid = stack.pop()\n        _visit_group(gid, seen, dependents, by_id, out, stack)\n\n\ndef _visit_group(\n    gid: str,\n    seen: set[str],\n    dependents: dict[str, list[str]],\n    by_id: dict[str, WorkGroup],\n    out: set[str],\n    stack: list[str],\n) -> None:\n    if gid in seen:\n        return\n    seen.add(gid)\n    _process_dependents(gid, dependents, by_id, out, stack)"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_traverse_downstream"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_visit_group"})
+
+[text] Let me check the current file state and run ruff to confirm everything is clean.
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 100})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 130})
+
+[tool-call] final_result({"task_id": "epic-cc-reduction", "status": "done", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "Refactored `_downstream_closure` (CC=9→1) by extracting 3 helpers: `_build_task_group_and_dependents` (CC=5), `_traverse_downstream` (CC=2), `_visit_group` (CC=2), `_init_stack` (CC=2), `_process_dependents` (CC=3). All functions now have CC≤5.", "notes": "Refactored `_downstream_closure` in factory/temp/factory/infra/validation.py from CC=9 to CC=1 by decomposing into 5 private helper functions, each with CC≤5. The original function now delegates to `_build_task_group_and_dependents` and `_traverse_downstream`. The while-loop body was extracted to `_visit_group`, and the list comprehension with filter was extracted to `_init_stack`. The inner loop over dependents was extracted to `_process_dependents`. All signatures and type annotations preserved. No public function signatures were modified.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true, "verdict_diff": "Extracted _build_task_group_and_dependents, _traverse_downstream, _visit_group, _init_stack, and _process_dependents helpers from _downstream_closure to reduce CC from 9 to 1.", "verdict_errors": "", "dep_pointers": ["factory/temp/factory/infra/validation.py"]})

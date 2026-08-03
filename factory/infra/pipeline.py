@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import json
 import os
 import re
-import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -22,10 +20,7 @@ from factory.infra.agent import (
     load_skill, _load_role_messages, _recover_role_output, _coder_agent_id,
 )
 from factory.infra.control import (
-    REPO_ROOT, MAX_AGENTS, TodoList, TodoItem,
-)
-from factory.infra.execution import (
-    run_execute_phase,
+    REPO_ROOT, TodoList, TodoItem,
 )
 from factory.infra.virtual_ast_buffer import (
     extract_file_skeleton_and_imports,
@@ -33,14 +28,13 @@ from factory.infra.virtual_ast_buffer import (
 )
 from factory.infra.exchange import (
     update_status_board, save_exchange,
-    format_exchange, append_exchange_turn, _model_to_md, _render_verdict_block,
-    _render_upfront_diffs,
+    format_exchange, append_exchange_turn,
     _render_history_md,
     ExchangeTurn,
 )
 from factory.infra.models import (
     ApprovedPlan, ApprovedTask, AuditResult, CodePassed,
-    DraftPlan, ExecutablePlan, GitResult, ReviewResult, TaskBatch, TaskResult, WorkGroup, ParallelisableWorkplan,
+    DraftPlan, ExecutablePlan, TaskBatch, WorkGroup, ParallelisableWorkplan,
 )
 from factory.infra.output_sanitizer import (
     clean_role_output, extract_model_json, extract_tool_call_payload,
@@ -49,10 +43,7 @@ from factory.infra.state import save_state, record_phase
 from factory.infra.context import compact_context_if_needed
 from factory.infra.tools import wrap_injected_context
 from factory.infra.tools_shell import verify_edit
-from factory.infra.validation import (
-    EXCHANGE_ROLES, MAX_RETRIES, PLAN_INVARIANT_RETRIES,
-    check_plan_invariants, _downstream_closure,
-)
+from factory.infra.validation import EXCHANGE_ROLES, PLAN_INVARIANT_RETRIES, check_plan_invariants
 
 RESUME_RE = re.compile(r"^Resume:\s*(true|false)\s*$", re.IGNORECASE)
 MAX_ATTEMPTS = 1
@@ -381,98 +372,10 @@ async def do_role(
         state_dict["seeded"] = True
 
     update_status_board(history, role, bd)
-    if role in ("planner", "supervisor_plan"):
-        brief_to_use = run_brief
-        for attempt in range(1, PLAN_INVARIANT_RETRIES + 1):
-            try:
-                out = await load_skill(role, brief_to_use, bd)
-                violations = []
-                if role == "planner":
-                    draft = clean_role_output(out, DraftPlan)
-                    violations = check_plan_invariants(draft) if draft else ["Plan is empty or malformed"]
-                else:
-                    plan_eval = clean_role_output(out, ApprovedPlan)
-                    draft_json = RAW_OUTPUTS.get("planner")
-                    draft = clean_role_output(draft_json, DraftPlan) if draft_json else None
-                    if plan_eval and draft:
-                        eval_map = {item.item_id: item for item in plan_eval.evaluations}
-                        merged_tasks = []
-                        for t in draft.subtasks:
-                            eval_item = eval_map.get(t.id)
-                            app_val = (eval_item.approved == "Yes") if eval_item else True
-                            notes_val = eval_item.comments if eval_item else ""
-                            merged_tasks.append(
-                                ApprovedTask(
-                                    id=t.id,
-                                    title=t.title,
-                                    file_paths=t.file_paths,
-                                    instruction=t.instruction,
-                                    acceptance=t.acceptance,
-                                    tool_preference=t.tool_preference,
-                                    evidence=t.evidence,
-                                    approved=app_val,
-                                    notes=notes_val,
-                                )
-                            )
-
-                        groups_merged = []
-                        for g in draft.strategy.parallelisable_workplan.groups:
-                            group_tasks = []
-                            for gt in g.tasks:
-                                eval_item = eval_map.get(gt.id)
-                                app_val = (eval_item.approved == "Yes") if eval_item else True
-                                notes_val = eval_item.comments if eval_item else ""
-                                group_tasks.append(
-                                    ApprovedTask(
-                                        id=gt.id,
-                                        title=gt.title,
-                                        file_paths=gt.file_paths,
-                                        instruction=gt.instruction,
-                                        acceptance=gt.acceptance,
-                                        tool_preference=gt.tool_preference,
-                                        evidence=gt.evidence,
-                                        approved=app_val,
-                                        notes=notes_val,
-                                    )
-                                )
-                            groups_merged.append(
-                                WorkGroup(
-                                    id=g.id,
-                                    depends_on=g.depends_on,
-                                    tasks=group_tasks,
-                                )
-                            )
-                        temp_plan = ExecutablePlan(
-                            epic=draft.epic,
-                            definition_of_done=draft.definition_of_done,
-                            acceptance_criteria=draft.acceptance_criteria,
-                            rubric_cube=draft.rubric_cube,
-                            summary=draft.summary,
-                            tasks=merged_tasks,
-                            alignment=draft.summary,
-                            workplan=ParallelisableWorkplan(groups=groups_merged),
-                            rejected_subtasks=[],
-                            strategy=draft.strategy,
-                            approved=True,
-                        )
-                        violations = check_plan_invariants(temp_plan)
-                    else:
-                        violations = ["No plan evaluation or DraftPlan found to check invariants."]
-
-                if violations:
-                    raise RuntimeError(f"Plan invariant violations: {violations}")
-                break
-            except Exception as e:
-                if attempt == PLAN_INVARIANT_RETRIES:
-                    raise
-                print(f"[gate] {role} attempt {attempt} failed: {e!r} -> replan", flush=True)
-                brief_to_use = run_brief + f"\n\n[INVARIANT VIOLATION] Your previous plan was rejected: {e!r}. Please ensure every task lists exactly 1 file, and file paths are disjoint across all tasks."
-                continue
-    else:
-        try:
-            out = await load_skill(role, run_brief, bd)
-        except UnexpectedModelBehavior as e:
-            out = _recover_from_unexpected_behavior(role, e)
+    try:
+        out = await load_skill(role, run_brief, bd)
+    except UnexpectedModelBehavior as e:
+        out = _recover_from_unexpected_behavior(role, e)
 
     out_md = PHASE_SUMMARIES.get(role, out)
     history.append((role, out_md))
@@ -1253,318 +1156,6 @@ def _checkpoint(phase: str, st: Any, stop_after: str | None, bd: str, exchange: 
         update_status_board(history, None, bd)
         return True
     return False
-
-
-async def run_code_review_gate(
-    plan: ApprovedPlan,
-    run_dir: Path,
-    coder_fn,
-    reviewer_fn,
-    exchange: list[ExchangeTurn] | None = None,
-    pass_counter: dict[str, int] | None = None,
-    bd: str = "",
-    history: list[tuple[str, str]] | None = None,
-) -> TaskBatch:
-    """Execute the DAG, have supervisor_review mark failures, then re-execute
-    only the failing tasks + their downstream dependents (bounded by the DAG),
-    up to MAX_RETRIES. Returns the final TaskBatch."""
-    sem = asyncio.Semaphore(MAX_AGENTS)
-    print(f"\n=== [conductor -> coder] (DAG initial dispatch: {len(plan.workplan.groups)} groups) ===", flush=True)
-    results = await run_execute_phase(plan, run_dir, sem, coder_fn, exchange=exchange, pass_counter=pass_counter, bd=bd, history=history, strict=False)
-    batch = TaskBatch(results=list(results.values()))
-    for attempt in range(1, MAX_RETRIES + 1):
-        print(f"\n=== [conductor -> supervisor_review] (attempt {attempt}) ===", flush=True)
-        update_status_board(history if history is not None else [], "supervisor_review", bd)
-        review_brief = (
-            _render_upfront_diffs(batch)
-            + "Review the executed tasks against their acceptance criteria.\n"
-            "Emit CodePassed with `findings` keyed by `task_id` "
-            "(severity 'blocker' = must recode).\n\n"
-            "PROPOSE-ONLY: the coder staged proposed edits under "
-            "factory/temp/ (mirroring repo paths, e.g. "
-            "temp/src2/core/schemas/unified.py). Read the staged files there to "
-            "verify against the live src2/ originals — the live tree was NOT "
-            "modified.\n\n"
-            + wrap_injected_context(
-                f"GLOBAL ALIGNMENT:\n{plan.alignment}\n\n"
-                f"TASK BATCH RESULTS:\n{_model_to_md(batch)}",
-                label="review_context",
-            )
-            + "\n"
-            + _render_verdict_block(batch)
-            + "\n"
-        )
-        rev_out = await reviewer_fn(review_brief)
-        append_exchange_turn(exchange, pass_counter, "supervisor_review", rev_out, bd)
-        try:
-            review = clean_role_output(rev_out, ReviewResult)
-        except RuntimeError as e:
-            raise RuntimeError(
-                f"[HALT] supervisor_review output unparseable after sanitize: {e}"
-            ) from e
-        passed_ = True
-        failing = set()
-        review_feedback = {}
-        for ev in review.evaluations:
-            app = ev.approved
-            if app == "No":
-                passed_ = False
-                failing.add(ev.item_id)
-                review_feedback[ev.item_id] = f"- [Review Feedback] {ev.comments}"
-        if passed_:
-            print(f"[gate] supervisor_review attempt {attempt}: PASS -> proceed")
-            return batch
-        if attempt == MAX_RETRIES:
-            print(f"[WARN] [gate] supervisor_review attempt {attempt}: FORCED PASS -> overriding evaluations and proceeding", flush=True)
-            for ev in review.evaluations:
-                if ev.approved == "No":
-                    ev.approved = "Yes"
-            return batch
-        rerun = _downstream_closure(failing, plan.workplan.groups)
-        print(f"[gate] supervisor_review attempt {attempt}: FAIL on {sorted(failing)} -> rerun {sorted(rerun)}")
-        results = await run_execute_phase(
-            plan,
-            run_dir,
-            sem,
-            coder_fn,
-            prior=results,
-            rerun_ids=rerun,
-            feedback=review_feedback,
-            exchange=exchange,
-            pass_counter=pass_counter,
-            bd=bd,
-            history=history,
-            strict=False,
-        )
-        batch = TaskBatch(results=list(results.values()))
-    return batch
-
-
-async def run_red_team_gate(
-    plan: ApprovedPlan,
-    run_dir: Path,
-    coder_fn,
-    reviewer_fn,
-    prior_batch: dict[str, TaskResult],
-    exchange: list[ExchangeTurn] | None = None,
-    pass_counter: dict[str, int] | None = None,
-    bd: str = "",
-    history: list[tuple[str, str]] | None = None,
-) -> TaskBatch:
-    """Red-team audit of the executed batch, then re-execute only the failing
-    tasks + their downstream dependents (bounded by the DAG), up to MAX_RETRIES."""
-    sem = asyncio.Semaphore(MAX_AGENTS)
-    print(f"\n=== [conductor -> coder] (red-team DAG dispatch: {len(plan.workplan.groups)} groups) ===", flush=True)
-    results = await run_execute_phase(
-        plan,
-        run_dir,
-        sem,
-        coder_fn,
-        prior=prior_batch,
-        exchange=exchange,
-        pass_counter=pass_counter,
-        bd=bd,
-        history=history,
-        strict=False,
-    )
-    batch = TaskBatch(results=list(results.values()))
-    for attempt in range(1, MAX_RETRIES + 1):
-        print(f"\n=== [conductor -> red_team] (attempt {attempt}) ===", flush=True)
-        update_status_board(history if history is not None else [], "red_team", bd)
-        review_brief = (
-            _render_upfront_diffs(batch)
-            + "Audit the executed code batch against the red-team rubric.\n"
-            "Emit AuditResult with `rubric_cube` (any blocker cell not passed = FAIL) "
-            "and `findings` keyed by `task_id` (severity 'blocker' = must recode).\n\n"
-            "PROPOSE-ONLY: the coder staged proposed edits under "
-            "factory/temp/ (mirroring repo paths, e.g. "
-            "temp/src2/core/schemas/unified.py). Read the staged files there to "
-            "verify against the live src2/ originals — the live tree was NOT "
-            "modified.\n\n"
-            + wrap_injected_context(
-                f"GLOBAL ALIGNMENT:\n{plan.alignment}\n\n"
-                f"TASK BATCH RESULTS:\n{_model_to_md(batch)}",
-                label="audit_context",
-            )
-            + "\n"
-            + _render_verdict_block(batch)
-            + "\n"
-        )
-        rev_out = await reviewer_fn(review_brief)
-        append_exchange_turn(exchange, pass_counter, "red_team", rev_out, bd)
-        try:
-            audit = clean_role_output(rev_out, AuditResult)
-        except RuntimeError as e:
-            raise RuntimeError(
-                f"[HALT] red_team output unparseable after sanitize: {e}"
-            ) from e
-        known_task_ids = {t.id for g in plan.workplan.groups for t in g.tasks}
-        passed_ = True
-        failing = set()
-        global_failures = []
-        red_feedback = {}
-
-        file_to_coder: dict[str, str] = {}
-        for g in plan.workplan.groups:
-            for t in g.tasks:
-                for fp in t.file_paths:
-                    file_to_coder[fp] = t.id
-        rubric_coder: dict[str, list[str]] = {}
-        for cell in plan.rubric_cube.cells:
-            if cell.coder_idents:
-                rubric_coder.setdefault(cell.dimension, cell.coder_idents)
-                rubric_coder.setdefault(cell.criterion, cell.coder_idents)
-
-        def resolve_item(item_id: str, comment: str) -> list[str]:
-            if item_id in known_task_ids:
-                return [item_id]
-            blob = f"{item_id} {comment}"
-            hits = {file_to_coder[fp] for fp in file_to_coder if fp in blob}
-            if hits:
-                return sorted(hits)
-            base = os.path.basename(item_id)
-            hits = {c for fp, c in file_to_coder.items() if os.path.basename(fp) == base}
-            if hits:
-                return sorted(hits)
-            if item_id in rubric_coder:
-                return rubric_coder[item_id]
-            return []
-
-        for ev in audit.evaluations:
-            app = ev.approved
-            if app == "No":
-                passed_ = False
-                matched_tasks = resolve_item(ev.item_id, ev.comments or "")
-
-                if matched_tasks:
-                    for tid in matched_tasks:
-                        failing.add(tid)
-                        red_feedback[tid] = f"- [RED-TEAM Feedback] (item {ev.item_id}) {ev.comments}"
-                else:
-                    global_failures.append(ev.item_id)
-        if global_failures and not failing:
-            if attempt == MAX_RETRIES:
-                print(
-                    f"[WARN] [gate] red_team attempt {attempt}: UNRESOLVABLE items force-passed: "
-                    + ", ".join(global_failures)
-                    + " (propose-only, unpushed)",
-                    flush=True,
-                )
-            else:
-                print(
-                    f"[WARN] [gate] red_team attempt {attempt}: UNRESOLVABLE items "
-                    + ", ".join(global_failures)
-                    + " — will force-pass on final attempt.",
-                    flush=True,
-                )
-                continue
-        if passed_:
-            print(f"[gate] red_team attempt {attempt}: PASS -> proceed to ops")
-            return batch
-        update_status_board(history if history is not None else [], "red_team", bd)
-        if attempt == MAX_RETRIES:
-            print(f"[WARN] [gate] red_team attempt {attempt}: FORCED PASS -> overriding evaluations and proceeding (propose-only, unpushed)", flush=True)
-            for ev in audit.evaluations:
-                if ev.approved == "No":
-                    tids = resolve_item(ev.item_id, ev.comments or "")
-                    files = sorted(
-                        {fp for g in plan.workplan.groups
-                         for t in g.tasks if t.id in tids
-                         for fp in t.file_paths}
-                    )
-                    marker = f"[FORCED PASS attempt {attempt} — UNVERIFIED, review files: {files}]"
-                    ev.comments = (marker + " " + (ev.comments or "")).strip()
-                    ev.approved = "Yes"
-            if exchange and exchange[-1].role == "red_team":
-                exchange[-1].content = audit.model_dump_json()
-            return batch
-        if failing:
-            rerun = _downstream_closure(failing, plan.workplan.groups)
-            print(f"[gate] red_team attempt {attempt}: FAIL on {sorted(failing)} -> rerun {sorted(rerun)}")
-            results = await run_execute_phase(
-                plan,
-                run_dir,
-                sem,
-                coder_fn,
-                prior=results,
-                rerun_ids=rerun,
-                feedback=red_feedback,
-                exchange=exchange,
-                pass_counter=pass_counter,
-                bd=bd,
-                history=history,
-                strict=False,
-            )
-            batch = TaskBatch(results=list(results.values()))
-            continue
-        else:
-            raise RuntimeError(
-                "[gate] HARD FAIL: red_team flagged a global blocker with no task-keyed evaluations to recode — unresolvable; aborting (no forced pass)."
-            )
-    return batch
-
-
-async def _run_subprocess_with_timeout(
-    cmd: list[str], cwd: str, timeout: float = 120.0, stderr_target: int = asyncio.subprocess.PIPE
-) -> tuple[int, str]:
-    """Run an async subprocess with a hard timeout. Kills the process on timeout."""
-    proc = await asyncio.create_subprocess_exec(
-        *cmd, cwd=cwd, stdout=asyncio.subprocess.PIPE, stderr=stderr_target
-    )
-    try:
-        stdout_data, stderr_data = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-    except TimeoutError:
-        try:
-            proc.kill()
-            await proc.wait()
-        except Exception:
-            pass
-        raise RuntimeError(
-            f"[ops] subprocess {cmd[0]!r} timed out after {timeout}s — killed"
-        )
-    stdout_text = stdout_data.decode("utf-8", "replace") if stdout_data else ""
-    stderr_text = stderr_data.decode("utf-8", "replace") if stderr_data else ""
-    merged = stdout_text + ("\n" + stderr_text if stderr_text else "")
-    return proc.returncode or 0, merged
-
-
-async def run_ops_phase(
-    bd: str,
-    *,
-    history: list[tuple[str, str]],
-    repo_root: Path = REPO_ROOT,
-) -> GitResult:
-    """Review the work: run hygiene scanners + show diff, NO auto-push."""
-    update_status_board(history, "ops", bd)
-
-    hook = repo_root / ".git" / "hooks" / "pre-push"
-    if hook.exists():
-        rc, stderr_text = await _run_subprocess_with_timeout(
-            [str(hook)], str(repo_root), timeout=120.0
-        )
-        if rc != 0:
-            raise RuntimeError(
-                "[ops] pre-push hygiene scanners FAILED — HALTING, not pushing\n"
-                + stderr_text
-            )
-
-    sha = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=30.0,
-    ).stdout.strip()
-
-    result = GitResult(
-        pushed=False,
-        commit_sha=sha,
-        bd_closed=False,
-        message="changes ready for human review. Run factory/tools/git-push.sh to push.",
-    )
-    history.append(("ops", result.model_dump_json()))
-    update_status_board(history, "ops", bd)
-    return result
 
 
 CHECKPOINT_TTL_SECONDS = 86400

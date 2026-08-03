@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-import asyncio
 import re
 
 import pytest
@@ -11,7 +10,6 @@ from pydantic_ai.usage import UsageLimits
 
 from factory.infra import _loopguard as lg
 from factory.infra import models, runner, tools
-from factory.infra.pipeline import run_ops_phase
 
 
 # ── SA1 Security (ACL) ───────────────────────────────────────────────────────
@@ -153,29 +151,6 @@ def test_security_checks_passed_truth_table():
     assert runner.security_checks_passed([], []) is False  # empty audit = no data = fail
 
 
-
-
-@pytest.mark.asyncio
-async def test_run_ops_phase_fails_on_bad_push(monkeypatch, tmp_path):
-    (tmp_path / ".git" / "hooks").mkdir(parents=True)
-    (tmp_path / ".git" / "hooks" / "pre-push").write_text("#!/bin/sh\nexit 1")
-    (tmp_path / ".git" / "hooks" / "pre-push").chmod(0o755)
-
-    class FakeProc:
-        returncode = 1
-
-        async def communicate(self):
-            return (b"", b"")
-
-        async def wait(self):
-            return 1
-
-    async def fake_exec(*a, **k):
-        return FakeProc()
-
-    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
-    with pytest.raises(RuntimeError):
-        await run_ops_phase("x", history=[], repo_root=tmp_path)
 
 
 # ── SA4 Observability ────────────────────────────────────────────────────────

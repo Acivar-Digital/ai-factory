@@ -45,7 +45,7 @@ async def run_execute_phase(
 
     - Topologically ordered via per-group asyncio.Event gating on depends_on.
     - Tasks within a group ALWAYS run concurrently via asyncio.gather, bounded
-      by `sem`.  If the Planner needs sequential ordering it must put tasks
+      by `sem`.  If the task spec needs sequential ordering it must put tasks
       in separate groups chained via depends_on — that is the ONLY supported
       gating mechanism.
     - `prior` + `rerun_ids` enable surgical re-execution: only tasks whose id is
@@ -54,7 +54,7 @@ async def run_execute_phase(
       When a rerun task's id is in `feedback`, its coder brief is augmented with
       a `=== PRIOR FEEDBACK ===` block (R1, ticket baziforecaster-nw9ov) so the
       rerun coder is told exactly what to change instead of re-deriving it blind.
-    - Asserts the Planner's file-disjoint claim per concurrent group (HALT)."""
+    - Asserts the task spec's file-disjoint claim per concurrent group (HALT)."""
     workplan = plan.workplan
     groups = {g.id: g for g in workplan.groups}
     for g in workplan.groups:
@@ -72,7 +72,7 @@ async def run_execute_phase(
             if key in seen_paths:
                 raise RuntimeError(
                     f"[DAG] group {g.id!r} is NOT file-disjoint "
-                    f"(shared {sorted(key)}) — violates Planner claim"
+                    f"(shared {sorted(key)}) — violates task spec claim"
                 )
             seen_paths.add(key)
     # P0 zu9u (H8): cross-group disjointness. Groups NOT in a depends_on chain
@@ -81,8 +81,8 @@ async def run_execute_phase(
     # safely share files (e.g. a dependent group refactoring the same file).
     # Intra-group assert above is insufficient — assert globally here, but skip
     # pairs where one depends_on the other (directly or transitively).
-    # NOTE: this is a PLANNER-CONTRACT violation surfaced fail-loudly — not a
-    # runtime patch. The planner owns parallelism; we do not silently reorder.
+    # NOTE: this is a TASK-SPEC-CONTRACT violation surfaced fail-loudly — not a
+    # runtime patch. The task spec owns parallelism; we do not silently reorder.
     _dep_map: dict[str, set[str]] = {}
     for g in workplan.groups:
         gdeps: set[str] = set(g.depends_on)
@@ -132,7 +132,7 @@ async def run_execute_phase(
         if tier == "B":
             # vze01 (last resort): if ANY single file alone exceeds the slice
             # budget, even a targeted slice read would blow the context — the
-            # task genuinely needs a huge file and must be SPLIT by the planner.
+            # task genuinely needs a huge file and must be SPLIT by the orchestrator.
             oversized = [fp for fp, n in per_file.items() if n > TIER_B_SLICE_THRESHOLD]
             if oversized:
                 raise TaskNeedsSplitError(
@@ -172,8 +172,8 @@ async def run_execute_phase(
                     f"{prefix_text}\n--- END FILE ---"
                 )
         # R5 (baziforecaster-6gizg): frozen, structured behaviour appendix derived
-        # from the task's acceptance/DoD — NOT the planner's raw prose. Anchors the
-        # coder to a contract regardless of planner wording.
+        # from the task's acceptance/DoD — NOT the task spec's raw prose. Anchors the
+        # coder to a contract regardless of task spec wording.
         behaviour_appendix = (
             "=== EXPECTED CODER BEHAVIOUR (frozen contract) ===\n"
             "- Implement ONLY this task; do not touch other tasks' files.\n"
@@ -464,7 +464,7 @@ async def run_execute_phase(
                     f"[HALT] task {t.id} failed validation after "
                     f"{CODER_VALIDATION_PASSES} re-spawn attempts "
                     f"({', '.join(reasons)}). EXECUTE phase aborted — a broken "
-                    f"type contract must not reach review/red-team."
+                    f"type contract must not reach the senior review phase."
                 )
 
             prior_rejection_notes = obj.get("notes", "")
@@ -657,7 +657,7 @@ async def run_execute_phase(
                     )
         if rerun_ids is None:
             # Fresh run when no prior exists; adopt prior verbatim (no re-exec)
-            # when a prior batch is supplied (e.g. the red-team gate auditing an
+            # when a prior batch is supplied (e.g. the senior review gate auditing an
             # already-executed code-review batch).
             to_run = [] if prior else list(g.tasks)
         else:
@@ -712,7 +712,7 @@ async def run_execute_phase(
     _concurrent = sum(1 for g in workplan.groups if not g.depends_on)
     _sequential = len(workplan.groups) - _concurrent
     print(
-        f"[DAG] planner topology: concurrent_groups={_concurrent} "
+        f"[DAG] workplan topology: concurrent_groups={_concurrent} "
         f"sequential_groups={_sequential} (total={len(workplan.groups)})",
         flush=True,
     )
@@ -727,11 +727,11 @@ async def run_execute_phase(
     # SPAWN-ALL HALT (baziforecaster-uqj06): after EVERY group has spawned and
     # executed, if ANY task is blocked/failed (or produced no result), hard-halt
     # the run — BUT only when `strict=True` (a top-level caller with no
-    # recovery owner). When called from run_code_review_gate / run_red_team_gate
-    # the gates own recovery (supervisor_review / red_team rerun + force-pass
+    # recovery owner). When called from run_code_review_gate / run_senior_review_gate
+    # the gates own recovery (senior review / senior rerun + force-pass
     # at MAX_RETRIES), so they pass strict=False and RECEIVE the incomplete
     # results to recover. The HALT must NOT pre-empt the gate's retry loop
-    # (This previously killed the run before supervisor_review could run).
+    # (This previously killed the run before the senior review could run).
     incomplete: list[str] = []
     for t in workplan.groups:
         for task in t.tasks:

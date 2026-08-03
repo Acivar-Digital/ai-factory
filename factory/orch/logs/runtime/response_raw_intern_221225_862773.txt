@@ -1,0 +1,41 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[tool-call] remember({"note": "Target: refactor _feedback_from_audit (CC=13) in factory/temp/factory/infra/validation.py to CC<=5. Strategy: extract loop bodies into private helper functions _process_audit_finding and _process_audit_risk. The main function will then just call these helpers sequentially, reducing CC to 1. Must preserve the public signature unchanged."})
+
+[tool-call] grep({"relative_path": "factory/temp/factory/infra/validation.py", "pattern": "def _feedback_from_audit"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 50})
+
+[tool-call] batch_read({"paths": ["factory/temp/factory/infra/validation.py"], "line_ranges": {"factory/temp/factory/infra/validation.py": "1-281"}})
+
+[text] Now I have the full file. I'll refactor `_feedback_from_audit` by extracting the two loop bodies into private helper functions.
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_feedback_from_audit", "new_function_code": "def _feedback_from_audit(\n    findings: list[\"ReviewFinding\"], audit: \"AuditResult\"\n) -> dict[str, str]:\n    \"\"\"R1 (baziforecaster-nw9ov): render red-team augmented findings + risks into a\n    task_id -> prior-feedback text map for the rerun coder brief.\"\"\"\n    out: dict[str, list[str]] = {}\n    for f in findings:\n        _process_audit_finding(f, out)\n    risks = getattr(audit, \"risks\", None) or []\n    for r in risks:\n        _process_audit_risk(r, out, out)\n    return {tid: \"\\n\".join(blocks) for tid, blocks in out.items()}\n\n\ndef _process_audit_finding(f: \"ReviewFinding\", out: dict[str, list[str]]) -> None:\n    \"\"\"Process a single ReviewFinding and append its text to out if it is a blocker.\"\"\"\n    if getattr(f, \"severity\", None) != \"blocker\":\n        return\n    tid = getattr(f, \"task_id\", None)\n    if not tid:\n        return\n    parts = [f\"- [RED-TEAM {getattr(f, 'severity', 'blocker')}] {getattr(f, 'message', '')}\"]\n    if getattr(f, \"file\", None):\n        parts.append(f\"  file: {f.file}\")\n    if getattr(f, \"line\", None) is not None:\n        parts.append(f\"  line: {f.line}\")\n    if getattr(f, \"suggestion\", None):\n        parts.append(f\"  fix: {f.suggestion}\")\n    out.setdefault(tid, []).append(\"\\n\".join(parts))\n\n\ndef _process_audit_risk(r: \"AuditRisk\", out: dict[str, list[str]], _sentinel: dict[str, list[str]]) -> None:\n    \"\"\"Process a single AuditRisk and append its text to out if severity is Critical/High and task not already present.\"\"\"\n    if getattr(r, \"severity\", None) not in (\"Critical\", \"High\"):\n        return\n    tid = getattr(r, \"task_id\", None)\n    if not tid or tid in out:\n        return\n    block = f\"- [RED-TEAM {getattr(r, 'severity', 'risk')}] {getattr(r, 'description', '')}\"\n    if getattr(r, \"mitigation\", None):\n        block += f\"\\n  fix: {r.mitigation}\"\n    out.setdefault(tid, []).append(block)"})
+
+[text] The `_sentinel` parameter in `_process_audit_risk` is unnecessary. Let me fix that.
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_process_audit_risk", "new_function_code": "def _process_audit_risk(r: \"AuditRisk\", out: dict[str, list[str]]) -> None:\n    \"\"\"Process a single AuditRisk and append its text to out if severity is Critical/High and task not already present.\"\"\"\n    if getattr(r, \"severity\", None) not in (\"Critical\", \"High\"):\n        return\n    tid = getattr(r, \"task_id\", None)\n    if not tid or tid in out:\n        return\n    block = f\"- [RED-TEAM {getattr(r, 'severity', 'risk')}] {getattr(r, 'description', '')}\"\n    if getattr(r, \"mitigation\", None):\n        block += f\"\\n  fix: {r.mitigation}\"\n    out.setdefault(tid, []).append(block)"})
+
+[tool-call] replace_text({"relative_path": "factory/temp/factory/infra/validation.py", "target_text": "        _process_audit_risk(r, out, out)", "replacement_text": "        _process_audit_risk(r, out)"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 50})
+
+[tool-call] replace_text({"relative_path": "factory/temp/factory/infra/validation.py", "target_text": "        _process_audit_risk(r, out, out)", "replacement_text": "        _process_audit_risk(r, out)"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 60})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 200, "end_line": 287})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_feedback_from_audit"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_process_audit_finding"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_process_audit_risk"})
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_process_audit_finding", "new_function_code": "def _process_audit_finding(f: \"ReviewFinding\", out: dict[str, list[str]]) -> None:\n    \"\"\"Process a single ReviewFinding and append its text to out if it is a blocker.\"\"\"\n    if getattr(f, \"severity\", None) != \"blocker\":\n        return\n    tid = getattr(f, \"task_id\", None)\n    if not tid:\n        return\n    parts = _build_finding_parts(f)\n    out.setdefault(tid, []).append(\"\\n\".join(parts))\n\n\ndef _build_finding_parts(f: \"ReviewFinding\") -> list[str]:\n    \"\"\"Build the text parts for a single blocker ReviewFinding.\"\"\"\n    parts = [f\"- [RED-TEAM {getattr(f, 'severity', 'blocker')}] {getattr(f, 'message', '')}\"]\n    if getattr(f, \"file\", None):\n        parts.append(f\"  file: {f.file}\")\n    if getattr(f, \"line\", None) is not None:\n        parts.append(f\"  line: {f.line}\")\n    if getattr(f, \"suggestion\", None):\n        parts.append(f\"  fix: {f.suggestion}\")\n    return parts"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_build_finding_parts"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_process_audit_risk"})
+
+[tool-call] final_result({"status": "done", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "Refactored _feedback_from_audit (CC=13→4) by extracting loop bodies into _process_audit_finding (CC=3) and _process_audit_risk (CC=5), plus _build_finding_parts (CC=4) helper. All target functions now CC≤5.", "notes": "All three functions pass CC verification: _feedback_from_audit (CC=4), _process_audit_finding (CC=3), _process_audit_risk (CC=5), _build_finding_parts (CC=4). No public signatures were changed.", "task_id": "reduce-cc-validation-feedback_from_audit", "exec_ok": true, "pyright_ok": true, "ruff_ok": true})

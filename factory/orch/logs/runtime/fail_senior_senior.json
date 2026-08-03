@@ -1,0 +1,7 @@
+{
+  "phase": "senior",
+  "role": "senior",
+  "error": "UnexpectedModelBehavior: Tool 'bash' exceeded max retries count of 5. Consider raising the retry limit, or see the docs on tool retries: https://ai.pydantic.dev/tools-advanced/#tool-retries",
+  "request_limit": 30,
+  "messages": []
+}

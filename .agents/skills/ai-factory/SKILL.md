@@ -14,11 +14,11 @@ metadata:
 
 AI-Factory is a **deterministic conductor** (NOT an LLM orchestrator) that runs multi-agent code-generation pipelines. It is a standalone MIT-licensed framework established in July 2026.
 
-The orchestrator spawns LLM agents with focused roles (planner, coder, supervisor, red-team, ops), validates their output, and gates progress through each phase. **The conductor never delegates orchestration decisions to an LLM.**
+The orchestrator spawns LLM agents with focused roles (planning, coder, review, adversarial, ops), validates their output, and gates progress through each phase. **The conductor never delegates orchestration decisions to an LLM.**
 
 ## Normalization: `normalize_json_escapes.py`
 
-`factory/tools/normalize_json_escapes.py` is a deterministic shadow tool that detects `\uXXXX` unicode escapes in JSON artifacts (e.g. planner `\u4e09` etc.), decodes them, and remaps domain terms to registry keys (`branch_interaction.*`). Wired into `pipeline.py` planner artifact flow and applied to all `factory/artefacts/**/*.json`. Not an LLM task — framework-level normalization.
+`factory/tools/normalize_json_escapes.py` is a deterministic shadow tool that detects `\uXXXX` unicode escapes in JSON artifacts (e.g. planning agent `\u4e09` etc.), decodes them, and remaps domain terms to registry keys (`branch_interaction.*`). Wired into `pipeline.py` planning artifact flow and applied to all `factory/artefacts/**/*.json`. Not an LLM task — framework-level normalization.
 
 ## Guardrail Diff: `diff_vs_orig` & Upfront Diff Injection
 
@@ -29,7 +29,7 @@ The harness-owned guardrail (`factory/tools/guardrail_check.py`) validates stage
 - **JSON key**: The `validate` command emits `"diff_vs_orig"` (not the legacy `"diff_vs_checkpoint"`).
 - **Legacy checkpoint code** (`CHECKPOINT_DIR`, `checkpoint()`, `_latest_checkpoint()`) has been fully removed.
 
-**Upfront diff injection** (`exchange.py:_render_upfront_diffs`): Before the reviewer's prompt instructions and global alignment context, `_render_upfront_diffs(batch)` extracts only `tr.verdict_diff` strings from the `TaskBatch` and formats them into a `=== PROPOSED CODE CHANGES (DIFF) ===` block. This is prepended to the absolute beginning of `review_brief` in both `run_code_review_gate` (supervisor_review) and `run_red_team_gate` (red_team) in `pipeline.py`, ensuring the Code Supervisor and Red-Team agents see exactly what code changed right at the start of their prompt.
+**Upfront diff injection** (`exchange.py:_render_upfront_diffs`): Before the reviewer's prompt instructions and global alignment context, `_render_upfront_diffs(batch)` extracts only `tr.verdict_diff` strings from the `TaskBatch` and formats them into a `=== PROPOSED CODE CHANGES (DIFF) ===` block. This is prepended to the absolute beginning of `review_brief` in both `run_code_review_gate` (code_review) and `run_adversarial_gate` (adversarial) in `pipeline.py`, ensuring the Code Reviewer and Adversarial Auditor agents see exactly what code changed right at the start of their prompt.
 
 ## Critical: `temp/` Path Resolution
 
@@ -77,12 +77,12 @@ ONLY need `target_repo:` in frontmatter if target repo differs from whatever
 
 | Phase | Path base | Resolution | What it reads |
 |---|---|---|---|
-| Planner | `TARGET_REPO` | `resolve_secure_path()` | Live target repo files at `TARGET_REPO/src2/...` |
-| Supervisor Plan | `TARGET_REPO` | `resolve_secure_path()` | Live target repo files at `TARGET_REPO/src2/...` |
+| Planning | `TARGET_REPO` | `resolve_secure_path()` | Live target repo files at `TARGET_REPO/src2/...` |
+| Plan Review | `TARGET_REPO` | `resolve_secure_path()` | Live target repo files at `TARGET_REPO/src2/...` |
 | Pre-stage | `TARGET_REPO` → `TEMP_DIR` | `stage_workspace_from_draft()` | Copies `TARGET_REPO/src2/...` → `TEMP_DIR/src2/...` |
 | Coder | `TEMP_DIR` | `stage_path()`, `resolve_repo_path()` | Staged copies at `TEMP_DIR/src2/...` |
-| Supervisor Review | `TEMP_DIR` | `stage_path()` | Staged copies |
-| Red Team | `TEMP_DIR` | `stage_path()` | Staged copies |
+| Code Review | `TEMP_DIR` | `stage_path()` | Staged copies |
+| Adversarial Audit | `TEMP_DIR` | `stage_path()` | Staged copies |
 
 ### How to set TARGET_REPO
 
@@ -95,8 +95,8 @@ bd: baziforecaster-batch-a
 target_repo: /home/yapilwsl/arthityap/baziforecaster
 write_mode: staged
 language: python
-start_phase: planner
-stop_phase: supervisor_plan
+start_phase: planning
+stop_phase: plan_review
 scope:
   - src2/engine/module1_macro.py
   - src2/core/schemas/unified.py
@@ -122,7 +122,7 @@ invocation**, so the prompt-parsed value is picked up dynamically.
 3. If `batch_read` returns empty for `src2/...` paths, `TARGET_REPO` is either
    not set or pointing to the wrong directory
 4. Do NOT check `factory/temp/src2/` — that's the staging area for coders, not
-   the planner's source
+    the planning agent's source
 
 ### Runtime Load Gate: `factory/tools/load_schema_gate.py`
 
@@ -143,7 +143,7 @@ model:
 **Common failure mode**: If `TARGET_REPO` is not in `sys.path`, staged files that
 import `src2.core.schemas...` crash with `ModuleNotFoundError`. The orchestrator
 then prepends `[Runtime Load Gate] failed schema validation:` to the error, which
-the Red Team may misinterpret as a Coder JSON output failure (hallucination).
+the adversarial auditor may misinterpret as a Coder JSON output failure (hallucination).
 Always verify `TARGET_REPO` is set when the Load Gate fails.
 
 ## Quick Start
@@ -168,30 +168,30 @@ factory/
     context.py     # Staging (stage_path, stage_workspace_from_draft), tier-B context, harness patches
     validation.py  # Invariant checks, gate constants
     execution.py   # EXECUTE phase - per-task timeout, spawn-all, patching
-    pipeline.py    # Gate orchestration (plan, code-review, red-team, ops)
-    agents/        # 7 role specs: planner, coder, supervisor_plan,
-                   #   supervisor_review, red_team, ops, healer
+    pipeline.py    # Gate orchestration (plan, code-review, adversarial, ops)
+    agents/        # 7 role specs: planning, coder, plan_review,
+                   #   code_review, adversarial, ops, healer
                    #   Each has a .py class + .yaml prompt template
     tools.py       # Shadow tooling wrappers (search, read, write, AST)
   tools/           # CLI wrappers for repo tools
-  temp/            # Staging area (TEMP_DIR) — coder writes, NOT planner source
+  temp/            # Staging area (TEMP_DIR) — coder writes, NOT planning agent source
 ```
 
 ## Roles & Pipeline Phases
 
 | Phase | Role | Gate | Purpose |
 |---|---|---|---|
-| `planner` | Planner | supervisor_plan | Parse task, build dependency DAG |
-| `coder` | Coder(s) | supervisor_review | Edit files, harness-owned guardrail + re-spawn loop |
-| `supervisor_review` | Supervisor | — | Review code, re-execute failing tasks, force-pass on final attempt |
-| `red_team` | Red Team | — | Audit results, re-execute failing tasks, force-pass on final attempt |
+| `planning` | Planning Agent | plan_review | Parse task, build dependency DAG |
+| `coder` | Coder(s) | code_review | Edit files, harness-owned guardrail + re-spawn loop |
+| `code_review` | Reviewer | — | Review code, re-execute failing tasks, force-pass on final attempt |
+| `adversarial` | Adversarial Auditor | — | Audit results, re-execute failing tasks, force-pass on final attempt |
 | `ops` | Ops | — | Propose-only commit (no push) |
 
 ## Key Architectural Constraint: coder_fn / reviewer_fn Adapters
 
 `runner.py` wraps `record_coder` and `load_skill` in closure adapters with signature
 `(brief: str, task_id: str | None = None) -> str` / `(brief: str) -> str` before
-passing them to `run_code_review_gate` and `run_red_team_gate`. This is required
+passing them to `run_code_review_gate` and `run_adversarial_gate`. This is required
 because `execute_task` in `execution.py` calls `coder_fn(brief, task_id=t.id)` (2
 args), but `record_coder` requires 6 args (`brief, bd, history, prior, state_dict,
 task_id`). The closures capture `bd`, `history`, `prior`, and a task-local state
@@ -246,7 +246,7 @@ The `_REMEMBER_NUDGE` ("you may call `remember(...)`") is still appended to read
 - **AST verification pipeline**: After the coder produces an edit, `verify_edit` runs 7-layer AST verification (syntax, CC/nesting, attribute hallucination, call swap, signature parity, namespace collision, unimported symbols) plus ruff/pyright lint regression. If verification fails, the errors are injected into the Boss prompt so it can fix the issues. The `VirtualASTBuffer` enables in-memory AST replacement for surgical verification without touching disk.
 - **Pre-flight anti-pattern detection**: Before the coder touches a file, `scan_file_for_anti_patterns` checks for try pyramids (priority 1), deep nesting >3 (priority 2), and CC >5 (priority 3). Anti-pattern warnings are prepended to the coder's prompt.
 - **Checkpoint/resume**: Pipeline results are persisted to JSONL checkpoint files (atomic writes via `os.replace`). On restart, completed files are skipped. Checkpoints expire after 24 hours (TTL).
-- **Red Team Integrity**: The `red_team_passed` gate relies solely on `findings` and `rubric_cells`. If both are empty, the audit is considered incomplete and the gate MUST fail.
+- **Adversarial Audit Integrity**: The gate check relies solely on `findings` and `rubric_cells`. If both are empty, the audit is considered incomplete and the gate MUST fail.
 
 ## Mandatory Pre-Flight Plan
 
@@ -342,31 +342,31 @@ Use `bd remember` to persist cross-session knowledge. Search with `bd memories <
 - **Converter (`converter.py`)**: `batch_read` and `read_file` results are NO LONGER truncated to `[N lines]`. Full content (line-numbered file text + `=== File read: path ===` header) renders in `.md`. The old special-case truncation (`_render_tool_return` lines 284-291) was removed.
 - **Budget markers preserved**: `_CONTENT_NOISE` regex (`converter.py:122`) was removed. `[TOOL CALL N/M]` budget markers now survive in `.md` so the agent sees its budget state every turn (before: stripped; agent blind).
 - **Auto-remember (`_auto_remember`)**: All 11 tools remember full content to `.jsonl`. `read_file`/`batch_read` remember raw line-numbered content. `write_file` remembers unified diff. The remembered notes appear in `.md` via `remember` tool-return, with file headers intact.
-- **READ_BUDGET**: Raised from 5 to 15 (`control.py:618`). All agents share the same `batch_read` cap (`read_budget` in `GuardToolset`). Per-role budgets (`ROLE_TOOL_BUDGET`): planner=10, planner_sup=10, coder=75.
+- **READ_BUDGET**: Raised from 5 to 15 (`control.py:618`). All agents share the same `batch_read` cap (`read_budget` in `GuardToolset`). Per-role budgets (`ROLE_TOOL_BUDGET`): planning=10, planning_sup=10, coder=75.
 - **Line numbers**: Absolute (`f"{s + i + 1}: {line}"`), not relative to range. `1:` = file line 1.
 - **Files changed**: `converter.py`, `control.py`, `CHANGELOG.md`, `.agents/skills/ai-factory/SKILL.md`.
 
 - **MD_LEDGER Append Bug Fix (`factory/infra/artefacts.py`)**: Fixed an exponential token explosion issue where `_clean_messages` failed to strip the reinjected `<!-- MD_LEDGER -->` (which is injected as a `UserPromptPart` by `md_bridge.py`) during artifact persistence. The ledger twin is strictly an ephemeral runtime context bridge; `artefacts.py` now unconditionally strips the ledger prior to writing `.jsonl` / `.md` to enforce isolated, delta-only persistence. Additionally, fixed a regression where Pydantic-AI's message merging caused the entire `ModelRequest` (including the task brief) to be discarded if the first part was the ledger; `_clean_messages` now selectively filters out only the `<!-- MD_LEDGER -->` part.
 
-- **Status loop-back** (`factory/infra/exchange.py`, `pipeline.py`): When `red_team` or `supervisor_review` blocks, `STATUS.md` shows `current = "coder"` with `(BACK TO CODER)` indicator (`loop_back` logic, line 216-230). `pipeline.py` updates status on gate FAIL (`line 846-847`). See `CHANGELOG.md` 2026-07-22 Status Reflection Fix entry.
+- **Status loop-back** (`factory/infra/exchange.py`, `pipeline.py`): When `adversarial` or `code_review` blocks, `STATUS.md` shows `current = "coder"` with `(BACK TO CODER)` indicator (`loop_back` logic, line 216-230). `pipeline.py` updates status on gate FAIL (`line 846-847`). See `CHANGELOG.md` 2026-07-22 Status Reflection Fix entry.
 
 ## HOW TO CONTINUE (IMPERATIVE)
 
-Pipeline order: planner -> supervisor_plan -> coder -> supervisor_review -> red_team -> ops.
+Pipeline order: planning -> plan_review -> coder -> code_review -> adversarial -> ops.
 
-To continue past supervisor_plan:
+To continue past plan_review:
 1. Edit `/home/yapilwsl/arthityap/ai-factory/factory/prompt/user_prompt.md` lines 7-8 (`start_phase` / `stop_phase`).
-2. Set `start_phase: coder` (or `supervisor_plan` if continuing from there) and `stop_phase: ops`.
+2. Set `start_phase: coder` (or `plan_review` if continuing from there) and `stop_phase: ops`.
 3. Confirm the edit before running any phase.
 
 IMPERATIVE: DO NOT TOUCH OTHER REPOS (e.g. baziforecaster) UNLESS EXPLICITLY INSTRUCTED WITH EXACT FILE PATH AND EXACT EDIT CONTENT. All factory work stays inside `/home/yapilwsl/arthityap/ai-factory/`. The target repo (`baziforecaster`) is ONLY read via `TARGET_REPO` set in user_prompt.md; no direct file modifications outside factory scope unless exact edit is specified.
 
 ---
 
-## FIX.md Updates (2026-07-22) — KG Injection (Option B) + Planner Tightening
+## FIX.md Updates (2026-07-22) — KG Injection (Option B) + Planning Tightening
 
 - `factory/tools/query_knowledge_graph.py`: Rewritten as self-contained CLI wrapper (no `libcst` / `qdrant_client` import dependency). Uses `factory/tools/_codebase_common`. Returns `exit 0` with empty results when `code_knowledge_graph.json` is missing (greenfield — Option B).
 - `factory/tools/get_file_symbols.py`: Missing `.py` files now return `success: True` + `{"symbols": []}` (exit 0), not an error.
 - `factory/infra/ledger.py`: `try/except RuntimeError` removed from `_kg_for_file` and `inject_repo_map`. Real CLI crashes propagate as hard halts (Fail Loudly); only greenfield empty results are safe.
-- `factory/infra/agents/planner.yaml`: `READ_BUDGET` corrected (`5` → `15`). Planning method replaced with concrete 4-step workflow: (1) IDENTIFY & GATHER, (2) DEEP INSPECTION, (3) TYPE-CONTRACT TRACING, (4) DISJOINT GROUPING.
+- `factory/infra/agents/planning.yaml`: `READ_BUDGET` corrected (`5` → `15`). Planning method replaced with concrete 4-step workflow: (1) IDENTIFY & GATHER, (2) DEEP INSPECTION, (3) TYPE-CONTRACT TRACING, (4) DISJOINT GROUPING.
 - See `CHANGELOG.md` 2026-07-22 entry for full details.

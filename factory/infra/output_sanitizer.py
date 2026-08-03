@@ -404,68 +404,6 @@ def clean_role_output(raw: str | None, model: type[T]) -> T:
     try:
         return model.model_validate_json(normalized)
     except Exception as e:
-        val_err = str(e)
-        try:
-            from factory.infra.control import CONTROL_SHEET
-            healer_model = CONTROL_SHEET.model("healer_mode")
-        except Exception:
-            healer_model = None
-
-        is_testing = "pytest" in sys.modules or "unittest" in sys.modules
-        is_real_model = type(healer_model).__name__ == "OpenAIChatModel"
-
-        if healer_model is not None and not (is_testing and is_real_model):
-            print(f"[healer] Triggering offline formatting recovery call using healer model for {model.__name__}", flush=True)
-            from pydantic_ai import Agent
-            from pydantic_ai.settings import ModelSettings
-            schema_str = generate_simplified_schema(model)
-            healer_agent = Agent(
-                healer_model,
-                output_type=model,
-                system_prompt=(
-                    "You are a structured JSON healing assistant. You receive a malformed output that failed "
-                    "validation against a target Pydantic schema, along with the validation error message. "
-                    "Your task is to repair the malformed output to make it valid according to the schema. "
-                    "Do not invent data; preserve all original meaning, values, and structure as much as possible. "
-                    "Ensure all required fields are present with correct types."
-                ),
-                model_settings=ModelSettings(parallel_tool_calls=False)
-            )
-            try:
-                import concurrent.futures
-                import asyncio
-                
-                def _run_healer_thread():
-                    return asyncio.run(healer_agent.run(
-                        f"Malformed Raw Output:\n{raw}\n\n"
-                        f"Target Schema:\n{schema_str}\n\n"
-                        f"Validation Error:\n{val_err}"
-                    ))
-                    
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    res = pool.submit(_run_healer_thread).result()
-                    
-                healed_obj = res.output
-
-                try:
-                    try:
-                        input_dict = json.loads(normalized)
-                    except Exception:
-                        try:
-                            input_dict = json.loads(repaired)
-                        except Exception:
-                            input_dict = None
-
-                    if isinstance(input_dict, dict) and hasattr(healed_obj, "model_dump"):
-                        output_dict = healed_obj.model_dump()
-                        _detect_and_log_aliases(input_dict, output_dict)
-                except Exception as telemetry_err:
-                    print(f"[healer] Telemetry log warning: {telemetry_err}", file=sys.stderr, flush=True)
-
-                return healed_obj
-            except Exception as healer_exc:
-                print(f"[healer] Healer model call failed: {healer_exc}", file=sys.stderr, flush=True)
-
         raise RuntimeError(
             f"[HALT] {model.__name__} output failed sanitize+validate "
             f"(raw head: {raw[:120]!r}): {e}"

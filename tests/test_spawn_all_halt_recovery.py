@@ -58,8 +58,7 @@ from factory.infra.models import (  # noqa: E402
     Strategy,
     WorkGroup,
 )
-from factory.infra.execution import run_execute_phase
-from factory.infra.pipeline import run_code_review_gate
+from factory.infra.execution import run_execute_phase  # noqa: E402
 
 
 def _plan(single: bool = True) -> ExecutablePlan:
@@ -169,18 +168,4 @@ def test_strict_true_default_still_halts():
         ))
     assert "[HALT] EXECUTE phase incomplete: coder01" in str(exc.value)
 
-
-# ── HARNESS-BLOCKED → RERUN (code_review gate) ───────────────────────────────
-
-def test_code_review_completes_without_halt_on_blocked():
-    """The SPAWN-ALL HALT no longer aborts the gate. The run reaches
-    PROPOSE-ONLY with the blocked task surfaced (force-passed at MAX_RETRIES)."""
-    plan = _plan()
-    batch = asyncio.run(run_code_review_gate(
-        plan, TEMP_DIR / "s00_cr2", _coder_block_first({"coder01"}),
-        _reviewer_always_pass_async,
-        history=[], bd="",
-    ))
-    statuses = {r.task_id: r.status for r in batch.results}
-    assert statuses["coder01"] == "blocked"  # surfaced, not hidden/raised
 

@@ -18,14 +18,14 @@ REVIEW_PASS_FIELD = {
 # Max review attempts per gated pair; the 3rd attempt is a FORCED pass.
 MAX_RETRIES = 3
 
-PLAN_INVARIANT_RETRIES = 5   # 01_fix: max planner/supervisor_plan retries before HALT
+PLAN_INVARIANT_RETRIES = 5   # 01_fix: max intern/engineer retries before HALT
 
 
 def check_plan_invariants(plan) -> list[str]:
     """Return violation strings (empty list = plan OK).
 
-    Checks: (1) every coder task lists exactly 1 file; (2) file paths are disjoint
-    across all coder tasks. Runs on BOTH planner and supervisor_plan output.
+    Checks: (1) every task lists exactly 1 file; (2) file paths are disjoint
+    across all tasks. Runs on output from both intern and engineer phases.
     """
     violations: list[str] = []
     seen: set[str] = set()
@@ -126,16 +126,15 @@ def _process_group_deps(
 def security_checks_passed(findings: list[dict], rubric_cells: list[dict]) -> bool:
     """Deterministic security audit go/no-go verdict — SINGLE SOURCE OF TRUTH.
 
-    Used by BOTH `run_red_team_gate` and the inline `passed()` reviewer check
-    so the gating logic can never drift between the two code paths (and never
-    contradict red_team.yaml).
+    Used by both the inline reviewer check and the re-execution loop
+    so the gating logic can never drift between the two code paths.
 
     Gate is driven SOLELY by:
       * `findings` (task-keyed, severity == "blocker") -> which tasks to recode,
       * an unresolvable global blocker in `rubric_cube` (a blocker cell with no
         matching `findings` entry) -> HARD FAIL.
     The LLM's free `green` boolean is NEVER trusted. This is exactly the
-    contract documented in templates/red_team.yaml + customised/red_team.yaml.
+    contract documented in templates/senior.yaml + customised/senior.yaml.
     """
     failing = any(f.get("severity") == "blocker" for f in findings)
     has_audit_data = bool(findings) or bool(rubric_cells)
@@ -147,7 +146,7 @@ def security_checks_passed(findings: list[dict], rubric_cells: list[dict]) -> bo
 
 
 def _feedback_from_review_findings(review: "CodePassed") -> dict[str, str]:
-    """R1 (baziforecaster-nw9ov): render supervisor_review findings + traceback_route
+    """R1 (baziforecaster-nw9ov): render review findings + traceback_route
     into a task_id -> prior-feedback text map for the rerun coder brief."""
     out: dict[str, list[str]] = {}
     findings = getattr(review, "findings", None) or []
@@ -177,7 +176,7 @@ def _feedback_from_review_findings(review: "CodePassed") -> dict[str, str]:
 def _feedback_from_audit(
     findings: list["ReviewFinding"],     audit: "AuditResult"
 ) -> dict[str, str]:
-    """R1 (baziforecaster-nw9ov): render red-team augmented findings + risks into a
+    """R1 (baziforecaster-nw9ov): render security audit findings + risks into a
     task_id -> prior-feedback text map for the rerun coder brief."""
     out: dict[str, list[str]] = {}
     for f in findings:
@@ -186,7 +185,7 @@ def _feedback_from_audit(
         tid = getattr(f, "task_id", None)
         if not tid:
             continue
-        parts = [f"- [RED-TEAM {getattr(f, 'severity', 'blocker')}] {getattr(f, 'message', '')}"]
+        parts = [f"- [SENIOR {getattr(f, 'severity', 'blocker')}] {getattr(f, 'message', '')}"]
         if getattr(f, "file", None):
             parts.append(f"  file: {f.file}")
         if getattr(f, "line", None) is not None:
@@ -204,7 +203,7 @@ def _feedback_from_audit(
         if not tid or tid in out:
             continue
         block = (
-            f"- [RED-TEAM {getattr(r, 'severity', 'risk')}] {getattr(r, 'description', '')}"
+            f"- [SENIOR {getattr(r, 'severity', 'risk')}] {getattr(r, 'description', '')}"
         )
         if getattr(r, "mitigation", None):
             block += f"\n  fix: {r.mitigation}"
@@ -223,7 +222,7 @@ def _blocker_findings_from_risks(
     `risks` (which name offending tasks). A lazy model can emit Critical/High
     `risks` flagging real defects yet leave `findings` empty — which lets
     `security_checks_passed` return True and skip re-execution entirely, so the
-    defects ship to ops unreviewed.
+    defects ship unreviewed.
 
     Any Critical/High `AuditRisk` that carries a `task_id` inside the approved
     plan but has NO matching blocker `ReviewFinding` is promoted to a blocker

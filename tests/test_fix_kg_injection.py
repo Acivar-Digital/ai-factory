@@ -1,4 +1,4 @@
-"""Regression tests for docs/FIX.md — KG injection + Option B + planner tightening."""
+"""Regression tests for docs/FIX.md — KG injection + Option B."""
 from __future__ import annotations
 
 import subprocess
@@ -61,25 +61,6 @@ def test_get_file_symbols_missing_file_exit_0():
     output = result.stdout
     assert '"success": true' in output
     assert '"symbols": []' in output
-
-
-# ------------------------------------------------------------------
-# Task 3: planner.yaml — budget 15 + 4-step method
-# ------------------------------------------------------------------
-
-def test_planner_yaml_has_15_budget():
-    text = (Path(__file__).resolve().parents[1] / "factory" / "infra" / "agents" / "planner.yaml").read_text()
-    assert "15 batch_read calls spent" in text
-    assert "all 5 batch_read calls spent" not in text
-
-
-def test_planner_yaml_has_4_step_workflow():
-    text = (Path(__file__).resolve().parents[1] / "factory" / "infra" / "agents" / "planner.yaml").read_text()
-    assert "=== PLANNING METHOD (4-STEP COGNITIVE WORKFLOW) ===" in text
-    assert "1. IDENTIFY & GATHER" in text
-    assert "2. DEEP INSPECTION" in text
-    assert "3. TYPE-CONTRACT TRACING" in text
-    assert "4. DISJOINT GROUPING" in text
 
 
 # ------------------------------------------------------------------

@@ -1,0 +1,2 @@
+{"timestamp": "2026-08-02T20:30:21.269448+00:00", "bd_id": "default", "phase": "engineer", "role": "engineer", "task_id": null, "output_type": "TaskResult", "usage": {"input_tokens": 26668, "output_tokens": 1278, "requests": 5}, "message_count": 11}
+{"timestamp": "2026-08-02T20:33:11.148806+00:00", "bd_id": "default", "phase": "senior", "role": "senior", "task_id": null, "output_type": "TaskResult", "usage": {"input_tokens": 51208, "output_tokens": 3753, "requests": 11}, "message_count": 23}

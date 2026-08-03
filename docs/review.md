@@ -20,7 +20,7 @@ When `prior={}` (empty dict, falsy), this triggers a fresh run when it should ad
 
 ## `pipeline.py` — New Issues
 
-**`run_red_team_gate` double-appends `red_team` to exchange** — `append_exchange_turn(..., "red_team", rev_out, bd)` is called once after the reviewer runs, then again with `audit.model_dump_json()` inside the FORCED PASS block at `MAX_RETRIES`. On a forced-pass path, this appends the red-team turn **twice**, which corrupts the exchange history used by downstream roles.
+**Adversarial audit gate double-appends to exchange** — `append_exchange_turn(..., "adversarial", rev_out, bd)` is called once after the reviewer runs, then again with `audit.model_dump_json()` inside the FORCED PASS block at `MAX_RETRIES`. On a forced-pass path, this appends the adversarial turn **twice**, which corrupts the exchange history used by downstream roles.
 
 **`_run_subprocess_with_timeout` discards stdout** — it only captures `stderr` (`stdout` defaults to inherited/terminal). But the caller in `run_ops_phase` constructs an error message using `stderr_text` — if the pre-push hook writes its failure reason to stdout (common), it's silently lost. Fix: add `stdout=asyncio.subprocess.PIPE` and include both in the error message.
 
@@ -42,7 +42,7 @@ When `prior={}` (empty dict, falsy), this triggers a fresh run when it should ad
 | -------------- | ------------------------------------------------------ | --------- |
 | `execution.py` | `prior={}` falsy inversion still present               | 🔴 High   |
 | `execution.py` | Re-spawn loop runs 4 passes, not 3                     | 🟡 Medium |
-| `pipeline.py`  | Double exchange append on red-team forced pass         | 🟡 Medium |
+| `pipeline.py`  | Double exchange append on adversarial forced pass         | 🟡 Medium |
 | `pipeline.py`  | `_run_subprocess_with_timeout` drops stdout            | 🟡 Medium |
 | `pipeline.py`  | `passed()` silently skips falsy non-bool `approved`    | 🟡 Medium |
 | `control.py`   | `verify_gateways_reachable` catches 4xx as unreachable | 🟠 High   |

@@ -107,8 +107,7 @@ standard for fidelity tests.
 | `test_new_modules.py` | New orchestrator modules (ledger / shadow_tools / gatekeeper). |
 | `test_payload_diet.py` | Harness payload diet (nz4ai): lean system prompts, scoped repo map. |
 | `test_prestage.py` | Conductor-led pre-staging. |
-| `test_read_memory_bridge.py` | Read-Memory Bridge feature. |
-| `test_red_team_contract.py` | Red-team gating prompt agrees with runner logic (id vocabulary). |
+ | `test_read_memory_bridge.py` | Read-Memory Bridge feature. |
 | `test_rerun_feedback.py` | Coder rerun feedback injection (R1) + frozen expected-behaviour appendix. |
 | `test_sanitizer_malformed_call.py` | Framework-rejected tool-call salvage path (78j9m). |
 | `test_scope_auto_context.py` | Scope-driven auto-context (86rmw / xfqkf / y1oqi). |

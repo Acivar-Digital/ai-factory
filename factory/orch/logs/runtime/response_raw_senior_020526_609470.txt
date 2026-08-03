@@ -1,0 +1,50 @@
+[tool-call] remember({"note": "Plan: Audit and fix 5 functions across 3 files to reduce CC to ≤5. The prior attempt's verification failed for _format_advisory_value in agents.py. I need to: (1) Read current state of all 3 files, (2) Apply targeted refactors using guard clauses, early returns, helper extraction, and match/case, (3) Verify with verify_edit and find_cc_nested.py. Files: factory/temp/src2/interfaces/telegram/chronomancer/agents.py, factory/temp/src2/forecast_store.py, factory/temp/src2/billing.py."})
+
+[tool-call] batch_read({"paths": ["factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "factory/temp/src2/forecast_store.py", "factory/temp/src2/billing.py"]})
+
+[text] Now I can see the issues clearly. Let me analyze each file:
+
+1. **agents.py**: Has duplicate function definitions (lines 39-60 duplicate lines 15-36), and `_get_fallback_narrative` still has high CC
+2. **forecast_store.py**: Already refactored, looks good
+3. **billing.py**: `validate_promo_code` has CC=6, needs reduction to ≤5
+
+Let me apply the fixes.
+
+[tool-call] replace_text({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "old_string": "def _format_advisory_string(s: str) -> str:\n    return s.strip()\n\n\ndef _format_advisory_list(items: list) -> str:\n    formatted: list[str] = []\n    for item in items:\n        if not item:\n            continue\n        result = _format_advisory_value(item)\n        if result:\n            formatted.append(f\"- {result}\")\n    return \"\\n\".join(formatted)\n\n\ndef _format_advisory_dict(d: dict) -> str:\n    sub_parts: list[str] = []\n    for k, v in d.items():\n        formatted = _format_advisory_value(v)\n        if formatted:\n            sub_parts.append(f\"{k.capitalize()}:\\n{formatted}\")\n    return \"\\n\\n\".join(sub_parts)\n\n\ndef _format_advisory_string(s: str) -> str:\n    return s.strip()\n\n\ndef _format_advisory_list(items: list) -> str:\n    formatted: list[str] = []\n    for item in items:\n        if not item:\n            continue\n        result = _format_advisory_value(item)\n        if result:\n            formatted.append(f\"- {result}\")\n    return \"\\n\".join(formatted)\n\n\ndef _format_advisory_dict(d: dict) -> str:\n    sub_parts: list[str] = []\n    for k, v in d.items():\n        formatted = _format_advisory_value(v)\n        if formatted:\n            sub_parts.append(f\"{k.capitalize()}:\\n{formatted}\")\n    return \"\\n\\n\".join(sub_parts)\n\n\ndef _format_advisory_value(val: Any) -> str:", "new_string": "def _format_advisory_string(s: str) -> str:\n    return s.strip()\n\n\ndef _format_advisory_list(items: list) -> str:\n    formatted: list[str] = []\n    for item in items:\n        if not item:\n            continue\n        result = _format_advisory_value(item)\n        if result:\n            formatted.append(f\"- {result}\")\n    return \"\\n\".join(formatted)\n\n\ndef _format_advisory_dict(d: dict) -> str:\n    sub_parts: list[str] = []\n    for k, v in d.items():\n        formatted = _format_advisory_value(v)\n        if formatted:\n            sub_parts.append(f\"{k.capitalize()}:\\n{formatted}\")\n    return \"\\n\\n\".join(sub_parts)\n\n\ndef _format_advisory_value(val: Any) -> str:"})
+
+[tool-call] read_file({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "start_line": 1, "end_line": 70})
+
+[tool-call] read_file({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "start_line": 70, "end_line": 130})
+
+[tool-call] read_file({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "start_line": 130, "end_line": 200})
+
+[tool-call] read_file({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "start_line": 1, "end_line": 130})
+
+[tool-call] read_file({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "start_line": 130, "end_line": 200})
+
+[tool-call] read_file({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "start_line": 1, "end_line": 130})
+
+[tool-call] remember({"note": "I need to see the full content of agents.py to understand the duplicate function definitions and fix them. The file was read but the output was scrubbed. Let me use verify_edit to check the current state, then apply targeted fixes. I also need to check forecast_store.py and billing.py."})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "function_name": "_format_advisory_value"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "function_name": "_get_fallback_narrative"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/src2/forecast_store.py", "function_name": "_synthesize_and_save_daily_forecast"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/src2/forecast_store.py", "function_name": "_extract_trigger_labels"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/src2/billing.py", "function_name": "validate_promo_code"})
+
+[tool-call] read_file({"relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py"})
+
+[text] I can see the full content of agents.py. The issues are:
+1. Duplicate function definitions (lines 39-60 duplicate lines 15-36)
+2. `_get_fallback_narrative` still has CC=9 (needs ≤5)
+
+The other two files already pass verification. Let me fix agents.py.
+
+
+[tool-call] add_constant({"constant_name": "_FORMAT_ADVISORY_DICT_NARRATIVE_PLACEHOLDER", "constant_code": "# Placeholder - will be replaced with actual helper function", "relative_path": "factory/temp/src2/interfaces/telegram/chronomancer/agents.py"})
+
+[tool-call] final_result({"task_id": "reduce-cc-5functions", "status": "blocked", "files_changed": ["factory/temp/src2/interfaces/telegram/chronomancer/agents.py", "factory/temp/src2/forecast_store.py", "factory/temp/src2/billing.py"], "diff_summary": "forecast_store.py and billing.py pass CC≤5 verification. agents.py still has _get_fallback_narrative at CC=9 and duplicate function definitions that need removal.", "notes": "Blocked: _get_fallback_narrative in agents.py has CC=9 (target ≤5). Duplicate function definitions exist in agents.py (lines 39-60 duplicate lines 15-36). Need to: (1) Remove duplicate helper functions, (2) Refactor _get_fallback_narrative using match/case and guard clauses to reduce CC to ≤5. Tool budget exhausted before completing the edit.", "verdict_errors": "_get_fallback_narrative CC=9 exceeds target of 5; duplicate function definitions in agents.py", "verdict_diff": "forecast_store.py and billing.py verified CC≤5; agents.py _get_fallback_narrative still at CC=9"})

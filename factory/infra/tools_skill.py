@@ -152,8 +152,7 @@ def build_skill_spec(role: str) -> SkillSpec:
     if role not in SKILL_MAP.roles:
         raise KeyError(f'[HALT] role {role!r} not in SKILL_MAP')
     entry = SKILL_MAP.roles[role]
-    module_map = {'supervisor_plan': 'supervisor', 'supervisor_review': 'supervisor'}
-    mod_name = module_map.get(role, role)
+    mod_name = role
     agent_module_name = f'factory.infra.agents.{mod_name}'
     try:
         import importlib
@@ -325,7 +324,7 @@ def forge_skill(role: str, base_template: dict, ctx: str, run_dir: Path, task_id
     Retained until M3 lands. NOTE: M2 routes build_worker_spec through the
     cached SkillSpec (forge_skill_spec) instead of this per-task forge.
     """
-    forge_agent = Agent(CONTROL_SHEET.models['planner_model'], output_type=SkillSpec, instructions=_FORGE_INSTRUCTIONS, model_settings=ModelSettings(parallel_tool_calls=False))
+    forge_agent = Agent(CONTROL_SHEET.models['intern_model'], output_type=SkillSpec, instructions=_FORGE_INSTRUCTIONS, model_settings=ModelSettings(parallel_tool_calls=False))
     template_str = yaml.safe_dump(base_template)
     last_err: str | None = None
     skill: SkillSpec | None = None
@@ -397,5 +396,5 @@ def build_worker_spec(task: ApprovedTask, strategy: Strategy, alignment: str, ru
     instructions = instructions + _tool_budget_instruction(budget)
     instructions = instructions + f'\n\nREAD BUDGET: you may call batch_read at most {READ_BUDGET} times and read_file at most {CODER_READ_FILE_BUDGET} times this run. After that, reads are disabled and you MUST emit final_result.'
     log_prompt_sent('CODER', task.id, task.id, instructions)
-    agent = Agent(model=CONTROL_SHEET.models['coder_model'], toolsets=[guard_tools(allowed_funcs, budget, read_budget=READ_BUDGET, read_file_budget=CODER_READ_FILE_BUDGET)], instructions=instructions, output_type=TaskResult, model_settings=ModelSettings(parallel_tool_calls=False))
+    agent = Agent(model=CONTROL_SHEET.models['intern_model'], toolsets=[guard_tools(allowed_funcs, budget, read_budget=READ_BUDGET, read_file_budget=CODER_READ_FILE_BUDGET)], instructions=instructions, output_type=TaskResult, model_settings=ModelSettings(parallel_tool_calls=False))
     return agent

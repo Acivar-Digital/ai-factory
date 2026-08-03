@@ -1,0 +1,1 @@
+[tool-call] final_result({"task_id": "unknown", "status": "blocked", "files_changed": [], "diff_summary": "No task was specified in the conversation to implement.", "notes": "The conversation does not contain a specific task description. The user message references exhausting a request budget, but no prior task context is available. I am BLOCKED due to lack of a defined task."})

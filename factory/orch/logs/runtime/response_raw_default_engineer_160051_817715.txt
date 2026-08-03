@@ -1,0 +1,11 @@
+[tool-call] batch_read({"line_ranges":{"src2/agents.py":"1-100","src2/forecast_store.py":"1-100","src2/billing.py":"1-100"},"paths":["src2/agents.py","src2/forecast_store.py","src2/billing.py"]})
+
+[tool-call] read_file({"relative_path":"factory/temp/src2/agents.py","start_line":1,"end_line":100})
+
+[tool-call] verify_edit({"relative_path":"factory/temp/src2/agents.py"})
+
+[tool-call] verify_edit({"relative_path":"factory/temp/src2/forecast_store.py"})
+
+[tool-call] verify_edit({"relative_path":"factory/temp/src2/billing.py"})
+
+[tool-call] final_result({"notes":"Successfully refactored all 5 functions across the 3 target files to CC <= 5. Passed all verification gates including AST safety checks, CC limits, ruff linting, and pyright.","status":"done","verdict_diff":"All 5 target functions refactored to CC <= 5 with extracted helpers and match/case dispatch.","dep_pointers":[],"ruff_ok":true,"files_changed":["factory/temp/src2/agents.py","factory/temp/src2/forecast_store.py","factory/temp/src2/billing.py"],"exec_ok":true,"verdict_errors":"","diff_summary":"Refactored 5 target functions (_format_advisory_value, _get_fallback_narrative, _synthesize_and_save_daily_forecast, _extract_trigger_labels, validate_promo_code) across agents.py, forecast_store.py, and billing.py to CC <= 5 using match/case, guard clauses, early returns, and helper extraction.","task_id":"cc-reduction-5funcs","pyright_ok":true})

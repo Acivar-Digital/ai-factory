@@ -139,7 +139,7 @@ def test_all_templates_contain_batch_read_illustration() -> None:
     from factory.infra import tools as tools_mod
 
     template_dir = tools_mod.PKG_DIR / "infra" / "agents"
-    roles = ["planner", "supervisor_plan", "supervisor_review", "red_team", "coder"]
+    roles = ["coder"]
     import yaml
 
     for role in roles:

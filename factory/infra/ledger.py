@@ -47,7 +47,7 @@ def _py_tree() -> str:
     """Compact list of .py files under src2/ (and tests/), gitignored excluded.
 
     Replaces the whole-repo ``get_repo_structure`` dump, which flooded the
-    planner brief with _docs/, _prd/, .beads/, WEB/, logs/ and audit noise.
+    orchestrator brief with _docs/, _prd/, .beads/, WEB/, logs/ and audit noise.
     Rules (per user directive):
       1. walk starts from src2/ (and tests/),
       2. .py files only,
@@ -101,42 +101,55 @@ def _unwrap_tool_output(raw: str) -> str:
 
     The codebase tools emit ``{"success": true, "message", "data": {...}}``
     (or ``{"success": false, "message"}`` on failure). Injecting that raw
-    envelope into a planner brief is noise — we want the *payload* only:
+    envelope into an orchestrator brief is noise — we want the *payload* only:
     for a success, the single non-trivial value in ``data`` (the tree string
     or the symbols listing); for a failure, the ``message`` as an ERROR note.
     """
     text = raw.strip()
+    obj = _unwrap_tool_output_parse(text)
+    if obj is None:
+        return text
+    return _unwrap_tool_output_render(obj, text)
+
+
+def _unwrap_tool_output_parse(text: str) -> dict | None:
+    """Parse ``text`` as JSON and return the dict, or None if invalid/not-a-dict."""
     try:
         obj = json.loads(text)
     except (json.JSONDecodeError, ValueError):
         # Not JSON — already clean text (or a CLI ERROR(...) string). Pass through.
-        return text
+        return None
     if not isinstance(obj, dict):
-        return text
-    if obj.get("success") is True:
-        data = obj.get("data", {})
-        if isinstance(data, dict) and len(data) == 1:
-            # Common case: {"structure": "..."} / {"symbols": [...]} — flatten.
-            value = next(iter(data.values()))
-            if isinstance(value, str):
-                return value
-            if isinstance(value, list):
-                # get_file_symbols returns [{"name","type","line"}, ...] —
-                # render a compact symbol listing, not raw JSON objects.
-                return _render_symbol_list(value)
-            return json.dumps(value, ensure_ascii=False, indent=2)
-        if isinstance(data, dict):
-            return json.dumps(data, ensure_ascii=False, indent=2)
+        return None
+    return obj
+
+
+def _unwrap_tool_output_render(obj: dict, text: str) -> str:
+    """Render the payload from a successfully-parsed tool-response dict."""
+    if obj.get("success") is not True:
+        return f"ERROR: {obj.get('message', text)}"
+    data = obj.get("data", {})
+    if not isinstance(data, dict):
         return str(data)
-    # success is False (or missing): surface the human message.
-    return f"ERROR: {obj.get('message', text)}"
+    if len(data) == 1:
+        return _unwrap_tool_output_value(next(iter(data.values())))
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+def _unwrap_tool_output_value(value: object) -> str:
+    """Render a single data value from a success response."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return _render_symbol_list(value)
+    return json.dumps(value, ensure_ascii=False, indent=2)
 
 
 def _render_symbol_list(symbols: list) -> str:
     """Compact, LLM-readable rendering of a ``get_file_symbols`` payload.
 
     Each entry is ``{"name", "type", "line"}``; emit ``name: type (line N)``
-    one per line so the planner gets a scannable symbol index, not a JSON dump.
+    one per line so the orchestrator gets a scannable symbol index, not a JSON dump.
     """
     lines: list[str] = []
     for sym in symbols:
@@ -208,7 +221,7 @@ def inject_repo_map(target_files: list[str]) -> str:
     for rel in target_files:
         if _is_dir(rel):
             # get_repo_structure emits the whole repo tree once (see STRUCTURE
-            # above); folders are recorded as in-scope scopes so the planner
+            # above); folders are recorded as in-scope scopes so the orchestrator
             # knows where to focus. (No per-folder subtree CLI exists yet.)
             lines.append(f"FOLDER (in scope, edit staged copy): factory/temp/{rel}")
             lines.append("-" * 40)
@@ -230,8 +243,8 @@ def build_coder_brief(task: ApprovedTask, plan: ApprovedPlan) -> str:
 
     Returns ONLY the coder's scoped task (instruction, file_paths, acceptance,
     tool_preference) plus the workplan context it needs to execute — the global
-    alignment and workplan DAG. The planner's raw prompt, rubric reasoning and
-    supervisor prose are deliberately excluded. This fixes the old
+    alignment and workplan DAG. The task spec's raw prompt, rubric reasoning and
+    senior review prose are deliberately excluded. This fixes the old
     `runner.py:664` "accumulate all role history" context-leak bug.
     """
     out: list[str] = [

@@ -1,0 +1,25 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py"})
+
+[tool-call] remember({"note": "Plan to refactor check_plan_invariants (CC=13) in factory/temp/factory/infra/validation.py:\n\n1. Replace check_plan_invariants body with guard-clause + helper calls (CC will drop to ~3)\n2. Add 4 private helper functions after check_plan_invariants:\n   - _get_workplan(plan) - extracts workplan from plan or strategy (CC=3)\n   - _get_groups(workplan) - gets groups list (CC=2)\n   - _collect_tasks(groups) - collects all tasks from groups (CC=2)\n   - _check_task_file_paths(task, seen, violations) - checks single task's file paths (CC=4)\n3. All new helpers have CC <= 5\n4. Do NOT modify any other function in the file\n5. Verify with ruff check and CC verification after edits"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 1, "end_line": 100})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/validation.py", "start_line": 100, "end_line": 200})
+
+[tool-call] grep({"relative_path": "factory/temp/factory/infra/validation.py", "pattern": "def check_plan_invariants"})
+
+[tool-call] batch_read({"paths": ["factory/temp/factory/infra/validation.py"]})
+
+[tool-call] replace_function({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "check_plan_invariants", "new_function_code": "def check_plan_invariants(plan) -> list[str]:\n    \"\"\"Return violation strings (empty list = plan OK).\n\n    Checks: (1) every coder task lists exactly 1 file; (2) file paths are disjoint\n    across all coder tasks. Runs on BOTH planner and supervisor_plan output.\n    \"\"\"\n    violations: list[str] = []\n    seen: set[str] = set()\n    workplan = _get_workplan(plan)\n    groups = _get_groups(workplan)\n    if not workplan:\n        violations.append(\"workplan or strategy.parallelisable_workplan is missing or null.\")\n    tasks = _collect_tasks(groups)\n    for task in tasks:\n        _check_task_file_paths(task, seen, violations)\n    return violations\n\n\ndef _get_workplan(plan) -> object:\n    \"\"\"Extract workplan from plan or strategy, return None if neither exists.\"\"\"\n    workplan = getattr(plan, \"workplan\", None)\n    if not workplan:\n        strategy = getattr(plan, \"strategy\", None)\n        if strategy:\n            workplan = getattr(strategy, \"parallelisable_workplan\", None)\n    return workplan\n\n\ndef _get_groups(workplan) -> list:\n    \"\"\"Return the groups list from a workplan, or empty list if workplan is falsy.\"\"\"\n    return getattr(workplan, \"groups\", []) if workplan else []\n\n\ndef _collect_tasks(groups) -> list:\n    \"\"\"Collect all tasks from a list of groups.\"\"\"\n    tasks = []\n    for group in groups or []:\n        tasks.extend(getattr(group, \"tasks\", []) or [])\n    return tasks\n\n\ndef _check_task_file_paths(task, seen: set[str], violations: list[str]) -> None:\n    \"\"\"Check that a task has exactly 1 file path and no file collisions.\"\"\"\n    fps = getattr(task, \"file_paths\", None) or []\n    if len(fps) != 1:\n        violations.append(\n            f\"task {getattr(task, 'id', '?')} lists {len(fps)} files (exactly 1 required)\"\n        )\n    for fp in fps:\n        if fp in seen:\n            violations.append(f\"file collision: {fp} in multiple tasks\")\n        seen.add(fp)"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "check_plan_invariants"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_get_workplan"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_get_groups"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_collect_tasks"})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/validation.py", "function_name": "_check_task_file_paths"})
+
+[tool-call] final_result({"status": "done", "task_id": "epic-cc-reduction-validation", "files_changed": ["factory/temp/factory/infra/validation.py"], "diff_summary": "Refactored check_plan_invariants (CC=13→3) by extracting 4 private helpers: _get_workplan (CC=3), _get_groups (CC=2), _collect_tasks (CC=4), _check_task_file_paths (CC=5). All helpers have CC<=5. Public signature unchanged.", "notes": "All target functions now have CC<=5. The main function check_plan_invariants went from CC=13 to CC=3. Four new private helper functions were added with CC values of 3, 2, 4, and 5 respectively.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true, "verdict_diff": "check_plan_invariants CC reduced from 13 to 3 via guard clauses and helper extraction."})

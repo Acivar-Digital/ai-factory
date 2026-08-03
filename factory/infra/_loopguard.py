@@ -272,12 +272,13 @@ async def run_with_loopguard(
     result_repeat: int = 0
     # Align the hard request cap with each role's GuardToolset tool budget.
     # pydantic-ai counts MODEL REQUESTS (~2 per tool call: call + result), so the
-    # cap is budget * 2. Coder (75) -> 150; planner (10) -> 20; others (15) -> 30.
+    # cap is budget * 2. Engineer (75) -> 150; intern (10) -> 20; senior (15) -> 30.
     # Replaces the old fixed 40 that killed tool-looping coders before they could
     # emit final_result (see session_crash.md coder_4 UsageLimitExceeded).
     role_request_cap = {
-        "planner": 20, "planner_sup": 20, "supervisor_plan": 20,
-        "coder": 150, "supervisor_review": 30, "red_team": 30, "ops": 30,
+        "intern": 20,
+        "engineer": 150,
+        "senior": 30,
     }
     limits = UsageLimits(request_limit=role_request_cap.get(role, 30))
     fail_dir = ORCH_ROOT / "logs" / "runtime"
@@ -574,11 +575,11 @@ async def run_with_loopguard(
                     "your best answer. If you are BLOCKED, say so explicitly instead of looping."
                 )
     finally:
-        # Shared-model safety: roles like planner + supervisor_plan resolve to the
-        # SAME model object (control.CONTROL_SHEET). The intercepted
-        # `request` closure captures `role`, so leaving it patched leaks one role's
-        # per-turn persist into another role's history folder. Always restore the
-        # original request on exit (normal return OR exception).
+        # Shared-model safety: multiple roles may resolve to the SAME model object
+        # (control.CONTROL_SHEET). The intercepted `request` closure captures
+        # `role`, so leaving it patched leaks one role's per-turn persist into
+        # another role's history folder. Always restore the original request on
+        # exit (normal return OR exception).
         if _patched_model_request is not None:
             _patched_model_request.request = _original_request
 

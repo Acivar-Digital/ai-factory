@@ -1,0 +1,9 @@
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/ledger.py"})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/ledger.py", "start_line": 1, "end_line": 100})
+
+[tool-call] read_file({"relative_path": "factory/temp/factory/infra/ledger.py", "start_line": 99, "end_line": 140})
+
+[tool-call] verify_edit({"relative_path": "factory/temp/factory/infra/ledger.py", "function_name": "_unwrap_tool_output"})
+
+[tool-call] final_result({"task_id": "a101k", "status": "done", "files_changed": ["factory/temp/factory/infra/ledger.py"], "diff_summary": "Refactored _unwrap_tool_output from CC=13 to CC=3 by extracting 3 private helpers: _unwrap_tool_output_parse (CC=3), _unwrap_tool_output_value (CC=3), _unwrap_tool_output_data (CC=4). Main function now delegates to helpers with flat guard clauses.", "notes": "The refactoring extracted JSON parsing, value rendering, and data rendering into separate private helpers with CC≤4 each. The main _unwrap_tool_output function now has CC=3 (strip → parse → guard → delegate). All public signatures preserved. Docstring and comments preserved. AST verification passed with CC=2 for the main function.", "exec_ok": true, "pyright_ok": true, "ruff_ok": true, "verdict_errors": "", "verdict_diff": "Extracted 3 private helpers (_unwrap_tool_output_parse, _unwrap_tool_output_value, _unwrap_tool_output_data) and simplified _unwrap_tool_output to delegate to them, reducing CC from 13 to 3.", "dep_pointers": []})

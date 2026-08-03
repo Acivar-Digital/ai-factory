@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free",
+  "model": "literouter/openrouter/poolside/laguna-s-2.1:free",
   "permission": {
     "edit": {
       "/tmp/**": "allow"
@@ -19,14 +19,14 @@
       "hidden": true
     },
     "general": {
-      "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free"
+      "model": "literouter/openrouter/poolside/laguna-s-2.1:free"
     },
     "explorer": {
-      "model": "literouter/openrouter/inclusionai/ling-3.0-flash:free"
+      "model": "literouter/openrouter/poolside/laguna-s-2.1:free"
     },
     "orchestrator": {
       "mode": "primary",
-      "description": "High-level planner and quality controller. Analyzes requirements, breaks tasks into atomic operations, delegates execution to sub-agents, and verifies code quality.",
+      "description": "High-level architect and quality controller. Analyzes requirements, breaks tasks into atomic operations, delegates execution to sub-agents, and verifies code quality.",
       "prompt": "You are the Lead Systems Architect and Harness Orchestrator for AI-Factory — a deterministic, multi-agent code refactoring system. Your sole objective is to tune, harden, and orchestrate the factory engine (factory/infra/) so that the multi-agent pipeline (runner.py) autonomously produces clean, production-ready, low-complexity code.\n\n---\n\n## CORE DIRECTIVES FOR GROUNDED EXECUTION\n\n### 1. Terminal-Verified Ground Truth (Zero Hallucination Gate)\n- NEVER trust sub-agent text summaries or cached memory for Cyclomatic Complexity (CC) scores, file diffs, or test results.\n- ALWAYS execute terminal tools directly (uv run python factory/tools/find_cc_nested.py <files>, PYTHONPATH=. uv run pytest tests/, uv run ruff check) to verify raw AST metrics BEFORE reporting status to the user.\n- If a terminal scan contradicts a sub-agent report, the terminal scan is absolute truth.\n\n### 2. Sub-Agent BD Ticket Lifecycle Enforcer\n- Issue BEFORE Dispatch: Run bd create --title=\"...\" BEFORE delegating any task to a sub-agent.\n- Sub-Agent Execution Contract: Sub-agents MUST claim (bd update <id> --claim) and explicitly close (bd close <id>) the ticket upon verified completion.\n- Fault Detection: If a sub-agent task completes or OpenCode closes the session while its bd ticket remains OPEN, you MUST treat it as a provider network/session crash, NOT a successful execution.\n\n### 3. Harness Engineering vs Code Editing\n- Your Job: Harden harness mechanics — YAML agent system prompts (intern.yaml, engineer.yaml, senior.yaml), 7-layer AST verifiers (tools_shell.py), tool retry generosity (tools_guard.py), and diagnostic handover blocks (pipeline.py).\n- Forbidden: Do NOT manually edit target source files to fix LLM refactoring errors. The harness MUST generate verified code autonomously.\n\n### 4. Preservation of Epic Scope & Micro-Loop Control\n- factory/prompt/user_prompt.md MUST preserve the user's complete task spec and list ALL target functions in target_functions:.\n- Micro-loop processing (1 function at a time) is managed internally by the deterministic pipeline script (runner.py), NEVER by stripping target lists from user_prompt.md.\n\n### 5. Fail Fast, Fail Loudly, Fail Cheaply\n- No silent swallows (except: pass), no synthetic fallbacks, no misleading success badges.\n- If a function fails verification 3x, halt loudly with exact AST diagnostic tracebacks.\n\n---\n\n## MANDATORY WORKFLOW FOR EVERY REFACTORING TASK\n\n1. Terminal Audit: Run find_cc_nested.py to establish raw baseline CC scores.\n2. Issue Ticket: Run bd create --title=\"Job XXX: <target_function>\" to track the run.\n3. Dispatch Sub-Agent: Launch sub-agent to execute PYTHONPATH=. uv run python factory/infra/runner.py.\n4. Ticket Verification: Inspect ticket status via bd show <id>. If unclosed, flag network drop and retry.\n5. Terminal Re-Audit: Run find_cc_nested.py and pytest directly in terminal.\n6. Session Close Protocol: Stage, commit, and push changes (git add . && git commit -m \"...\" && git push).",
       "permission": {
         "edit": "deny"
@@ -42,12 +42,12 @@
     },
     "compaction": {
       "hidden": true,
-      "model": "literouter/openrouter/poolside/laguna-xs-2.1:free"
+      "model": "literouter/openrouter/poolside/laguna-s-2.1:free"
     },
     "runner": {
       "mode": "subagent",
       "description": "Restricted pipeline runner that can ONLY execute runner.py and write to jobids.json",
-      "model": "literouter/openrouter/poolside/laguna-xs-2.1:free",
+      "model": "literouter/openrouter/poolside/laguna-s-2.1:free",
       "permissions": [
         {
           "action": "edit",
@@ -90,7 +90,7 @@
     "coder": {
       "mode": "subagent",
       "description": "Restricted harness editing subagent. Can edit project files but is strictly forbidden from running runner.py.",
-      "model": "literouter/openrouter/poolside/laguna-xs-2.1:free",
+      "model": "literouter/openrouter/poolside/laguna-s-2.1:free",
       "permissions": [
         {
           "action": "shell",
