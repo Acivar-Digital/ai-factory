@@ -540,10 +540,10 @@ class ControlSheet(BaseModel):
 def load_control_sheet() -> ControlSheet:
     return ControlSheet(models={
         "codebase_model": gemini_3_5_flash_extra_low,
-        "intern_model": laguna_s,
+        "intern_model": ling_flash,
         "engineer_model": laguna_s,
-        "senior_model": laguna_s,
-        "compact_model": laguna_s,
+        "senior_model": ling_flash,
+        "compact_model": ling_flash,
     })
 
 
