@@ -1,0 +1,52 @@
+{
+  "id": "OW-07",
+  "title": "Subagent Isolation for Exploration",
+  "scope": "Map how OpenWorker's explore tool spawns a child TurnEngine in PLAN mode (hard-blocked writes/shell) with a fresh context for safe research without polluting the parent session.",
+  "folders": [
+    "openworker/coworker/tools/subagent.py",
+    "openworker/tests/test_subagent.py",
+    "openworker/coworker/engine.py"
+  ],
+  "findings": {
+    "explore_tool": {
+      "purpose": "A read-only research subagent with its own context window. Broad questions ('where is retry logic handled?') burn the main session's context on dozens of file reads; explore spawns a child TurnEngine over the same workspace with read-only tools and a fresh context; only its final report returns to the caller.",
+      "mode": "Child runs in PLAN mode — PermissionEngine hard-blocks writes/shell no matter what the child decides",
+      "approver": "No approver — child never needs an approval round-trip",
+      "parallel": "Low-risk metadata (children are read-only) makes several explores in one assistant turn eligible for the engine's parallel execution (engine.py:664 _parallel_safe)",
+      "recursion": "No recursion: the child registry has no 'explore' tool — child engine cannot spawn grandchildren"
+    },
+    "child_engine": {
+      "builder": "build_explorer_engine() (subagent.py:42) constructs a child TurnEngine",
+      "max_iterations": "_CHILD_MAX_ITERATIONS = 10 — bounded, can't loop forever",
+      "registry": "Child ToolRegistry gets a restricted tool set: file_tools (read-only, no allow_write), git_tools, search_tools",
+      "tool_replacement": "Replaced = {search_files, read_file, read_file_lines} — child uses openworker's own grep + windowed read_file instead of aisuite's",
+      "provider": "Child shares the parent's provider/model — same LLM, fresh context"
+    },
+    "instructions": {
+      "system": "EXPLORER_INSTRUCTIONS (subagent.py:30) — read-only code explorer persona",
+      "task": "Answer the research task by searching/reading code (grep, read_file, list_files, git_log/status/diff). Cannot write files or run commands.",
+      "report": "Final message is the report — goes back to the caller agent, not the user. Self-contained: answer directly, reference path:line, quote snippets, note surprises.",
+      "failure_handling": "If something wasn't found, say what was searched so the caller doesn't repeat the same searches"
+    },
+    "contrast_with_ai_factory": {
+      "current": "ai-factory's 'task' tool spawns intern subagents via build_worker_spec — these are FULL agents with write tools, not read-only explorers",
+      "gap": "No isolation mechanism for exploration — an intern exploring code can accidentally write/overwrite files. Context bloat from many file reads in the parent.",
+      "location": "factory/infra/tools_skill.py:362 (build_worker_spec) / :281 (load_skill delegates to it) / :399 (intern Agent creation with guard_tools)",
+      "solution": "Spawn a read-only exploration intern: a child Agent with deps_type=ReadOnlyCtx, a FunctionToolset restricted to read-only tools (search_files, read_file, batch_read, list_files, get_repo_structure, get_file_symbols — NO write_file/replace_text/rename_file/delete_file), output_type=ExplorerReport, bounded max_iterations=10, no recursion (child registry excludes the 'task' tool). The child context is discarded after the report returns, keeping parent context clean. Mirror OpenWorker's PLAN-mode child engine (subagent.py:42 build_explorer_engine) which hard-blocks writes via PermissionEngine."
+    }
+  },
+  "proposal": "ai-factory's subagent spawning (tools_skill.py / build_worker_spec) creates full write-capable intern agents with no isolation. When the LLM needs to explore/research (e.g. 'find all usages of X'), a full intern with write tools is risky and pollutes the parent's context with file reads. OpenWorker's explore pattern — a child TurnEngine in PLAN mode with read-only tools only, no recursion, bounded iterations — should be adopted for exploration tasks. This prevents exploration subagents from hallucinating file writes and keeps the parent context clean.",
+  "pydantic_ai_2_impl": {
+    "pattern": "Pydantic-AI Agent with read-only FunctionToolset + output_type=Report model + deps_type=ReadOnlyCtx — child agent can only read, never write, forced to emit a structured final report.",
+    "code": "from pydantic_ai import Agent, RunContext\nfrom pydantic import BaseModel, Field\n\nclass ReadOnlyCtx(BaseModel):\n    workspace: str\n    allowed_prefixes: list[str]  # path-scoped reads only\n\nclass ExplorerReport(BaseModel):\n    answer: str = Field(description='Direct answer to the research task')\n    file_refs: list[str] = Field(default_factory=list)  # path:line references\n    searched: list[str] = Field(default_factory=list)  # what didn't match, to prevent repeats\n    surprises: list[str] = Field(default_factory=list)\n\n# Read-only tools only — no write_file, no replace_text, no shell\nexplorer_agent = Agent(\n    model='litellm/gpt-4o-mini',  # cheap model for exploration\n    deps_type=ReadOnlyCtx,\n    output_type=ExplorerReport,\n    system_prompt='You are a read-only code explorer. Search and read files. Never write. Your final message is your report.',\n    retries=2,\n)\n\nresult = explorer_agent.run_sync('find retry logic', deps=ReadOnlyCtx(workspace='/repo', allowed_prefixes=['src/', 'tests/']))\n# result.output is a typed ExplorerReport — the LLM MUST emit structured JSON\n# If it hallucinates a file_ref outside workspace, a model_validator(mode='after')\n# checks file existence and raises ModelRetry to reject the hallucination",
+    "why_now": "ai-factory's LLMs burn context on exploratory file reads in the parent session, which then overflows and corrupts output. OpenWorker's explore tool (subagent.py:42) proves that a child engine with read-only tools + PLAN mode + bounded iterations keeps the parent context clean and prevents exploration subagents from hallucinating writes. The typed ExplorerReport output_type ensures the report is structured, not free-text garbage.",
+    "harness_gap": "ai-factory's intern spawning at factory/infra/tools_skill.py:362 (build_worker_spec) creates full write-capable intern agents with no read-only exploration mode. load_skill() delegates to build_worker_spec at factory/infra/tools_skill.py:281; the intern Agent is forged at :399 with guard_tools(allowed_funcs, budget) where allowed_funcs includes MODIFY_TOOLS ACL-wrapped for write access at :380-383 (wrap_with_acl(func, INTERN_WRITE_ROOTS)). No PLAN-mode child engine, no read-only FunctionToolset, no ExplorerReport output_type — exploration subagents can accidentally write/overwrite files and burn parent context on file reads. No typed output contract: the LLM emits free-text reports that may hallucinate file refs. Adopt: ReadOnlyCtx deps_type restricting allowed paths, read-only FunctionToolset only (search_files, read_file, batch_read, list_files, get_repo_structure, get_file_symbols — NO write_file/replace_text/rename_file/delete_file), output_type=ExplorerReport for typed report emission, pre-flight file existence check in model_validator(mode='after') to reject hallucinated file refs."
+  },
+  "status": "done",
+  "assigned_agent": 7,
+  "dependencies": ["OW-01"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:06:23+08:00"
+}

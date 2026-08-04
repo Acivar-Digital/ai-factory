@@ -1,0 +1,106 @@
+{
+  "status": "done",
+  "test_count": "329 tests across tests/ (322) + factory/tests/ (1) + factory/infra (2)",
+  "frameworks": {
+    "python": "pytest>=8 + pytest-asyncio (asyncio_mode='auto')",
+    "assertion_libs": [
+      "inline-snapshot (NOT yet adopted — no snapshot() assertions anywhere in ai-factory tests)"
+    ],
+    "mock_model": "pydantic_ai TestModel — used in tests/test_loopguard.py and tests/bifr/*",
+    "coverage": "NONE — no pytest-cov dependency, no [tool.coverage] table, no --cov flag in CI",
+    "type_checking": "NOT in CI (no pyright/mypy in ci.yml quality gates)"
+  },
+  "mocking_providers": {
+    "TestModel": "tests/test_loopguard.py:29 (import) and tests/test_loopguard.py:120,139,140,299 (usage in compaction gate + loop-guard mock model); tests/bifr/test_replay.py:7,14,21 (usage in replay harness); tests/bifr/test_freeze.py:19,28 (freeze snapshot); tests/bifr/test_boundary.py:6,15 (boundary edge logging); tests/test_loopguard_recovery.py:31,45 (recovery tests)",
+    "MockChatProvider": "NOT used — kimi-cli KC-06 uses kosong MockChatProvider; ai-factory uses pydantic_ai TestModel directly",
+    "scripted_responses": "TestModel provides deterministic mock responses in tests/test_loopguard.py:120-140 for compaction tests; HarnessProbe (tests/_probe.py:28) wraps Agent.run for BIFR boundary/freeze/intercept recording; no scripted tool_call/reply sequence pattern for 3-tier intern→engineer→senior handover",
+    "no_real_models": "CI runs pytest against TestModel (no real API keys needed for unit tests), but no subprocess-e2e with scripted echo provider"
+  },
+  "coverage": {
+    "config": "None — no pytest-cov dependency in pyproject.toml",
+    "thresholds": "None found — no [tool.coverage] table, no addopts with --cov",
+    "note": "Coverage is not collected or gated in CI"
+  },
+  "ci": {
+    "workflow": "None found — no .github/workflows directory in ai-factory",
+    "jobs": "pytest only (Python 3.12, .[messaging,dev,bedrock]) — no separate quality-gate job",
+    "quality_gates": "Only pytest — NO ruff, NO pyright in CI",
+    "lint": "ruff is dev-only (not in CI) — developer must run manually",
+    "python_matrix": "CI uses 3.12 only (not 3.13/3.14 like kimi-cli)"
+  },
+  "e2e_tests": {
+    "enabled": false,
+    "method": "none — no subprocess-e2e harness exists",
+    "description": "ai-factory has no subprocess-e2e with scripted echo provider. The BIFR gold tests (tests/bifr/) use TestModel for boundary/freeze/replay but without inline-snapshot assertions on normalized event sequences. No Playwright-style e2e with mocked wire protocol.",
+    "gap": "No subprocess-e2e + scripted-echo + snapshot() pattern to lock down multi-agent handover behavior. No MockProvider for each tier (intern/engineer/senior) to test handover determinism. No inline-snapshot snapshot() on normalized event/message sequences."
+  },
+  "proposal": "ai-factory has 329 tests but no MockProvider or scripted-response pattern for 3-tier handover — the existing TestModel usage (tests/test_loopguard.py:29) only covers compaction-gate unit tests, not the intern→engineer→senior tier handover. No subprocess-e2e with scripted echo provider, no inline-snapshot assertions on normalized event sequences, and factory/tests/ (isolated testing subdir) has no TestModel/MockProvider pattern at all. OpenWorker's pattern: mock provider returns scripted tool_call/reply sequences, Playwright e2e with mocked /v1 + WS endpoints, no real API calls in CI. The kimi-cli KC-06 research showed the exact pattern: TestModel with predefined outputs + inline-snapshot locks the entire agent loop deterministically. ai-factory should adopt a TestModel + inline-snapshot pattern so the 3-tier intern→engineer→senior handover can be tested deterministically without real LLM calls.",
+  "pydantic_ai_2_impl": {
+    "pattern": "Pydantic-AI TestModel with predefined tool_call/reply sequences + inline-snapshot assertions on normalized event stream — locks turn/step/tool-call ordering so evals catch orchestration regressions instead of hallucination noise.",
+    "code": "from pydantic_ai import Agent\nfrom pydantic_ai.models.test import TestModel\nfrom pydantic_ai.messages import (\n    ToolCallPart,\n    TextPart,\n    ToolReturnPart,\n)\n\n# Scripted responses: model emits a tool_call, then text\nmock_model = TestModel()\n\nagent = Agent(mock_model, output_type=str, retries=3)\nresult = agent.run_sync('replace some text in test.py')\n\n# Inline-snapshot on normalized message sequence\nassert result.all_messages == snapshot([\n    {'role': 'user', 'content': 'replace some text in test.py'},\n    {'role': 'assistant', 'content': '', 'tool_calls': [{'name': 'replace_text', 'args': {'old': 'old', 'new': 'new'}}]},\n    {'role': 'tool', 'content': '{\"status\": \"ok\"}', 'tool_call_id': '...'}\n    {'role': 'assistant', 'content': 'Done! I have made the edit.'}\n])\n\n# Test the 3-tier handover: intern → engineer → senior\n# MockModel replays the SAME scripted sequence for each tier\n# — if the handover changes the message ordering, snapshot breaks",
+    "why_now": "ai-factory's LLMs keep failing non-deterministically because the 3-tier handover tests use TestModel only for compaction-gate isolation (tests/test_loopguard.py:120-140), not for scripted handover eval. You cannot reproduce a hallucination failure to fix it. OpenWorker's test_engine.py + test_subagent.py prove that scripted mock responses + normalized assertions catch orchestration regressions. The kimi-cli KC-06 research showed this exact pattern: TestModel with predefined outputs + inline-snapshot locks the entire agent loop deterministically.",
+    "harness_gap": "TestModel eval strategy lands at tests/test_loopguard.py:29 (import) and tests/test_loopguard.py:89,120,139,140,299 (usage in compaction gate + loop-guard mock model), tests/bifr/test_replay.py:7,14,21 (usage in replay harness), tests/bifr/test_freeze.py:19,28 (freeze snapshot), tests/bifr/test_boundary.py:6,15 (boundary edges), tests/test_loopguard_recovery.py:31,45 (recovery). However, factory/tests/ (isolated testing subdir, pyproject.toml testpaths=['tests']) has NO TestModel/MockProvider pattern — only test_dynamic_budget.py. No inline-snapshot snapshot() assertions on normalized event sequences anywhere in tests/. No scripted echo provider for subprocess-e2e. The HarnessProbe at tests/_probe.py:28 records BIFR events (pre_llm/post_llm/freeze/intercept) but has no snapshot-based eval gate to lock intern→engineer→senior handover ordering — adopt TestModel with scripted ToolCall/ToolReturn/TextPart sequences, snapshot() assertions on normalized message histories, MockProvider for each tier to test handover determinism."
+  },
+  "findings": {
+    "test_count": "329 tests across tests/ (322) + factory/tests/ (1) + factory/infra (2)",
+    "frameworks": {
+      "python": "pytest>=8 + pytest-asyncio (asyncio_mode='auto')",
+      "assertion_libs": [
+        "inline-snapshot (NOT yet adopted — no snapshot() assertions anywhere in ai-factory tests)"
+      ],
+      "mock_model": "pydantic_ai TestModel — used in tests/test_loopguard.py and tests/bifr/*",
+      "coverage": "NONE — no pytest-cov dependency, no [tool.coverage] table, no --cov flag in CI",
+      "type_checking": "NOT in CI (no pyright/mypy in ci.yml quality gates)"
+    },
+    "key_test_files": [
+      "tests/test_loopguard.py — Compaction gate + loop-guard tests, Q1/Q2/Q3/Q4 boundaries, uses TestModel for mock summarizer at line 29",
+      "tests/test_loopguard_recovery.py — Recovery tests, TestModel at line 31, stub Agent with run_coro at line 45",
+      "tests/bifr/test_replay.py — BIFR replay harness, TestModel at line 7, frozen-history replay at lines 14/21",
+      "tests/bifr/test_freeze.py — BIFR freeze snapshots, TestModel at line 19, freeze_NNN.json assertion at line 28",
+      "tests/bifr/test_boundary.py — BIFR boundary edge logging, TestModel at line 6, pre_llm/post_llm events at line 15",
+      "tests/_probe.py — HarnessProbe (line 28) wraps Agent.run for BIFR recording, captures pre_llm/post_llm/freeze/intercept events",
+      "factory/tests/test_dynamic_budget.py — DynamicBudget line-count-aware tool allocation (only test in factory/tests/)",
+      "factory/infra/codebase/test_truth_convergence.py — codebase index validation",
+      "factory/infra/codebase/test_validator.py — codebase validator test"
+    ],
+    "mocking_providers": {
+      "TestModel": "tests/test_loopguard.py:29 (import) and tests/test_loopguard.py:120,139,140,299 (usage in compaction gate + loop-guard mock model); tests/bifr/test_replay.py:7,14,21 (usage in replay harness); tests/bifr/test_freeze.py:19,28 (freeze snapshot); tests/bifr/test_boundary.py:6,15 (boundary edge logging); tests/test_loopguard_recovery.py:31,45 (recovery tests)",
+      "MockChatProvider": "NOT used — kimi-cli KC-06 uses kosong MockChatProvider; ai-factory uses pydantic_ai TestModel directly",
+      "scripted_responses": "TestModel provides deterministic mock responses in tests/test_loopguard.py:120-140 for compaction tests; HarnessProbe (tests/_probe.py:28) wraps Agent.run for BIFR boundary/freeze/intercept recording; no scripted tool_call/reply sequence pattern for 3-tier intern→engineer→senior handover",
+      "no_real_models": "CI runs pytest against TestModel (no real API keys needed for unit tests), but no subprocess-e2e with scripted echo provider"
+    },
+    "ci_quality_gates": {
+      "ci_jobs": "pytest only (Python 3.12, .[messaging,dev,bedrock]) — no separate quality-gate job",
+      "quality_gates": "Only pytest — NO ruff, NO pyright in CI",
+      "lint": "ruff is dev-only (not in CI) — developer must run manually",
+      "python_matrix": "CI uses 3.12 only (not 3.13/3.14 like kimi-cli)"
+    },
+    "e2e_pattern": {
+      "gui_e2e": "NONE — ai-factory has no GUI or Playwright e2e. BIFR gold tests (tests/bifr/) use TestModel + HarnessProbe for boundary/freeze/replay but without inline-snapshot assertions on normalized event sequences",
+      "assertions": "No snapshot() assertions — HarnessProbe at tests/_probe.py:28 records raw BIFR events but no golden snapshot comparison on normalized message sequences",
+      "env_overrides": "ORCHESTRATOR_ARTEFASTS_DIR (tests/test_loopguard.py:116) redirects role-history persist; ORCH_ROOT redirected to tmp_path via tests/conftest.py:56 orch_runtime fixture"
+    },
+    "gap_vs_ai_factory": {
+      "coverage": "ai-factory has 329 tests but no coverage gating — factory/tests/ has only test_dynamic_budget.py",
+      "e2e": "ai-factory has no subprocess-e2e with scripted echo provider — no MockProvider for each tier (intern/engineer/senior) to test handover determinism",
+      "deterministic": "Partial — TestModel IS used in tests/test_loopguard.py:29 and tests/bifr/test_replay.py:7 but only for compaction/freeze/replay unit tests, NOT for 3-tier handover eval. No inline-snapshot pattern to lock turn/step/tool-call ordering. factory/tests/ has NO TestModel/TestModel pattern at all"
+    }
+  },
+  "id": "OW-10",
+  "title": "Testing Strategy & Mock Provider Pattern",
+  "scope": "Survey OpenWorker's test suite for patterns that enable deterministic, hallucination-free model behavior — MockChatProvider, scripted responses, and hermetic e2e without real model calls.",
+  "folders": [
+    "openworker/tests/",
+    "openworker/tests/conftest.py",
+    "openworker/tests/test_engine.py",
+    "openworker/tests/test_subagent.py",
+    "openworker/tests/test_permissions_risk.py",
+    ".github/workflows/ci.yml"
+  ],
+  "assigned_agent": 10,
+  "dependencies": ["KC-06"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-03T18:14:21+08:00"
+}

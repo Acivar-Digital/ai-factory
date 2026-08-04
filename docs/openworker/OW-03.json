@@ -1,0 +1,84 @@
+{
+  "id": "OW-03",
+  "title": "Provider Router & Config Invalidation",
+  "scope": "Understand how OpenWorker's ProviderRouter lazily builds, caches, and invalidates provider clients from SecretStore profiles — preventing stale config from causing LLM failures.",
+  "folders": [
+    "openworker/coworker/providers/router.py",
+    "openworker/coworker/providers/registry.py",
+    "openworker/coworker/secrets.py",
+    "openworker/tests/test_provider_router.py"
+  ],
+  "config_formats": [
+    "json",
+    "env"
+  ],
+  "config_locations": [
+    "~/.config/coworker/secrets.json (0600 JSON file, SecretStore backend)",
+    "~/.config/coworker/.env (env-var resolution source)"
+  ],
+  "env_vars": [
+    "OW_PROVIDER_* (provider-specific env vars referenced via ${ENV_VAR} in secrets.json)",
+    "OW_SECRET_* (secret references resolved at read time)",
+    "process environment (fallthrough for ${ENV_VAR} resolution)"
+  ],
+  "config_loader": "SecretStore.get('provider:{name}') reads profiles from secrets.json (0600), resolves ${ENV_VAR} references at read time from process env + ~/.config/coworker/.env, then build_provider_client() delegates to the registry's build() factory to construct the SDK client. ProviderRouter caches built clients in self._clients dict with threading.Lock, invalidated via invalidate(name=None).",
+  "findings": {
+    "config_formats": [
+      "json — secrets.json (0600 permissions, SecretStore backend)",
+      "env — .env file for ${ENV_VAR} resolution"
+    ],
+    "config_locations": [
+      "~/.config/coworker/secrets.json",
+      "~/.config/coworker/.env"
+    ],
+    "env_vars": [
+      "OW_PROVIDER_* (provider-specific env vars referenced via ${ENV_VAR} in secrets.json)",
+      "OW_SECRET_* (secret references resolved at read time)",
+      "process environment (fallthrough for ${ENV_VAR} resolution)"
+    ],
+    "config_loader": "SecretStore.get('provider:{name}') reads profiles from secrets.json (0600), resolves ${ENV_VAR} references at read time from process env + ~/.config/coworker/.env, then build_provider_client() delegates to the registry's build() factory. ProviderRouter caches built clients in self._clients dict with threading.Lock, invalidated via invalidate(name=None).",
+    "router_design": {
+      "class": "ProviderRouter (router.py:23) — implements ProviderClient ABC",
+      "dispatch": "Dispatches by provider: prefix of model string: openai:gpt-4o → OpenAI client, ollama:llama3 → Ollama client, bare gpt-4o → default (openai)",
+      "prefix_stripped": "The provider prefix is stripped before delegating to the SDK (which wants bare model name). _bare() (router.py:70) only strips KNOWN provider prefixes — qwen2.5-coder:32b (version tag, not provider) is returned unchanged",
+      "lazy_build": "_client_for(model) builds client lazily from SecretStore profile and caches it in self._clients dict",
+      "thread_safe": "Uses threading.Lock for client cache access"
+    },
+    "invalidation": {
+      "method": "invalidate(name=None) (router.py:82)",
+      "behavior": "Drops cached client(s) so the next call rebuilds with fresh config. If name given → pop one; if None → clear all",
+      "trigger": "Config changes (new key, new Ollama URL) call invalidate() so existing engines pick up the change without a rebuild — the engine still holds the same ProviderRouter instance"
+    },
+    "config_resolution": {
+      "profile_source": "self._secrets.get(f'provider:{name}') or {} — reads from SecretStore",
+      "build_call": "build_provider_client(name, profile, self._secrets) delegates to the registry's build() factory",
+      "on_use_callback": "Optional on_use(provider_name) callable fired when a completion is dispatched — drives Settings pane 'Last used' line. Best-effort: failures never break a model call"
+    },
+    "secret_store": {
+      "backend": "0600 JSON file (~/.config/coworker/secrets.json)",
+      "profile_key": "connector[:account] or provider:<name>",
+      "env_resolution": "Values may be ${ENV_VAR} references resolved at read time from process env + ~/.config/coworker/.env",
+      "interface_only": "Interface abstracts the backend — pluggable (file → Keychain/age-later without touching callers)"
+    },
+    "test_coverage": "openworker/tests/test_provider_router.py verifies: (1) _client_for lazy build with cache hit/miss, (2) _bare() strips known provider prefixes only (qwen2.5-coder:32b returned unchanged), (3) invalidate(name) pops a single client from cache, (4) invalidate() with no arg clears all clients, (5) concurrent _client_for calls are thread-safe under threading.Lock, (6) dispatch by provider: prefix routes to correct SDK client, (7) on_use callback fires best-effort without breaking model calls.",
+    "failure_modes": [
+      "Stale client cache: if config changes without invalidate() call, the engine picks up the new ProviderRouter instance on next engine creation — but in-flight completions may use the stale cached client",
+      "Provider prefix mismatch: bare model names without a known prefix fall through to 'openai' default — a typo in the model string silently routes to OpenAI",
+      "Env-var resolution failure: if ${ENV_VAR} references an unset variable, SecretStore returns the literal string '${ENV_VAR}' — the SDK receives a literal string as api_key, producing an authentication error (not a silent fallback)"
+    ],
+    "gap_vs_kimi": "OpenWorker does NOT apply env-var overrides imperatively after config validation (unlike kimi-cli's augment_provider_with_env_vars). The SecretStore resolves ${ENV_VAR} at read time, and ProviderRouter invalidates on config change. No race between validated config and runtime env."
+  },
+  "pydantic_ai_2_impl": {
+    "pattern": "AgentDeps + BaseSettings(env_prefix='OW_') for typed config injection — a single validated AppConfig flows into ProviderRouter, with invalidate() to drop stale clients on config change. Eliminates the env-var race that causes LLMs to read stale/guess provider config.",
+    "code": "class ProviderConfig(BaseSettings):\n    model_config = SettingsConfigDict(env_prefix='OW_', extra='ignore')\n    api_key: SecretStr\n    base_url: str = 'https://api.openrouter.ai'\n    model: str = 'openrouter/inclusionai/ling-3.0-flash:free'\n\nclass ProviderRouter:\n    def __init__(self, config: ProviderConfig):\n        self._config = config  # validated, immutable\n        self._clients: dict[str, Any] = {}\n    def invalidate(self, name: str | None = None):\n        if name is None: self._clients.clear()\n        else: self._clients.pop(name, None)\n    def get_client(self, model: str) -> Any:\n        key = model.split(':')[0] if ':' in model else 'openai'\n        if key not in self._clients:\n            self._clients[key] = self._build(key)  # lazy build from validated config\n        return self._clients[key]\n\n# Injection via deps_type\nctx = RuntimeCtx(provider_config=ProviderConfig())\nagent = Agent(model, deps_type=RuntimeCtx)\nsess = ctx.get_session()  # typed, no env guessing",
+    "why_now": "ai-factory's LLMs fail because control.py loads model config via os.getenv at module level with no validation — if the env var is stale or missing, the LLM reads wrong config and produces garbage. OpenWorker's ProviderRouter + SecretStore pattern proves that a single validated config object (injected via AgentDeps) with invalidate() on change eliminates this entire failure class.",
+    "harness_gap": "factory/infra/control.py:221 caches OpenAIProvider objects in _PROVIDERS_CACHE (built from SystemSettings at module import via _make_providers(), no invalidate()). factory/infra/control.py:550 instantiates CONTROL_SHEET at module level with no reload on config change. factory/infra/http_client.py:141 caches the _orch_http_client singleton, recreated only on event-loop change. When env vars rotate (API key, URL), these caches retain stale config — LLM calls fail with auth errors blamed on the model. Adoption: ProviderRouter with lazy client caching + invalidate() (rebuild OpenAIProvider from validated SystemSettings), AgentDeps injection so tools receive authoritative typed config — no post-hoc env re-read."
+  },
+  "status": "done",
+  "assigned_agent": 3,
+  "dependencies": ["OW-04"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:09:12+08:00"
+}

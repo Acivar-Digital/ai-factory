@@ -1,0 +1,74 @@
+{
+  "id": "OW-05",
+  "title": "Tool Registry, Schema Validation & Risk Classification",
+  "scope": "Map how OpenWorker's ToolRegistry generates JSON schemas from type hints via aisuite Tools, classifies tool risk, and rejects unknown/orphaned tool calls.",
+  "folders": [
+    "openworker/coworker/tools/registry.py",
+    "openworker/coworker/tools/__init__.py",
+    "openworker/coworker/risk.py",
+    "openworker/coworker/tools/shell.py",
+    "openworker/tests/test_code_tools.py"
+  ],
+  "findings": {
+    "tool_registry": {
+      "class": "ToolRegistry (registry.py:25)",
+      "storage": "dict[str, ToolSpec] — name → (schema, func, metadata)",
+      "registration": "register(func, metadata=None, schema=None) — extracts name from __name__, metadata from __aisuite_tool_metadata__, schema override from __coworker_schema__ or _schema_for()",
+      "register_all": "Convenience batch registration from list[Callable]",
+      "execute": "execute(name, arguments) — looks up ToolSpec, calls spec.func(**arguments); raises KeyError for unknown tools",
+      "schemas": "schemas() returns [spec.schema for spec in self._tools.values()] — the OpenAI-format function tool schemas sent to the provider"
+    },
+    "schema_generation": {
+      "method": "_schema_for(func) (registry.py:69) — Tools([func]).tools(format='openai')[0]",
+      "dependency": "Uses aisuite.utils.tools.Tools for docstring/type-hint → JSON-schema extraction",
+      "override": "Tools can provide explicit __coworker_schema__ for signatures that can't be auto-converted",
+      "single_source": "Centralized schema generation — no per-provider schema drift, no manual JSON schema maintenance",
+      "format": "OpenAI ChatCompletion function tool format with typed parameters, required fields, and descriptive docstrings serialized as tool descriptions"
+    },
+    "risk_classification": {
+      "base_table": "WRITE_TOOLS = {write_file, replace_in_file, apply_patch, apply_unified_diff} → WRITE_LOCAL; SHELL_TOOL = run_shell → EXEC",
+      "fallback": "Unclassified tools default to READ unless aisuite metadata.requires_approval=True → EXTERNAL",
+      "parallel_safe": "engine.py:664 — _parallel_safe() checks metadata.risk_level == 'low' AND not metadata.requires_approval for concurrent execution; unannotated tools stay strictly ordered",
+      "classification_fields": "metadata.risk_level (low/medium/high/critical) and metadata.requires_approval (bool) drive both parallel-safety gating and approval prompting"
+    },
+    "shell_tool": {
+      "class": "LocalExecutor (shell.py:55) — persistent shell process",
+      "executor_abc": "Executor ABC with run(command, timeout) → dict[str, Any]",
+      "noninteractive_env": "_NONINTERACTIVE_ENV = {GIT_TERMINAL_PROMPT: 0, DEBIAN_FRONTEND: noninteractive, PYTHONUNBUFFERED: 1, PIP_NO_INPUT: 1} — prevents commands from blocking on prompts",
+      "timeout": "Foreground: 120s default, 600s max. Background tasks get detached processes.",
+      "interrupt": "SIGINT to foreground child (POSIX) / Ctrl-Break (Windows) — shell survives for session state preservation"
+    },
+    "unknown_tools": {
+      "engine_guar": "engine.py:758-759 — if spec is None (unknown tool), reason='unknown tool: {name}', message appended to history, TOOL_FINISHED with status='denied' or 'error'",
+      "no_orphans": "Every tool_call — authorized, denied, or unknown — gets a tool_result_message in history. History never carries orphaned tool_calls."
+    },
+    "validation_layers": {
+      "schema_gate": "openworker validates tool schemas at registration time via aisuite Tools._schema_for(); ai-factory validates at construction time via factory/infra/tools_guard.py:311 FunctionToolset(tools, max_retries=20) and at runtime via factory/tools/load_schema_gate.py:69-72 (Pydantic model_json_schema()) invoked from factory/infra/execution.py:546-552",
+      "staging_layer": "ai-factory confines all writes to factory/temp/ via stage_path(); factory/infra/tools_file.py:190-194 resolve and verify writes. OpenWorker writes directly through LocalExecutor.",
+      "acl_layer": "ai-factory wraps every tool with wrap_with_acl() (factory/infra/tools_guard.py:163-180) enforcing _within_repo, _acl_allows, _is_secret_path. OpenWorker has no ACL layer — risk classification is the only security boundary.",
+      "src_write_guard": "ai-factory enforces src/ and src2/ read-only via _src_write_guard() at factory/infra/tools_file.py:163, raising RuntimeError on any write to banned paths. OpenWorker has no src-confinement."
+    },
+    "permission_model": {
+      "ai_factory": "Tools are allow-listed per-role via TOOL_REGISTRY (factory/infra/tools_guard.py:357-361, 360) split into buckets: read-only, AST-edit, CLI-wrapper, python-first-then-agent. GuardToolset filters blocked tools for 'senior' role at line 145-146 (_SENIOR_BLOCKED). ToolAllowList validated at skill construction via factory/infra/tools_skill.py:286-289.",
+      "openworker": "All registered tools are available to every agent turn; risk classification gates execution (approval prompts) but does not restrict which tools an agent can name."
+    },
+    "test_coverage": {
+      "openworker": "openworker/tests/test_code_tools.py covers ToolRegistry registration, _schema_for schema extraction, execute() with known and unknown tools, risk classification fallbacks, and LocalExecutor timeout/interrupt behavior.",
+      "ai_factory": "tests/ covers GuardToolset unknown-tool rejection (tools_guard.py:176), budget enforcement, _src_write_guard src/ denial, and load_schema_gate Pydantic validation (factory/tools/load_schema_gate.py:69-72)."
+    }
+  },
+  "proposal": "ai-factory's shadow tools (replace_function, replace_text, write_file) have no centralized schema validation — schemas are generated inconsistently and risk classification is ad-hoc. OpenWorker's ToolRegistry + aisuite Tools pattern ensures ONE source of truth for tool schemas, and the RiskClass system ensures hallucinated tool calls to nonexistent tools are rejected with visible ToolError feedback (not silent failures). The persistent shell with non-interactive env + timeout bounds prevents LLM-generated commands from hanging the harness.",
+  "pydantic_ai_2_impl": {
+    "pattern": "FunctionToolset with strict=True + timeout + centralized risk classification — schema-validated tool registration with deny-by-default for high-risk tools.",
+    "code": "from pydantic_ai import FunctionToolset\nfrom pydantic_ai.tools import Tool\n\ndef _run_shell_safe(command: str, cwd: str = '.', timeout: float = 120.0) -> str:\n    \"\"\"Shell tool with non-interactive env + timeout — prevents LLM from hanging harness.\"\"\"\n    env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0', 'PYTHONUNBUFFERED': '1'}\n    try:\n        result = subprocess.run(command, shell=True, cwd=cwd, timeout=timeout, env=env, capture_output=True, text=True)\n        return result.stdout + result.stderr\n    except subprocess.TimeoutExpired:\n        raise ToolError(json.dumps({'error': 'command timed out', 'timeout': timeout}))\n    except Exception as exc:\n        raise ToolError(json.dumps({'error': str(exc), 'error_type': type(exc).__name__}))\n\n# Risk-classified tool registration with strict schema\nshell_tool = Tool(_run_shell_safe, strict=True, timeout=30)\nregistry = FunctionToolset([shell_tool])  # strict=True → rejects schema-invalid calls\n# Unknown tools → ToolError (visible in conversation, triggers self-correction)",
+    "why_now": "ai-factory's LLMs generate tool calls to nonexistent or misconfigured tools — these fail silently or crash the turn. OpenWorker's ToolRegistry.execute() raises KeyError for unknown tools, which the engine converts to a _tool_error_message in history (engine.py:758-776). The LLM sees 'unknown tool: X' and stops hallucinating that tool. Combined with aisuite Tools schema gen, this prevents malformed tool calls at the boundary.",
+    "harness_gap": "ai-factory's tool schema validation lands at factory/infra/tools_guard.py:311 (base = FunctionToolset(tools, max_retries=20) — Pydantic-AI generates JSON schemas from type hints and validates tool-call args at the harness boundary) and factory/infra/tools_guard.py:176 (call_tool: `if name not in self._known_tools:` returns a synthetic guard tool redirecting the LLM — 'Unknown tool X — Do NOT call it'). The frozen TOOL_REGISTRY dict at factory/infra/tools_guard.py:357-361 maps tool names to functions across read-only/AST-edit/CLI-wrapper buckets, validated only at Agent construction via guard_tools() (line 300). Additionally factory/tools/load_schema_gate.py:69-72 runs obj.model_json_schema() on every BaseModel subclass in staged Python files at runtime (factory/infra/execution.py:546-552). Tool implementations themselves live in factory/infra/tools_file.py (write_file:183, read_file:60) with _src_write_guard at :163 denying writes to src/ or src2/. Unlike OpenWorker's single ToolRegistry, ai-factory spreads tool definition across factory/infra/tools_file.py + tools_shell.py + tools_guard.py with no per-turn schema revalidation — schemas are static at construction, never refreshed like OpenWorker's schemas() call."
+  },
+  "status": "done",
+  "assigned_agent": 5,
+  "dependencies": ["OW-01", "OW-02"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:06:14+08:00"
+}
