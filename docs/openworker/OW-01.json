@@ -1,0 +1,77 @@
+{
+  "id": "OW-01",
+  "title": "Engine Error Feedback Into Context",
+  "scope": "How TurnEngine feeds ALL tool execution errors back into the LLM conversation history so the model can self-correct inline — the core anti-hallucination pattern.",
+  "folders": [
+    "openworker/coworker/engine.py",
+    "openworker/coworker/tools/registry.py",
+    "openworker/tests/test_engine.py"
+  ],
+  "findings": {
+    "error_feedback_mechanism": {
+      "method": "_execute_sync (engine.py:782-787)",
+      "behavior": "Catches ALL exceptions from tool execution and returns {\"error\": str(exc), \"error_type\": type(exc).__name__} as a tuple (result, status). No exception escapes to crash the turn.",
+      "context_injection": "_record_result (engine.py:789) calls _tool_result_message(tool_call, result) which appends a role='tool' message with json.dumps(result) content + tool_call_id to self.messages — the LLM SEES the error in its next turn's conversation history.",
+      "contrast": "ai-factory defers verification to post-run ruff/pyright — the LLM never sees its own tool execution failures in context, so it cannot self-correct. output_sanitizer.py only repairs broken JSON offline."
+    },
+    "no_silent_failures": {
+      "interrupted_tools": "_interrupted_tool (engine.py:651) appends _tool_error_message with 'interrupted by user' reason — no orphaned tool_calls",
+      "denied_tools": "_authorize (engine.py:757) appends _tool_error_message for denied/unknown tool calls — LLM sees why a tool was rejected",
+      "audit_sink": "_audit (engine.py:837) fires an audit_sink callback with full context (tool_name, arguments, stage, status, result_preview) — structured observability side-channel"
+    },
+    "message_format": {
+      "tool_result": "_tool_result_message (engine.py:1170) — role='tool', tool_call_id=<id>, content=json.dumps(result), ts=time.time()",
+      "tool_error": "_tool_error_message (engine.py:1180) — role='tool', tool_call_id=<id>, content=json.dumps({\"error\": ..., \"reason\": ...}), ts=time.time()",
+      "preview": "_preview (engine.py:1189) — truncates result to 300 chars in audit events for readable observability"
+    },
+    "tool_registry_structure": {
+      "class": "ToolRegistry (registry.py:25)",
+      "storage": "dict[str, ToolSpec] — name to (schema, func, metadata) mapping",
+      "registration": "register(func, metadata=None, schema=None) — extracts name from __name__, schema via _schema_for() using aisuite Tools",
+      "execute": "execute(name, arguments) — looks up ToolSpec, calls spec.func(**arguments); raises KeyError for unknown tools",
+      "unknown_tool_handling": "engine.py:758-759 — if spec is None (unknown tool), reason='unknown tool: {name}', error message appended to history, TOOL_FINISHED with status='denied'"
+    },
+    "guard_toolset_callsite": {
+      "file": "factory/infra/tools_guard.py",
+      "method": "GuardToolset.call_tool (line 152)",
+      "delegation_point": "self.wrapped.call_tool(name, tool_args, ctx, tool) at line 260 — bare delegation with NO try/except, NO error envelope injection",
+      "agent_construction": "factory/infra/tools_skill.py:301 — Agent(output_type=..., retries=5, toolsets=[guard_tools(...)]) — already has retry budget but tool exceptions propagate as unstructured tracebacks",
+      "consequence": "When a tool fails (file not found, syntax error, permission denied), the exception kills the agent run or gets swallowed — the LLM never sees the error in its conversation history and cannot self-correct"
+    },
+    "pydantic_ai_retry_mech": {
+      "mech": "ModelRetry (pydantic_ai.exceptions) — raised from within a tool function, Pydantic-AI catches it and adds a RetryPromptPart to the message history, then re-sends the request",
+      "retries_param": "Agent(retries=5) at tools_skill.py:301 — framework-managed retry budget, but only triggers on ModelRetry (not generic exceptions)",
+      "tool_error_propagation": "When self.wrapped.call_tool() at tools_guard.py:260 raises a non-ModelRetry exception, it propagates up through Pydantic-AI's ToolExecutionError path — the error is NOT injected into conversation history as a retry prompt",
+      "fix": "Wrap call_tool delegation in try/except, catch Exception, raise ToolError(envelope.model_dump_json()) where ToolError subclasses ModelRetry"
+    },
+    "post_run_verification_gap": {
+      "current": "ai-factory runs ruff + pyright + CC checks AFTER the agent run completes (factory/infra/validation.py) — all verification is deferred, the LLM never sees failures in-turn",
+      "openworker": "Verification is INLINE — _record_result appends the error to self.messages before the next iteration, so the LLM learns from its mistake immediately",
+      "impact": "Deferred verification means the LLM repeats the same hallucinated tool call across multiple retry cycles, wasting API calls and producing garbage output"
+    }
+  },
+  "proposal": "ai-factory's tools_guard.py / GuardToolset must intercept EVERY tool call result and inject errors back into the agent's conversation history as tool messages before returning. Currently, when a tool fails (file not found, syntax error, permission denied), the error surfaces only in deferred ruff/verifier output AFTER the LLM stops — the LLM never learns it made a bad call. Adopting openworker's _execute_sync pattern means wrapping every tool call in try/except, returning {\"error\": str(exc), \"error_type\": type(exc).__name__} as a tool message, and raising ModelRetry so the LLM sees the failure and self-corrects inline. This is the single highest-impact fix for hallucination-driven garbage output.",
+  "pydantic_ai_2_impl": {
+    "pattern": "ToolError (subclass of ModelRetry) + ToolErrorEnvelope (output_type BaseModel) at the GuardToolset.tool boundary — every tool failure becomes a visible retry prompt in the LLM conversation, triggering automatic self-correction.",
+    "code": "import json\nfrom pydantic import BaseModel\nfrom pydantic_ai.exceptions import ModelRetry\n\n\nclass ToolError(ModelRetry):\n    \"\"\"Surface tool failures as visible retry messages in LLM conversation.\n\n    Subclasses ModelRetry so Pydantic-AI injects the error as a retry prompt\n    part in the conversation history — the LLM sees the failure and self-corrects.\n    \"\"\"\n\n\nclass ToolErrorEnvelope(BaseModel):\n    tool_name: str\n    error: str\n    error_type: str\n    reason: str | None = None\n\n\n# Agent construction (factory/infra/tools_skill.py:301) already uses\n# output_type + retries=5 for typed validation and retry budget:\n#   agent = Agent(\n#       model=model,\n#       toolsets=[guard_tools(resolved_tools, budget)],\n#       output_type=output_type,  # e.g. TaskResult pydantic model\n#       retries=5,\n#       model_settings=ModelSettings(parallel_tool_calls=False),\n#   )\n#\n# INJECTION POINT — factory/infra/tools_guard.py:260, GuardToolset.call_tool:\n#\n#   CURRENT (broken — bare delegation, errors kill the turn):\n#     result = await self.wrapped.call_tool(name, tool_args, ctx, tool)\n#\n#   ENRICHED — wrap in try/except, raise ToolError so Pydantic-AI injects\n#   the failure as a visible retry prompt in conversation history:\ntry:\n    result = await self.wrapped.call_tool(name, tool_args, ctx, tool)\nexcept Exception as exc:\n    envelope = ToolErrorEnvelope(\n        tool_name=name,\n        error=str(exc),\n        error_type=type(exc).__name__,\n        reason=\"tool execution failed — see error_type for details\",\n    )\n    raise ToolError(envelope.model_dump_json())  # visible retry prompt triggers ModelRetry self-correction",
+    "why_now": "ai-factory's LLMs keep producing hallucinated tool calls (wrong file paths, nonexistent commands, invalid arguments) because they never see the failure. OpenWorker's _execute_sync (engine.py:782) proves that feeding structured {\"error\", \"error_type\"} back as a tool message closes the self-correction loop — the model learns from its mistake in-turn instead of repeating it across retries. Pydantic-AI 2.0's ModelRetry mechanism is designed exactly for this: raise it from a tool boundary and the framework injects a retry prompt into the conversation. ai-factory already has retries=5 at tools_skill.py:301 but tool exceptions bypass it because they're not ModelRetry.",
+    "harness_gap": "factory/infra/tools_guard.py:260 — GuardToolset.call_tool delegates to self.wrapped.call_tool(name, tool_args, ctx, tool) without a try/except wrapper. Tool exceptions propagate as unstructured tracebacks (ToolExecutionError) that kill the run or get swallowed silently — no {\"error\": ..., \"error_type\": ...} envelope is injected into the conversation history. Fix: wrap line 260 in try/except Exception, construct a ToolErrorEnvelope(tool_name, error, error_type, reason) via Pydantic model_dump_json(), and raise ToolError(...) (a subclass of ModelRetry) so Pydantic-AI injects the failure as a visible retry prompt at line 152-271 of tools_guard.py, with the Agent's retries=5 budget (tools_skill.py:301) handling the retry loop."
+  },
+  "implementation_notes": "Key findings for implementation: (1) GuardToolset.call_tool at tools_guard.py:152 is the single chokepoint — ALL agent tool calls route through it. (2) The bare delegation at line 260 must be wrapped in try/except Exception. (3) ToolError must subclass ModelRetry (from pydantic_ai.exceptions) since pydantic_ai does not export ToolError directly in v2.14.1. (4) ToolErrorEnvelope is a Pydantic BaseModel whose model_dump_json() becomes the ModelRetry.message visible to the LLM. (5) The existing retries=5 at tools_skill.py:301 already caps retry attempts; the error feedback just makes each retry informed. (6) Failed calls should NOT increment self._used budget — the LLM should retry without penalty. (7) The _seen cache at line 262 should not cache error results — raise ToolError before reaching the cache block.",
+  "related_kc_cards": [
+    "KC-01",
+    "KC-04",
+    "KC-09",
+    "OW-02",
+    "OW-05",
+    "OW-08",
+    "OW-09"
+  ],
+  "status": "done",
+  "assigned_agent": 1,
+  "dependencies": ["OW-05"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:11:17+08:00"
+}

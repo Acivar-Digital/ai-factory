@@ -1,0 +1,58 @@
+{
+  "id": "OW-04",
+  "title": "Friendly Error Translation & Provider Abstraction",
+  "scope": "Map how OpenWorker translates vendor-specific API errors into actionable sentences the LLM can understand — preventing raw error noise from corrupting the conversation.",
+  "folders": [
+    "openworker/coworker/providers/errors.py",
+    "openworker/coworker/providers/base.py",
+    "openworker/coworker/providers/openai_provider.py",
+    "openworker/tests/test_model_errors.py",
+    "openworker/tests/test_providers.py"
+  ],
+  "findings": {
+    "friendly_model_error": {
+      "function": "friendly_model_error(model, exc) (errors.py:38)",
+      "behavior": "Returns one actionable sentence for 'account can't use this model' failures, or None for unrecognized. Anything unrecognized returns None → caller surfaces raw error.",
+      "matching": "Matches on error BODY text (error codes/types), not just HTTP status — a 404 also means 'wrong base_url', a 429 also means 'slow down'. Neither dressed up as access problem.",
+      "no_access_markers": "_NO_ACCESS = (model_not_found, does not exist or you do not have access, does not have access to model, permission_error, permission denied)",
+      "no_quota_markers": "_NO_QUOTA = (insufficient_quota, exceeded your current quota, credit balance is too low, billing hard limit)"
+    },
+    "provider_abc": {
+      "class": "ProviderClient (base.py) — ABC",
+      "methods": "complete() (non-streaming), stream() (generator yielding StreamChunk), capabilities(model) (ModelCapabilities), close()",
+      "contract": "The runtime NEVER imports a provider SDK directly — it talks to a ProviderClient. All providers implement the same interface."
+    },
+    "token_usage_normalization": {
+      "model": "TokenUsage dataclass (base.py:25): input, output, cache_read, cache_write",
+      "context_tokens": "property: input + cache_read + cache_write — what actually occupied the window",
+      "provider_variance": "Providers that don't report cache split (Ollama, most compat) leave cache fields at 0"
+    },
+    "capabilities_matrix": {
+      "module": "capabilities.py + providers/matrix.py",
+      "fields": "tools, vision, pdf, parallel_tool_calls, streaming",
+      "source": "Curated exact-match table for known models; heuristics for ollama/bedrock/vertex/gemini families; custom models fall through to conservative defaults",
+      "purpose": "Prevents the LLM from attempting vision/PDF on models that don't support it — avoids hallucinated capability assumptions"
+    },
+    "error_in_engine": {
+      "context": "engine.py:363 — provider failure caught in _loop() try/except around _astream()",
+      "context_overflow": "is_context_overflow(exc) routes 400 context-overflow into compaction retry path, not surfaced as error",
+      "friendly": "friendly_model_error(self.model, exc) maps to actionable sentence",
+      "persist": "_append_notice('error', ...) persists as display-only notice (role='notice', stripped from provider feed) — survives reload",
+      "emit": "Event(EventType.ERROR, payload) with error + error_type fields"
+    }
+  },
+  "proposal": "ai-factory surfaces raw provider exceptions (ModelHTTPError with vendor JSON bodies) directly to Pydantic-AI, which can emit confusing error text into the LLM context. OpenWorker's friendly_model_error() translates these to actionable sentences ('Your account is out of quota for MODEL — add credits or pick a different model') that the LLM can actually act on. ai-factory should adopt a similar translation layer, plus the ModelCapabilities matrix to prevent the LLM from hallucinating unsupported features.",
+  "pydantic_ai_2_impl": {
+    "pattern": "Pydantic output_type for typed error envelope + friendly_model_error translation at the provider boundary — vendor noise becomes actionable LLM context via ToolError.",
+    "code": "from pydantic import BaseModel\n\nclass LLMErrorEnvelope(BaseModel):\n    error_type: str  # rate_limit, auth, overloaded, context_overflow, 4xx_client, network, etc.\n    status_code: int | None\n    actionable: str  # human-readable sentence the LLM can act on\n\nclass ErrorClassifier:\n    _NO_ACCESS = ('model_not_found', 'does not exist or you do not have access', 'permission_error')\n    _NO_QUOTA = ('insufficient_quota', 'credit balance is too low', 'exceeded your current quota')\n    \n    @classmethod\n    def classify(cls, exc: Exception) -> LLMErrorEnvelope:\n        text = str(exc).lower()\n        for marker in cls._NO_QUOTA:\n            if marker in text:\n                return LLMErrorEnvelope(error_type='quota', status_code=None, actionable='Your account is out of quota — add credits or pick a different model.')\n        return LLMErrorEnvelope(error_type='other', status_code=None, actionable=str(exc))\n\n# Surface as ToolError so it's visible in conversation\ntry:\n    result = provider.complete(model=model, messages=messages)\nexcept Exception as exc:\n    envelope = ErrorClassifier.classify(exc)\n    raise ToolError(envelope.model_dump_json())",
+    "why_now": "ai-factory's LLMs receive raw ModelHTTPError JSON bodies in their context when provider calls fail — the LLM can't parse vendor-specific error formats and either ignores them or hallucinates a fix. OpenWorker's friendly_model_error (errors.py:38) proves that translating to 'Your account is out of quota for MODEL' gives the LLM actionable context to switch models or report back. This is the kimi-cli KC-03/KC-09 gap: raw openai SDK with no structured error contract.",
+    "harness_gap": "Friendly error translation currently lands at factory/common/subprocess.py:83 where _run_tool() wraps non-zero exit stderr into a JSON envelope {success:false, message:stderr} instead of raw text, and at factory/infra/tools_shell.py where ModelRetry raises actionable recovery messages (lines 54, 89, 110). However, unlike OpenWorker's friendly_model_error(), vendor-specific LLM API errors — ModelHTTPError JSON bodies from provider calls — still propagate raw to the agent context with no provider-boundary ErrorClassifier (type/status_code/actionable) translating quota/auth/context-overflow into actionable sentences. No ModelCapabilities matrix exists to prevent hallucinating vision/PDF on unsupported models."
+  },
+  "status": "done",
+  "assigned_agent": 4,
+  "dependencies": ["OW-01"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:04:57+08:00"
+}

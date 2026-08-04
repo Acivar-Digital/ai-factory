@@ -1,0 +1,61 @@
+{
+  "id": "OW-09",
+  "title": "No Orphan Tool Calls — Stop-Path Error Propagation",
+  "scope": "Map how OpenWorker ensures every pending tool_call gets a tool error result in history when the turn is interrupted, denied, or stopped — preventing orphaned tool_calls that confuse the LLM.",
+  "folders": [
+    "openworker/coworker/engine.py",
+    "openworker/coworker/events.py"
+  ],
+  "findings": {
+    "interrupted_tool": {
+      "method": "_interrupted_tool (engine.py:651)",
+      "behavior": "Called when stop is requested mid-tool-execution. Appends _tool_error_message(tool_call, 'interrupted by user') to history — role='tool' with json.dumps({'error': 'tool call not executed', 'reason': 'interrupted by user'})",
+      "purpose": "Orphaned tool_calls (assistant emitted a tool_call but no result) are rejected by hosted chat templates and cause durable-resume re-prompting. Every pending call must get an answer."
+    },
+    "cancel_integration": {
+      "method": "TurnEngine.request_interrupt (engine.py:129)",
+      "behavior": "Sets self._cancel = asyncio.Event, runs all interrupt_hooks (shell executor kill, etc.)",
+      "loop_check": "_loop() checks self._cancel.is_set() at 4 points: before new iteration (line 389, mid-stream), between iterations (line 429), before each tool_call in _handle_tool_calls (line 592), and in the stream producer (line 555)"
+    },
+    "stop_path": {
+      "mid_stream": "engine.py:389-395 — if cancel set and turn is None: persist partial via _partial_turn(), append notice('interrupted'), emit INTERRUPTED, return",
+      "post_tool": "engine.py:429-432 — if cancel set after tool execution: append notice('interrupted'), emit INTERRUPTED, return",
+      "in_tool": "engine.py:592-595 — if cancel set during _handle_tool_calls: each remaining tool_call gets _interrupted_tool()",
+      "in_stream": "engine.py:555 — producer thread checks cancel flag, breaks stream between chunks"
+    },
+    "denied_and_unknown": {
+      "denied": "engine.py:757-766 — denied/unknown tool calls: _tool_error_message appended to history, TOOL_FINISHED event with status='denied'/'error'",
+      "unknown": "engine.py:758-759 — spec is None → reason='unknown tool: {name}', error appended, denied event emitted",
+      "orphan_prevention": "Every path — authorized, denied, unknown, interrupted — results in a tool_result_message in history"
+    },
+    "partial_turn_survival": {
+      "method": "_partial_turn (engine.py:341)",
+      "behavior": "What the user watched arrive — text and thinking, NO tool calls (half-formed calls would either orphan or execute against the stop)",
+      "persistence": "Appended as a complete assistant message on the error/interrupted path (engine.py:378, 393) so the transcript survives even when the turn crashes"
+    },
+    "ai_factory_existing": {
+      "method": "get_safe_recent_messages (_loopguard.py:614)",
+      "behavior": "Walks FORWARD past a leading ToolReturnPart during compaction (lines 620-636) so a churned orphan tool-return doesn't trigger a 400 API reject on the next request",
+      "limitation": "Confined to the compaction boundary only — does NOT fire on live stop/deny/interrupt exit paths"
+    },
+    "gap_vs_ai_factory": {
+      "ai_factory_existing": "factory/infra/_loopguard.py:614 — get_safe_recent_messages (lines 620-636) skips a leading ToolReturnPart during compaction so a churned orphan tool-return doesn't trigger a 400. This is ai-factory's ONLY orphan-tool prevention, confined to the compaction boundary.",
+      "recovery_no_injection": "factory/infra/_loopguard.py:390 (UsageLimitExceeded → recovery_agent.run at :409 passes current_history with no ToolError injection for orphaned calls); factory/infra/_loopguard.py:557 (stall/repeat → recovery_agent.run at :582 passes res.all_messages() with no ToolError injection); factory/infra/_loopguard.py:434 (generic Exception → dump+re-raise at :436, no injection)",
+      "guard_no_injection": "factory/infra/tools_guard.py:160 — GuardToolset.call_tool raises RuntimeError after 3 blocked modify-tool attempts without injecting ToolError; :177 returns a plain warning string for unknown tools instead of a visible ToolError"
+    }
+  },
+  "proposal": "ai-factory's GuardToolset does not guarantee that interrupted/denied tool calls get error messages injected back into the LLM conversation history. When the LLM is interrupted mid-turn (e.g. by a circuit breaker or context limit), pending tool_calls become orphans in the history — the LLM sees tool_calls with no results and either hallucinates results or gets confused on retry. OpenWorker's _interrupted_tool() + stop-path pattern ensures every tool_call — authorized, denied, unknown, or interrupted — gets a visible error message in history. This must be adopted so the LLM never operates on orphaned tool_call state.",
+  "pydantic_ai_2_impl": {
+    "pattern": "BeforeModelRequest hook checks for orphaned tool_calls and injects ToolError for any pending call without a result — ensures the LLM always sees a complete conversation history with no dangling references.",
+    "code": "import json\nfrom pydantic_ai import Agent\nfrom pydantic_ai.exceptions import ToolError\n\nclass OrphanGuard:\n    '''Mirror of openworker _interrupted_tool — no orphaned tool_calls.'''\n    \n    @staticmethod\n    def check_messages(messages: list[dict]) -> None:\n        '''Pre-flight: ensure every assistant tool_call has a matching tool result.'''\n        pending: set[str] = set()\n        for msg in messages:\n            if msg.get('role') == 'assistant' and msg.get('tool_calls'):\n                for tc in msg['tool_calls']:\n                    pending.add(tc['id'])\n            elif msg.get('role') == 'tool' and msg.get('tool_call_id'):\n                pending.discard(msg['tool_call_id'])\n        for orphan_id in pending:\n            raise ToolError(json.dumps({  # visible in conversation, triggers retry\n                'error': 'tool call not executed',\n                'reason': 'orphaned — turn was interrupted',\n                'tool_call_id': orphan_id,\n            }))\n\n@agent.hook\nasync def guard_orphans(run_ctx) -> None:\n    OrphanGuard.check_messages(run_ctx.messages)",
+    "why_now": "ai-factory's LLMs get confused on retry when tool_calls in the history have no corresponding results — the model sees dangling references and either hallucinates fake results or refuses to act. OpenWorker's engine.py:651-662 (_interrupted_tool) proves that appending _tool_error_message for EVERY pending call on stop/cancel/deny/unknown prevents this corruption. This is the kimi-cli KC-01 gap: no output-boundary ground-truth guard for the conversation state.",
+    "harness_gap": "ai-factory's ONLY orphan-tool prevention is at factory/infra/_loopguard.py:614 — get_safe_recent_messages (lines 620-636) skips a leading ToolReturnPart during compaction so a churned tool-return doesn't trigger a 400. But the live stop/deny/interrupt exit paths do NOT inject ToolError for orphaned tool_calls: factory/infra/_loopguard.py:390 (UsageLimitExceeded recovery at :409 passes current_history with no ToolError injection), factory/infra/_loopguard.py:557 (stall/repeat recovery at :582 passes res.all_messages() with no ToolError injection), factory/infra/_loopguard.py:434 (generic Exception at :436 just dump+re-raise, no injection), and factory/infra/tools_guard.py:160 (GuardToolset.call_tool raises RuntimeError) / :177 (unknown tool returns plain warning string) — none inject a visible ToolError into conversation history. OpenWorker's _interrupted_tool (engine.py:651) pattern must be adopted: inject ToolError(json.dumps({'error':'tool call not executed','reason':'interrupted'})) for every pending tool_call on ALL exit paths — stop/cancel/deny/unknown — surfaced as visible messages triggering ModelRetry."
+  },
+  "status": "done",
+  "assigned_agent": 9,
+  "dependencies": ["OW-01"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:17:07+08:00"
+}

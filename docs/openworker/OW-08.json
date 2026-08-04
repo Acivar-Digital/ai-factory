@@ -1,0 +1,84 @@
+{
+  "id": "OW-08",
+  "title": "Shell Safety & Timeout Enforcement",
+  "scope": "Map how OpenWorker's shell tool prevents LLM-generated commands from hanging the harness via persistent shell, non-interactive env, timeout bounds, and interrupt safety.",
+  "folders": [
+    "openworker/coworker/tools/shell.py",
+    "openworker/tests/test_shell.py",
+    "openworker/coworker/risk.py"
+  ],
+  "findings": {
+    "executor_pattern": {
+      "class": "LocalExecutor (shell.py:55) implements Executor ABC",
+      "persistent_shell": "Keeps one long-lived shell process so cd, export, activated venvs persist across run_shell calls — unlike per-call subprocess.run",
+      "os_native": "POSIX: /bin/bash; Windows: powershell.exe (-Command - REPL). Each backend has its own marker/exit-code protocol",
+      "interface_abc": "Executor interface is the hedge for future ContainerExecutor/VMExecutor (sandboxing) without touching the engine"
+    },
+    "noninteractive_safety": {
+      "env": "_NONINTERACTIVE_ENV = {GIT_TERMINAL_PROMPT: 0, DEBIAN_FRONTEND: noninteractive, PYTHONUNBUFFERED: 1, PIP_NO_INPUT: 1}",
+      "purpose": "Discourages commands from blocking on a prompt — LLM-generated commands that try to ask for input get non-interactive defaults instead of hanging forever"
+    },
+    "timeout_bounds": {
+      "foreground_default": "_DEFAULT_TIMEOUT = 120.0s — long enough for installs/builds/test runs",
+      "foreground_max": "_MAX_TIMEOUT = 600.0s (10 min) — capped so a model-requested timeout can't wedge the turn",
+      "background": "Background tasks (run_in_background) get their own detached process — NOT the persistent shell — so a dev server can run while the session keeps working"
+    },
+    "interrupt_safety": {
+      "timeout_recovery": "Timed-out command is interrupted (SIGINT to foreground child on POSIX, Ctrl-Break to child group on Windows); the shell survives so session state is preserved",
+      "background_persistence": "Background tasks are NOT killed by close() (which the timeout-recovery path calls) — they end when they exit or via shell_task_kill",
+      "cancel_integration": "TurnEngine.request_interrupt() cancels the asyncio Event AND runs interrupt_hooks — the shell executor's interrupt() is registered as a hook"
+    },
+    "risk_class": {
+      "SHELL_TOOL": "run_shell classified as RiskClass.EXEC — requires approval in INTERACTIVE mode",
+      "command_operators": "Shell metacharacters (;, &, |, >, <, `, $(), (, newlines) disqualify auto-run — approval required instead",
+      "deny_by_default": "In PLAN/DISCUSS modes, EXEC tools are hard-blocked; in INTERACTIVE mode they need user approval"
+    },
+    "gap_vs_ai_factory": {
+      "subprocess_safety": "factory/common/subprocess.py:41 — _run_proc() calls subprocess.run(argv, cwd=REPO_ROOT, capture_output=True, text=True, timeout=TOOL_SUBPROCESS_TIMEOUT=300) but passes no _NONINTERACTIVE_ENV (no GIT_TERMINAL_PROMPT=0, PIP_NO_INPUT=1, DEBIAN_FRONTEND=noninteractive), no shell operator detection, and on TimeoutExpired (line 48) uses proc.kill() (SIGKILL at line 51) without SIGINT-first graceful recovery or ModelRetry context injection",
+      "tool_wrapper_safety": "factory/common/subprocess.py:69 — _run_tool() wraps subprocess calls with error envelope at line 83 but adds no _NONINTERACTIVE_ENV, no shell operator detection, no ModelRetry on timeout — a hallucinated command blocking on input hangs until the 300s wall-clock cap then returns raw stderr without recovery guidance",
+      "missing_bash_wrapper": "factory/tools/shell.py — dedicated bash tool wrapper (analogous to OpenWorker tools/shell.py with LocalExecutor) does not exist in ai-factory; the bash MCP tool is a built-in opencode tool with no ai-factory safety layer (no persistent shell, no _NONINTERACTIVE_ENV, no 120s/600s timeout bounds, no SIGINT-on-timeout recovery, no shell operator to approval gate)",
+      "no_risk_classification": "No RiskClass (READ/WRITE_LOCAL/EXEC/EXTERNAL) + Mode (DISCUSS/PLAN/INTERACTIVE/AUTO) deny-by-default gate — factory/infra/tools_guard.py:357-361 TOOL_REGISTRY maps tool names to functions across read-only/AST-edit/CLI-wrapper buckets but has no permission gate; EXEC-level subprocess calls execute freely without approval in any mode, unlike OpenWorker risk.py + permissions.py"
+    }
+  },
+  "proposal": "ai-factory's bash tool (built-in opencode MCP tool, executed via factory/common/subprocess.py:41) runs commands via subprocess.run with a 300s timeout but no _NONINTERACTIVE_ENV (GIT_TERMINAL_PROMPT=0, PIP_NO_INPUT=1), no shell operator detection (;, &, |, >, <, `, $(), newlines), and no SIGINT-on-timeout recovery (only SIGKILL via proc.kill()). When the LLM hallucinates a command that blocks on input (e.g. git commit without GIT_TERMINAL_PROMPT=0), the command hangs until the 300s cap then is SIGKILLed without context recovery. OpenWorker's LocalExecutor pattern — persistent shell + _NONINTERACTIVE_ENV + 120s/600s timeout bounds + SIGINT-on-timeout + shell operator to approval gate — recovers the turn instead of crashing. A dedicated factory/tools/shell.py wrapper (analogous to OpenWorker's tools/shell.py) does not exist. Adopt: non-interactive env (GIT_TERMINAL_PROMPT=0, PIP_NO_INPUT=1), timeout bounds (120s default, 600s hard cap), shell operator detection (→ ModelRetry requiring approval), proc.kill() on timeout with ModelRetry for self-correction, SIGINT-first on POSIX before SIGKILL, interrupt hook registration in TurnEngine.cancel().",
+  "pydantic_ai_2_impl": {
+    "pattern": "FunctionTool with timeout=30 + non-interactive env + interruptible subprocess — prevents LLM commands from hanging, with ModelRetry on timeout for self-correction.",
+    "code": "import asyncio\nimport json\nimport os\nfrom pydantic_ai import Tool, ModelRetry\n\n_NONINTERACTIVE_ENV = {\n    'GIT_TERMINAL_PROMPT': '0',\n    'DEBIAN_FRONTEND': 'noninteractive',\n    'PYTHONUNBUFFERED': '1',\n    'PIP_NO_INPUT': '1',\n}\n\nasync def run_shell_safe(command: str, cwd: str, timeout: float = 120.0) -> str:\n    '''Shell tool with non-interactive env + timeout — prevents LLM from hanging harness.'''\n    # Check for shell operators that disqualify auto-run\n    _OPERATORS = (';', '&', '|', '>', '<', '`', '$(', '(', '\\n', '\\r')\n    if any(op in command for op in _OPERATORS):\n        raise ModelRetry(json.dumps({'error': 'command contains shell operators', 'reason': 'requires user approval'}))\n    if timeout > 600:\n        timeout = 600  # hard cap at 10 min\n    env = {**os.environ, **_NONINTERACTIVE_ENV}\n    try:\n        proc = await asyncio.create_subprocess_shell(\n            command, cwd=cwd, env=env,\n            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,\n        )\n        stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=timeout)\n        if proc.returncode != 0:\n            return f'command failed (exit {proc.returncode}):\\n{stderr_b.decode()}'\n        return stdout_b.decode()\n    except asyncio.TimeoutExpired:\n        proc.kill()\n        raise ModelRetry(json.dumps({'error': 'command timed out', 'timeout': timeout, 'action': 'refactor into smaller steps or reduce scope'}))\n    except Exception as exc:\n        raise ModelRetry(json.dumps({'error': str(exc), 'error_type': type(exc).__name__}))\n\nshell_tool = Tool(run_shell_safe, strict=True, timeout=120)",
+    "why_now": "ai-factory's LLMs hang when they generate commands that block on input (e.g. git commit, pip install without --no-input). _run_proc at factory/common/subprocess.py:41 has a 300s timeout but no _NONINTERACTIVE_ENV, no shell operator detection, no SIGINT interrupt hook — only SIGKILL on timeout without recovery context. A single bad command either hangs until the 300s cap (wasting context window budget) or is SIGKILLed without surfacing the error to the LLM for self-correction. OpenWorker's shell.py proves that _NONINTERACTIVE_ENV + 120s/600s timeout bounds + SIGINT-on-timeout + ModelRetry for self-correction recovers the turn instead of crashing. This is why 'LLMs keep failing' — the harness dies on a bad command instead of recovering.",
+    "harness_gap": "factory/common/subprocess.py:41 — _run_proc's subprocess.run(argv, timeout=TOOL_SUBPROCESS_TIMEOUT=300) call lacks _NONINTERACTIVE_ENV (no GIT_TERMINAL_PROMPT=0, PIP_NO_INPUT=1, DEBIAN_FRONTEND=noninteractive), no shell operator detection (;, &, |, >, <, `, $(), newlines to no ModelRetry requiring approval), and on timeout (line 48) uses SIGKILL proc.kill() (line 51) without SIGINT-first graceful recovery. factory/common/subprocess.py:69 — _run_tool wraps the subprocess call with error envelope (line 83) but adds no non-interactive env or operator detection. factory/tools/shell.py — the dedicated bash tool wrapper (analogous to OpenWorker tools/shell.py) does not exist; the bash MCP tool is a built-in opencode tool with no ai-factory safety layer. Adopt: _NONINTERACTIVE_ENV at factory/common/subprocess.py:42 (env= parameter), operator detection at factory/common/subprocess.py:22 (new _OPERATORS check in _run_proc), timeout bounds 120s/600s override at factory/common/subprocess.py:26 (TOOL_SUBPROCESS_TIMEOUT), SIGINT-first on POSIX then proc.kill() at factory/common/subprocess.py:51 on timeout with ModelRetry for self-correction, interrupt hook registration in TurnEngine.cancel()."
+  },
+  "status": "done",
+  "assigned_agent": 8,
+  "dependencies": [
+    "OW-02"
+  ],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:31:12+08:00",
+  "executor_pattern": {
+    "class": "LocalExecutor (shell.py:55) implements Executor ABC",
+    "persistent_shell": "Keeps one long-lived shell process so cd, export, activated venvs persist across run_shell calls — unlike per-call subprocess.run",
+    "os_native": "POSIX: /bin/bash; Windows: powershell.exe (-Command - REPL). Each backend has its own marker/exit-code protocol",
+    "interface_abc": "Executor interface is the hedge for future ContainerExecutor/VMExecutor (sandboxing) without touching the engine"
+  },
+  "noninteractive_safety": {
+    "env": "_NONINTERACTIVE_ENV = {GIT_TERMINAL_PROMPT: 0, DEBIAN_FRONTEND: noninteractive, PYTHONUNBUFFERED: 1, PIP_NO_INPUT: 1}",
+    "purpose": "Discourages commands from blocking on a prompt — LLM-generated commands that try to ask for input get non-interactive defaults instead of hanging forever"
+  },
+  "timeout_bounds": {
+    "foreground_default": "_DEFAULT_TIMEOUT = 120.0s — long enough for installs/builds/test runs",
+    "foreground_max": "_MAX_TIMEOUT = 600.0s (10 min) — capped so a model-requested timeout can't wedge the turn",
+    "background": "Background tasks (run_in_background) get their own detached process — NOT the persistent shell — so a dev server can run while the session keeps working"
+  },
+  "interrupt_safety": {
+    "timeout_recovery": "Timed-out command is interrupted (SIGINT to foreground child on POSIX, Ctrl-Break to child group on Windows); the shell survives so session state is preserved",
+    "background_persistence": "Background tasks are NOT killed by close() (which the timeout-recovery path calls) — they end when they exit or via shell_task_kill",
+    "cancel_integration": "TurnEngine.request_interrupt() cancels the asyncio Event AND runs interrupt_hooks — the shell executor's interrupt() is registered as a hook"
+  },
+  "risk_class": {
+    "SHELL_TOOL": "run_shell classified as RiskClass.EXEC — requires approval in INTERACTIVE mode",
+    "command_operators": "Shell metacharacters (;, &, |, >, <, `, $(), (, newlines) disqualify auto-run — approval required instead",
+    "deny_by_default": "In PLAN/DISCUSS modes, EXEC tools are hard-blocked; in INTERACTIVE mode they need user approval"
+  }
+}

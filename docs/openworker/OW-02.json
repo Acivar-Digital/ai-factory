@@ -1,0 +1,65 @@
+{
+  "id": "OW-02",
+  "title": "Deny-by-Default Permission Engine",
+  "scope": "Map OpenWorker's RiskClass + Mode permission system that prevents hallucinated destructive tool calls from executing without approval.",
+  "folders": [
+    "openworker/coworker/permissions.py",
+    "openworker/coworker/risk.py",
+    "openworker/tests/test_permissions_risk.py",
+    "openworker/tests/test_tools_permissions.py"
+  ],
+  "findings": {
+    "risk_classes": {
+      "read": "RiskClass.READ — no side effects, always allowed",
+      "write_local": "RiskClass.WRITE_LOCAL — mutates workspace, path-scoped + mode-gated",
+      "exec": "RiskClass.EXEC — runs commands, mode-gated",
+      "external": "RiskClass.EXTERNAL — side effects off-machine (connector sends), unattended Inbox hook"
+    },
+    "modes": {
+      "discuss": "Mode.DISCUSS — read-only conversation, no edits/planning workflow",
+      "plan": "Mode.PLAN — read-only + planning contract (explore → propose_plan → execute)",
+      "interactive": "Mode.INTERACTIVE — ask for approval (default), auto-allow reads",
+      "auto": "Mode.AUTO — full access (still path-scoped)",
+      "custom": "Mode.CUSTOM — interactive + auto-allow the config's auto_allow tools"
+    },
+    "classification": {
+      "method": "classify(tool_name, metadata, overrides) in risk.py:39",
+      "priority": "user-local override → by-name base table (WRITE_TOOLS, SHELL_TOOL) → aisuite metadata.requires_approval → READ fallback",
+      "base_table": "WRITE_TOOLS = {write_file, replace_in_file, apply_patch, apply_unified_diff}, SHELL_TOOL = run_shell",
+      "consequence_check": "is_consequential(risk) returns True for anything != READ — drives permission gating"
+    },
+    "decision_model": {
+      "dataclass": "Decision(allowed: bool, reason: str, needs_user: bool, rule: str)",
+      "needs_user": "True → surface prompts user for approval before executing",
+      "standing_rules": "standing_rule_candidate() returns target value for task-scoped 'allow this path' rules (§25 invariant)"
+    },
+    "authorization_flow": {
+      "step1": "_handle_tool_calls (engine.py:591) iterates tool_calls, emits TOOL_PROPOSED event",
+      "step2": "_authorize (engine.py:673) calls permissions.evaluate(tool_name, arguments, metadata)",
+      "step3": "If allowed and decision.rule is set → audit auto_allowed",
+      "step4": "If denied and needs_user → emit PERMISSION_REQUIRED event, await approver",
+      "step5": "If denied → append _tool_error_message to history (no orphans)"
+    },
+    "guard_toolset_integration": {
+      "class": "GuardToolset (factory/infra/tools_guard.py:100) — WrapperToolset that confines all worker tools",
+      "call_tool": "GuardToolset.call_tool (factory/infra/tools_guard.py:152) intercepts every tool invocation",
+      "current_gates": "senior-role deny check at line 155-156; mandatory-planning gate at line 157-161 (blocks _MODIFY_TOOLS until 'remember' called); unknown/discovery tool warning at lines 176-179",
+      "gap": "No RiskClass classification gate — all modification tools in _MODIFY_TOOLS (replace_text, write_file, replace_function, etc.) execute directly once _has_planned is True (lines 167-168). No per-tool risk evaluation, no Mode-based approval, no _tool_error_message feedback path for denied/unknown-risk calls. A hallucinated destructive call (wrong file path / dangerous command) executes without any permission check.",
+      "deny_by_default_risk_gate": "Should be inserted in call_tool between the senior-role block (line 156) and the modify-tools gate (line 157): classify each tool by RiskClass, default to INTERACTIVE mode (ask on writes/exec), and raise PermissionDenied for denied calls so the LLM learns the constraint in-turn."
+    }
+  },
+  "proposal": "ai-factory's tools_guard.py allows ALL tools by default — there is no deny-by-default gate. When the LLM hallucinates a destructive tool call (e.g. editing the wrong file, running a dangerous command), it executes without any permission check. OpenWorker's RiskClass + Mode system ensures only READ tools auto-pass; WRITE_LOCAL and EXEC require explicit approval or standing rules. ai-factory should adopt a similar classification: classify each shadow tool by risk (read/write/shell), default to INTERACTIVE mode (ask on writes/shell), and append _tool_error_message for denied calls so the LLM learns what it can't do.",
+  "pydantic_ai_2_impl": {
+    "pattern": "Risk-aware tool-error feedback: classify each tool by RiskClass at the call_tool boundary; reject non-READ calls in INTERACTIVE mode by raising a PermissionDenied exception whose message is surfaced to the LLM as a tool-error result (no silent execution); the LLM self-corrects in-turn. Integrated into GuardToolset.call_tool (tools_guard.py:152) so the gate fires before any _MODIFY_TOOLS invocation.",
+    "code": "from enum import Enum\nimport json\nfrom pydantic import BaseModel\nfrom pydantic_ai import Agent, RunContext\n\nclass RiskClass(str, Enum):\n    READ = 'read'\n    WRITE = 'write'\n    EXEC = 'exec'\n    EXTERNAL = 'external'\n\nclass Mode(str, Enum):\n    DISCUSS = 'discuss'\n    PLAN = 'plan'\n    INTERACTIVE = 'interactive'\n    AUTO = 'auto'\n    CUSTOM = 'custom'\n\n_RISK_TABLE = {\n    'read_file': RiskClass.READ,\n    'batch_read': RiskClass.READ,\n    'write_file': RiskClass.WRITE,\n    'replace_text': RiskClass.WRITE,\n    'replace_function': RiskClass.WRITE,\n    'add_import': RiskClass.WRITE,\n    'delete_file': RiskClass.WRITE,\n    'shell': RiskClass.EXEC,\n}\n\ndef classify(tool_name: str) -> RiskClass:\n    return _RISK_TABLE.get(tool_name, RiskClass.EXEC)\n\ndef is_consequential(risk: RiskClass) -> bool:\n    return risk != RiskClass.READ\n\nclass Decision(BaseModel):\n    allowed: bool\n    reason: str\n    needs_user: bool\n    rule: str\n\ndef _authorize(tool_name: str, mode: Mode = Mode.INTERACTIVE) -> Decision:\n    risk = classify(tool_name)\n    if risk == RiskClass.READ:\n        return Decision(allowed=True, reason='auto-pass', needs_user=False, rule='READ')\n    if mode in (Mode.AUTO, Mode.CUSTOM):\n        return Decision(allowed=True, reason=f'auto-allowed in {mode.value}', needs_user=False, rule=f'{mode.value}-allow')\n    return Decision(allowed=False, reason=f'{risk.value} risk needs approval in {mode.value} mode', needs_user=True, rule=f'{risk.value}+{mode.value}-deny')\n\nclass PermissionDenied(Exception):\n    \"\"\"Raised for non-READ tools in INTERACTIVE mode; surfaces as tool-error to LLM.\"\"\"\n\nclass AgentDeps(BaseModel):\n    mode: Mode = Mode.INTERACTIVE\n\nagent = Agent('test', deps_type=AgentDeps)\n\n@agent.tool\ndef safe_write(ctx: RunContext[AgentDeps], path: str, content: str) -> str:\n    d = _authorize('write_file', ctx.deps.mode)\n    if not d.allowed:\n        raise PermissionDenied(json.dumps({'error': 'denied', 'reason': d.reason, 'rule': d.rule}))\n    return f'wrote {path}'\n\n# GuardToolset.call_tool integration (factory/infra/tools_guard.py:152):\n#   d = _authorize(name, mode=current_mode)\n#   if not d.allowed:\n#       raise PermissionDenied(json.dumps({'error': 'denied', 'reason': d.reason, 'rule': d.rule}))\n\nif __name__ == '__main__':\n    d = _authorize('write_file', Mode.INTERACTIVE)\n    assert not d.allowed and d.needs_user\n    print(f'DENIED: {d.reason}')\n    d2 = _authorize('read_file', Mode.INTERACTIVE)\n    assert d2.allowed\n    print(f'ALLOWED: {d2.reason}')",
+    "why_now": "ai-factory's LLMs execute destructive edits without any gate — a hallucinated file path causes real damage before any verification runs. OpenWorker's deny-by-default + tool-error feedback (engine.py:757-766) prevents this: denied calls get a visible error message in history, and the LLM learns the constraint in-turn. GuardToolset.call_tool (tools_guard.py:152) already intercepts all tool calls and has a mandatory-planning gate (line 157) but no RiskClass classification — adding classify() + _authorize() before line 167 would close the gap with zero architectural disruption.",
+    "harness_gap": "factory/infra/tools_guard.py:152 — GuardToolset.call_tool has no RiskClass classification gate. The senior-role deny check (lines 155-156) and mandatory-planning gate (lines 157-161) are the only pre-execution filters; after _has_planned is True, all _MODIFY_TOOLS (replace_text, write_file, replace_function, add_import, add_constant, move_symbol, delete_file, rename_file — defined at line 97) execute directly at lines 167-168 with no per-tool risk evaluation. No Mode enum, no RiskClass classification, no PermissionDenied/_tool_error_message feedback path for denied calls. A hallucinated destructive tool call (wrong file path, dangerous command) executes without any permission check. Insert classify() + _authorize() between the senior-role block (line 156) and the modify-tools gate (line 157), raising PermissionDenied (surfaced as tool-error) for non-READ tools in INTERACTIVE mode."
+  },
+  "status": "done",
+  "assigned_agent": 2,
+  "dependencies": ["OW-01"],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:03:59+08:00"
+}

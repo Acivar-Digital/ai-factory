@@ -1,0 +1,68 @@
+{
+  "id": "OW-06",
+  "title": "Auto-Compaction & Live Context Management",
+  "scope": "Map how OpenWorker prevents context-overflow corruption of LLM output via token-threshold-triggered compaction with retry-once + trim fallback, and live context injection.",
+  "folders": [
+    "openworker/coworker/compaction.py",
+    "openworker/coworker/engine.py",
+    "openworker/tests/test_compaction.py",
+    "openworker/tests/test_compaction_engine.py"
+  ],
+  "findings": {
+    "compaction_config": {
+      "threshold_pct": "DEFAULT_THRESHOLD_PCT — percentage of context window that triggers compaction",
+      "cap_tokens": "DEFAULT_CAP_TOKENS — hard token cap for compacted output",
+      "keep_fraction": "KEEP_RECENT_FRACTION — fraction of trigger tokens kept as recent context after compaction",
+      "model_setting": "compaction_settings is a live getter — Settings changes apply without a rebuild of the TurnEngine"
+    },
+    "trigger_and_execution": {
+      "check": "_compaction_due() (engine.py:447) — cheap, side-effect-free check between iterations and before new turn",
+      "signal": "Uses turn.usage.context_tokens (from provider) or _compaction.estimate_tokens(outbound_messages) as fallback",
+      "trigger": "yield Event(COMPACTING, {}) BEFORE the slow summarizer call so surfaces show progress",
+      "build": "_compact_now() (engine.py:463) calls _compaction.build_state() in asyncio.to_thread",
+      "retry": "Attempts _build() once, retries once (for _attempt in range(2)) — both modes",
+      "failure_policy": "attended → Retry/Trim prompt to user; unattended → auto-trim and continue (never park a run on bookkeeping)"
+    },
+    "overflow_recovery": {
+      "catch": "engine.py:363 — provider exception caught in _loop() try/except around _astream()",
+      "route": "is_context_overflow(exc) + not _cancel.is_set() → yield COMPACTING, force=True compaction, continue loop",
+      "progress_guarded": "Each pass moves the boundary forward or gives up — a model that keeps overflowing still terminates in the error path",
+      "partial_survives": "streamed/streamed_reasoning are persisted as _partial_turn() message before the error path — what the user watched arrive survives the failure"
+    },
+    "live_context_provider": {
+      "field": "context_provider: Optional[Callable[[], str]] — set post-construction by the surface/manager",
+      "injection": "_outbound_messages() (engine.py:1125) appends ephemeral <system-context> block to LAST user message at send-time only (never persisted)",
+      "purpose": "Dynamic per-turn context (e.g. live directory list) rides on the latest user turn — can't reliably inject system messages mid-thread across providers",
+      "strip": "Display-only sidecars (source, _display, ts, reasoning, usage) are stripped from every outbound message — providers reject unknown keys"
+    },
+    "compaction_state_persistence": {
+      "compaction_state": "_compaction.CompactionState — persists the compacted block representation for replay",
+      "outbound_view": "apply_to_outbound() replaces everything before the boundary with the compacted summary, keeping the tail intact — byte-stable between turns so prompt caching works",
+      "stale_reset": "self._last_context_tokens = None after compaction — stale once outbound view shrank"
+    },
+    "ai_factory_compaction": {
+      "compaction_gate": "compact_memory_gate (factory/infra/_loopguard.py:834) — cross-turn gate prepends bounded history; calls keep_memory agent (factory/infra/tools_memory.py:53) + summarizer fallback (_compact_memory_fallback at line 801)",
+      "token_budget": "maybe_compact (factory/infra/_loopguard.py:662) — token-budget trigger at 60% of compact_at_fraction from COMPACTION_CONFIG (factory/infra/control.py:559); uses estimate_tokens (line 647) on agent_msgs",
+      "threshold_constants": "CONTEXT_COMPACT_CEILING (line 739) = PerRoleConfig hard_max; CONTEXT_COMPACT_FLOOR (line 821) — fails loudly if compacted dump still violates floor",
+      "invocation_site": "agent.py:419 — run_with_loopguard checks estimate_tokens(prior_history) > CONTEXT_COMPACT_CEILING before each turn, calls compact_memory_gate",
+      "pre_tier_compaction": "pipeline.py:813 — compact_context_if_needed (factory/infra/context.py:371) compresses run_brief at 100K token threshold before tier attempt",
+      "overflow_catch": "_loopguard.py:419 — catches ModelHTTPError + UsageLimitExceeded, triggers RECOVER (tools=[]) but does NOT catch provider context-window overflow; no auto-compaction retry loop",
+      "scrub_pattern": "_scrub_old_read_returns (factory/infra/_loopguard.py:210) — existing read-return scrub pattern that could be extended to overflow recovery"
+    },
+    "gap_vs_ai_factory": "ai-factory's compact_memory is triggered by token estimate via LiteRouter response, but has NO retry-once + trim fallback for unattended runs, and NO live context_provider injecting <system-context> into the latest user message. Context overflow crashes the LLM (produces garbage) instead of recovering."
+  },
+  "proposal": "ai-factory's context compaction (compact_memory in _loopguard.py) triggers on token estimate but has no fallback when the summarizer fails. When the LLM context overflows, the model produces garbage/hallucination instead of recovering. OpenWorker's pattern: (1) COMPACTING signal before summarizer so surfaces show progress, (2) retry-once + trim fallback for unattended runs, (3) live context_provider injecting <system-context> into the last user message at send-time. This should be adopted to prevent context-overflow from corrupting LLM output.",
+  "pydantic_ai_2_impl": {
+    "pattern": "Pydantic-AI before_model_request hook + ModelRetry for retry-once compaction — emit COMPACTING signal, attempt summarizer once, fall back to trim, never let context overflow corrupt output.",
+    "code": "from pydantic_ai import Agent, hooks\nfrom pydantic_ai.hooks import BeforeModelRequestEvent, RunContext\n\nclass CompactionState(BaseModel):\n    boundary_idx: int\n    summary: str\n\n@agent_harvester.hook_impl\nasync def compact_on_overflow(ctx: RunContext) -> None:\n    '''Before each model request, check token budget and compact if needed.'''\n    tokens = ctx.usage.total_tokens\n    if tokens > THRESHOLD_PCT * ctx.state.context_window:\n        # Signal before slow summarizer\n        emit_signal('compacting')\n        state = await asyncio.to_thread(build_compaction, ctx.messages)\n        if state is None:  # summary failed\n            if ctx.is_attended:\n                raise ModelRetry('Context compaction failed — retry')  # prompt user\n            else:\n                trim_oldest(ctx.messages)  # auto-trim, continue\n        else:\n            ctx.messages[:] = apply_compaction(ctx.messages, state)\n        ctx._last_context_tokens = None  # reset for next check",
+    "why_now": "ai-factory's LLMs produce garbage when context overflows because compaction has no fallback — the summarizer fails silently and the model keeps going with bloated context. OpenWorker's engine.py:363-374 proves that catching context-overflow, yielding a COMPACTING signal, and forcing trim-on-failure recovers the turn instead of corrupting output. This is the kimi-cli KC-07 harness gap: _run_verify_edit (CC=49) exhausts budget, and compaction doesn't recover.",
+    "harness_gap": "ai-factory's auto-compaction lands in factory/infra/_loopguard.py — compact_memory_gate (line 834) runs the keep_memory summarizer agent with NO retry-once + trim fallback for unattended runs (only fails loudly via _compact_memory_fallback at line 801); maybe_compact (line 662) triggers on token estimate from COMPACTION_CONFIG (control.py:559) but has no COMPACTING event emission before the summarizer. The token-scrub pattern _scrub_old_read_returns (line 210) exists for read returns but NOT for context overflow. ModelHTTPError/UsageLimitExceeded caught at line 419 triggers RECOVER (tools=[]) but does NOT catch provider context-window overflow — the LLM keeps generating garbage. compact_context_if_needed (factory/infra/context.py:371) pre-compacts run-briefs at 100K tokens with a bare summarizer, no trim fallback. When _run_verify_edit (factory/infra/pipeline.py:429, 157 lines) exhausts budget, there is no BeforeModelRequest hook to intercept and compact. Adopt: (1) BeforeModelRequest hook wrapping maybe_compact with ModelRetry, (2) trim-on-fallback for unattended runs, (3) COMPACTING event emission before summarizer via factory/infra/exchange.py:149 mark_compaction, (4) live context_provider injecting <system-context> into last user message."
+  },
+  "status": "done",
+  "assigned_agent": 6,
+  "dependencies": [],
+  "notes": [],
+  "created_by": "opencode-research-phase",
+  "mode": "collaboration",
+  "timestamp": "2026-08-04T02:08:00+08:00"
+}
