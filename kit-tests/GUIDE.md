@@ -85,14 +85,14 @@ This is enforced in **two layers of defense**:
 
 ### The `01_`–`09_` layers and `math_chapters/`, `param_flows/`
 
-These are **full slices from the baziforecaster codebase**. They:
+These are **full slices from the your-repo codebase**. They:
 
 - Import `src2.*` (the original application source code)
 - Hardcode references to `TEST/` and `GOLD/` directory paths
 - Require a running PostgreSQL database (mocked in `infra/conftest.py`, but
   the underlying source tree is still needed)
 
-**You cannot run these unless you already work on baziforecaster and have its
+**You cannot run these unless you already work on your-repo and have its
 source tree checked out.** They're here as **reference material** — read the
 test files to see how production patterns look in context, but don't expect
 `uv run pytest` (with no arguments) to execute them.
@@ -126,7 +126,7 @@ Open `.env` in your editor. Here's what each variable means:
 | Variable | Purpose | What to put |
 |---|---|---|
 | `KIT_LIVE` | Master switch. Set `false` for offline, `true` for live. | `true` or `false` (default) |
-| `KIT_PATH` | Where the kit expects to find `src2/`, `TEST/`, `GOLD/` directories. | Absolute path to your baziforecaster checkout root |
+| `KIT_PATH` | Where the kit expects to find `src2/`, `TEST/`, `GOLD/` directories. | Absolute path to your your-repo checkout root |
 | `KIT_BASE_URL` | The LLM API endpoint (e.g., Ollama, vLLM, OpenAI-compatible). | `http://localhost:8000` or your provider URL |
 | `KIT_MODEL` | The chronomancer-layer model name (sent to the LLM API). | `gemma-2`, `phi-3`, etc. |
 | `KIT_MEM0_MODEL` | The mem0-synthesis layer model name. **Independent** from `KIT_MODEL`. | `gemma-2-vision`, `nomic-embed-text`, etc. |
@@ -166,7 +166,7 @@ programmatically.
 
 ### Scenario A: You're a student/newcomer (most common)
 
-You don't have baziforecaster. You just want to learn the patterns.
+You don't have your-repo. You just want to learn the patterns.
 
 ```bash
 cd kit-tests
@@ -181,13 +181,13 @@ Done. Read the files in `examples/` in order (`01` through `06`, then
 uv run python examples/01_frozen_clock.py
 ```
 
-### Scenario B: You work on baziforecaster and want the full suite
+### Scenario B: You work on your-repo and want the full suite
 
-1. Clone baziforecaster to some directory, e.g. `/home/you/code/baziforecaster/`
+1. Clone your-repo to some directory, e.g. `/home/you/code/your-repo/`
 2. Edit `kit-tests/.env`:
    ```
    KIT_LIVE=true
-   KIT_PATH=/home/you/code/baziforecaster
+   KIT_PATH=/home/you/code/your-repo
    KIT_BASE_URL=http://localhost:8000   # your LLM endpoint
    KIT_MODEL=gemma-2
    KIT_MEM0_MODEL=gemma-2-vision
@@ -215,10 +215,10 @@ uv run python examples/01_frozen_clock.py
 ### Scenario C: You want to build your own test kit from a different codebase
 
 1. Read [orchestrator.md](orchestrator.md) — it documents the exact extraction
-   recipe: how the `0N_*` directories were curated from `baziforecaster/TEST/`,
+   recipe: how the `0N_*` directories were curated from `your-repo/TEST/`,
    how PII was scrubbed, and how the `collect_ignore` / `testpaths` gates were
    wired.
-2. Adapt the recipe: swap `baziforecaster/` for your repo, adjust the
+2. Adapt the recipe: swap `your-repo/` for your repo, adjust the
    `0N_*` layer names to match your test categories, and update
    `pyproject.toml` with your dependencies.
 3. Keep the `examples/` folder as your "cloner-runnable" gate — every commit
@@ -239,7 +239,7 @@ uv run python examples/03_mutation_target.py
 cp .env.example .env    # edit it
 KIT_LIVE=true uv run pytest examples -q
 
-# Run a baziforecaster layer (needs src2/ tree)
+# Run a your-repo layer (needs src2/ tree)
 uv run pytest 04_bug_repros/ -v
 
 # Check what pytest will collect (debug visibility)
@@ -261,11 +261,11 @@ uv run mutmut html
 
 ### "ModuleNotFoundError: No module named 'src2'"
 
-You're trying to run a `0N_*` layer or `param_flows/` without the baziforecaster
+You're trying to run a `0N_*` layer or `param_flows/` without the your-repo
 source tree. Either:
 
 - **For learning:** stick to `examples/` (which works offline with no upstream).
-- **For baziforecaster work:** set `KIT_PATH` to your baziforecaster checkout
+- **For your-repo work:** set `KIT_PATH` to your your-repo checkout
   root in `.env`.
 
 ### "RuntimeError: KIT_LIVE=true but missing required env"
