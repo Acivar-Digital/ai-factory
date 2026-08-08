@@ -1,6 +1,8 @@
 # 🧭 kit-hygiene Guide — Install, Configure & Run
 
-> **Step-by-step. 5 minutes to your first audit.**
+> **Step-by-step. 5 minutes to your first audit. 5 minutes to your first audit.**
+
+> **Related docs:** `README.md` (overview & scanner capabilities) · `FAQ.md` (troubleshooting & cost questions)
 
 ---
 
@@ -245,3 +247,5 @@ KIT_API_KEY            — LM proxy API key (required if KIT_ENABLE_REGISTRY_CLA
 KIT_MODEL              — model name (required if KIT_ENABLE_REGISTRY_CLASHES=true)
 PYTHON_DEPS            — extra pip deps to install
 ```
+
+> **Related docs:** [README.md](./README.md) (overview & scanner table) · [FAQ.md](./FAQ.md) (cost, CI/CD, troubleshooting)
