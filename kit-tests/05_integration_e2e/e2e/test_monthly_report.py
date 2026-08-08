@@ -15,12 +15,12 @@ from src.engine.orchestrator import run_full_engine
 
 
 async def test_francis_monthly_report():
-    print("--- Simulating Monthly Forecast Engine Run for Francis Yap ---")
+    print("--- Simulating Monthly Forecast Engine Run for Test Profile ---")
 
     # 1. Setup Profile (Mirroring intake)
     profile = UserProfile(
-        name="Francis Yap",
-        alias="Francis",
+        name="Test Profile",
+        alias="Tester",
         gender="M",
         year_pillar={"stem": "Ding", "branch": "Si"},
         month_pillar={"stem": "Jia", "branch": "Chen"},
@@ -44,7 +44,7 @@ async def test_francis_monthly_report():
     }
 
     # 2. Map to K3 format
-    k3_profile = map_profile_to_k3(profile, 187049734, dob="1977-05-05", tailoring_concerns=tailoring_concerns)
+    k3_profile = map_profile_to_k3(profile, 999000001, dob="1990-01-01", tailoring_concerns=tailoring_concerns)
 
     print(f"Profile Mapped: {k3_profile['name']} ({k3_profile['dm_strength_type']})")
 

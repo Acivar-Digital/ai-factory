@@ -1,7 +1,7 @@
 """
 Set 2 — End-to-End Pipeline Smoke Tests
 ========================================
-Goal: Verify that the /auto intake path for Francis Yap (1977-04-28 11:51 M)
+Goal: Verify that the /auto intake path for Test Profile (1977-04-28 11:51 M)
 flows all the way through to report generation being triggered.
 
 What IS mocked
@@ -109,8 +109,8 @@ def _stub_conductor_auto():
             session.metadata["dob"] = "1977-04-28 11:51"
             session.metadata["location"] = "Singapore"
             session.profile.gender = "M"
-            session.profile.alias = "FYCL"
-            session.profile.name = "Francis Yap"
+            session.profile.alias = "TEST"
+            session.profile.name = "Test Profile"
         return None, session  # None reply = "all fields collected"
 
     return patch("src.bot.intake.run_conductor", side_effect=_fake_conductor)
@@ -145,7 +145,7 @@ class TestAutoModeSessionReachesComplete:
         with _stub_conductor_auto():
             session = await _drive(["/start", "/auto", "yes"])
 
-        assert session.profile.alias == "FYCL", f"Expected alias 'FYCL', got {session.profile.alias!r}"
+        assert session.profile.alias == "TEST", f"Expected alias 'TEST', got {session.profile.alias!r}"
 
     @pytest.mark.asyncio
     async def test_auto_engine_populates_four_pillars(self, mock_telegram):
@@ -298,8 +298,8 @@ class TestPipelineSmoke:
         session = get_session(CHAT_ID)
         session.step = "COMPLETE"
         session.profile = UserProfile(
-            name="Francis Yap",
-            alias="FYCL",
+            name="Test Profile",
+            alias="TEST",
             gender="M",
             year_pillar={"stem": "Ding", "branch": "Si"},
             month_pillar={"stem": "Jia", "branch": "Chen"},
@@ -342,7 +342,7 @@ class TestPipelineSmoke:
 
         session = get_session(CHAT_ID)
         session.step = "COMPLETE"
-        session.profile = UserProfile(alias="FYCL", gender="M")
+        session.profile = UserProfile(alias="TEST", gender="M")
         save_session(session)
 
         monkeypatch.setattr("src.bot.bridge.save_k3_profile", MagicMock(return_value="/tmp/fake.json"))

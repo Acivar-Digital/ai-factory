@@ -62,7 +62,7 @@ GOLD_DIR = Path(__file__).resolve().parent.parent
 SNAP_FILE = Path(__file__).resolve().parent / "snapshot.json"
 FAKE_TELEGRAM_URL = "http://127.0.0.1:9999"
 SERVER_URL = "http://127.0.0.1:8445"
-WEBHOOK_SECRET = "2f8a9d1c4e6b7f3a0d5c8b2e1f9a7d3c"
+WEBHOOK_SECRET = "00000000000000000000000000000000"
 
 def send_webhook(chat_id: int, text: str) -> dict:
     update_id = int(time.time() * 1000) % 1000000

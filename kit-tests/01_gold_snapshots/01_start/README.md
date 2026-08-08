@@ -42,7 +42,7 @@ Or manually with curl (note the test channel header):
 ```bash
 curl -s -X POST http://127.0.0.1:8445/webhook/test \
   -H "Content-Type: application/json" \
-  -H "X-Telegram-Bot-Api-Secret-Token: 2f8a9d1c4e6b7f3a0d5c8b2e1f9a7d3c" \
+  -H "X-Telegram-Bot-Api-Secret-Token: 00000000000000000000000000000000" \
   -H "X-Test-Channel: test_telegram01" \
   -d '{"update_id": 9001, "message": {"message_id": 1, "from": {"id": 999001001, "is_bot": false, "first_name": "GoldTest"}, "chat": {"id": 999001001, "type": "private"}, "date": 1717545600, "text": "/start"}}'
 ```

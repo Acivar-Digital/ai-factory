@@ -65,10 +65,10 @@ class TestParseResponse:
         )
 
     def test_parse_standard_format(self):
-        raw = self._make_raw("Thanks! What is your birth date?", {"alias": "FYCL", "gender": "Male"}, False)
+        raw = self._make_raw("Thanks! What is your birth date?", {"alias": "TEST", "gender": "Male"}, False)
         reply, extracted, all_collected = _parse_conductor_response(raw)
         assert reply == "Thanks! What is your birth date?"
-        assert extracted["alias"] == "FYCL"
+        assert extracted["alias"] == "TEST"
         assert extracted["gender"] == "Male"
         assert all_collected is False
 
@@ -103,11 +103,11 @@ class TestParseResponse:
         """User dumps alias + gender + DOB in one message — all extracted."""
         raw = self._make_raw(
             "Great, got it!",
-            {"alias": "FYCL", "gender": "Male", "dob": "1977-04-28 11:51", "location": "Singapore"},
+            {"alias": "TEST", "gender": "Male", "dob": "1977-04-28 11:51", "location": "Singapore"},
             False,
         )
         _, extracted, _ = _parse_conductor_response(raw)
-        assert extracted["alias"] == "FYCL"
+        assert extracted["alias"] == "TEST"
         assert extracted["dob"] == "1977-04-28 11:51"
         assert extracted["location"] == "Singapore"
 
@@ -142,8 +142,8 @@ class TestApplyExtracted:
 
     def test_apply_alias(self):
         s = _fresh_session()
-        s = _apply_extracted(s, {"alias": "FYCL"}, "auto")
-        assert s.profile.alias == "FYCL"
+        s = _apply_extracted(s, {"alias": "TEST"}, "auto")
+        assert s.profile.alias == "TEST"
 
     def test_apply_gender_male_full_word(self):
         s = _fresh_session()
@@ -211,14 +211,14 @@ class TestApplyExtracted:
         s = _apply_extracted(
             s,
             {
-                "alias": "FYCL",
+                "alias": "TEST",
                 "gender": "Male",
                 "dob": "1977-04-28 11:51",
                 "location": "Singapore",
             },
             "auto",
         )
-        assert s.profile.alias == "FYCL"
+        assert s.profile.alias == "TEST"
         assert s.profile.gender == "M"
         assert s.metadata["dob"] == "1977-04-28 11:51"
         assert s.metadata["location"] == "Singapore"
@@ -240,7 +240,7 @@ class TestConductorLive:
     that contains all the info it needs to collect in one shot.
 
     Expected outcome: after one turn, session.metadata['dob'] contains
-    '1977', '04', '28' and session.profile.alias is 'FYCL'.
+    '1977', '04', '28' and session.profile.alias is 'TEST'.
     """
 
     @pytest.mark.asyncio
@@ -257,7 +257,7 @@ class TestConductorLive:
         _, s = await run_conductor(s, "__init__")
 
         # User provides all info in one natural language sentence
-        user_msg = "My name is Francis Yap, alias FYCL, male. Born 28 April 1977 at 11:51am in Singapore."
+        user_msg = "My name is Test Profile, alias TEST, male. Born 01 January 1990 at 11:51am in Singapore."
         reply, s = await run_conductor(s, user_msg)
 
         dob = s.metadata.get("dob", "")
@@ -279,10 +279,10 @@ class TestConductorLive:
         _, s = await run_conductor(s, "__init__")
 
         reply, s = await run_conductor(
-            s, "Name: Francis Yap, alias FYCL, gender Male, born 1977-04-28 11:51, Singapore."
+            s, "Name: Test Profile, alias TEST, gender Male, born 1977-04-28 11:51, Singapore."
         )
 
-        assert "FYCL" in s.profile.alias, f"Got alias: {s.profile.alias!r}"
+        assert "TEST" in s.profile.alias, f"Got alias: {s.profile.alias!r}"
         assert s.profile.gender == "M", f"Got gender: {s.profile.gender!r}"
 
     @pytest.mark.asyncio
@@ -298,7 +298,7 @@ class TestConductorLive:
 
         # Pre-seed all required auto fields
         s = _fresh_session(mode="auto")
-        s.profile.alias = "FYCL"
+        s.profile.alias = "TEST"
         s.profile.gender = "M"
         s.metadata["dob"] = "1977-04-28 11:51"
         s.metadata["location"] = "Singapore"

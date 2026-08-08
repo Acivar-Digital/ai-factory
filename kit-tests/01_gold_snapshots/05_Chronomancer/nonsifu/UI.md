@@ -9,7 +9,7 @@
 
 🔴 <i>EVENT ALERT: Reputation Event</i>
 
-# 📅 Francis, today is a great day to reclaim your personal power and get things done, provided you keep your temper in check to avoid unnecessary friction 🚀
+# 📅 Tester, today is a great day to reclaim your personal power and get things done, provided you keep your temper in check to avoid unnecessary friction 🚀
 
 • 💼 Career | Do: Tackle demanding projects that require high focus | Avoid: Getting into heated debates or being overly critical of colleagues 🌟
 • 💖 Relationships | Do: Set clear and firm boundaries with others | Avoid: Letting irritability turn into a public argument or scandal 🧘
@@ -42,7 +42,7 @@ The current energy provides a structural advantage that helps you see through th
 
 🔴 <i>EVENT ALERT: Reputation Event</i>
 
-# 📅 Francis, today is a great day to reclaim your personal power and get things done, provided you keep your temper in check to avoid unnecessary friction 🚀
+# 📅 Tester, today is a great day to reclaim your personal power and get things done, provided you keep your temper in check to avoid unnecessary friction 🚀
 
 • 💼 Career | Do: Tackle demanding projects that require high focus | Avoid: Getting into heated debates or being overly critical of colleagues 🌟
 • 💖 Relationships | Do: Set clear and firm boundaries with others | Avoid: Letting irritability turn into a public argument or scandal 🧘
@@ -76,7 +76,7 @@ Rewrite technical Bazi advisory into plain English.
 Keep the exact structure.
 Remove all technical jargon (e.g., 'Jia Yin', 'Direct Officer', 'Seal resonance', '7 Killings', 'clash').
 Replace technical terms with simple, practical language.
-A Bazi analysis for "Francis" regarding meeting a partner.
+A Bazi analysis for "Tester" regarding meeting a partner.
 
     *   <i>Lead:</i> "Today is a favorable day to meet your partner as you will feel more confident and emotionally supported, though you should remain mindful of minor mood swings." -&gt; (This is already fairly plain, but I can make it even simpler).
 
@@ -217,7 +217,7 @@ Today's energy is highly beneficial. It provides a cooling influence that counte
 Rewrite technical Bazi advisory into plain English.
 Keep exact structure.
 Remove all technical jargon (e.g., 'Jia Yin', 'Direct Officer', 'Seal resonance', '7 Killings', 'clash'). Replace with simple, practical language.
-Bazi advisory for "Francis" regarding a house purchase in Singapore (July 2026) and a new job (June 2026).
+Bazi advisory for "Tester" regarding a house purchase in Singapore (July 2026) and a new job (June 2026).
 
     *   <i>Introduction:</i> "For your Singapore house purchase and new role, you are currently in a high-support phase that gives you the mental and material strength to execute these major moves, though you should expect some last-minute administrative friction." -&gt; <i>This is already fairly plain, but can be simplified further.</i>
 
@@ -272,7 +272,7 @@ However, there is a conflict between your current energy and some of your existi
 
 🔴 <i>EVENT ALERT: Reputation Event</i>
 
-# 📅 Francis, today is a great day to reclaim your personal power and get things done, provided you keep your temper in check to avoid unnecessary friction 🚀
+# 📅 Tester, today is a great day to reclaim your personal power and get things done, provided you keep your temper in check to avoid unnecessary friction 🚀
 
 • 💼 Career | Do: Tackle demanding projects that require high focus | Avoid: Getting into heated debates or being overly critical of colleagues 🌟
 • 💖 Relationships | Do: Set clear and firm boundaries with others | Avoid: Letting irritability turn into a public argument or scandal 🧘

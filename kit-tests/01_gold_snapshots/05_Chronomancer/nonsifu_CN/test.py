@@ -129,7 +129,7 @@ async def run_test(verbose=False, chat_id_override=None):
     except Exception as e:
         logger.warning(f"Failed to clear cache: {e}")
 
-    # Save Francis' profile to memory manager disk
+    # Save Tester' profile to memory manager disk
     memory_manager.get_user_dir(user_id)
     profile_path = memory_manager.get_profile_path(user_id)
     user_uuid = str(db._get_or_create_uuid(user_id))
@@ -138,7 +138,7 @@ async def run_test(verbose=False, chat_id_override=None):
     mock_profile_data = {
         "profile_id": user_uuid,
         "gender": "M",
-        "alias": "Francis",
+        "alias": "Tester",
         "year_pillar": "丁巳",
         "month_pillar": "乙巳",
         "day_pillar": "庚辰",
@@ -157,7 +157,7 @@ async def run_test(verbose=False, chat_id_override=None):
     session.profile = UserProfile(
         profile_id=user_uuid,
         gender="M",
-        alias="Francis",
+        alias="Tester",
         year_pillar=Pillar(stem="Ding", branch="Si"),
         month_pillar=Pillar(stem="Yi", branch="Si"),
         day_pillar=Pillar(stem="Geng", branch="Chen"),

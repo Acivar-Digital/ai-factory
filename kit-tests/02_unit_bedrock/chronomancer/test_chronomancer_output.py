@@ -62,7 +62,7 @@ async def test_chronomancer():
 
     # Setup a dummy session with a Bazi profile
     profile = UserProfile(
-        alias="Francis Test",
+        alias="Tester Test",
         gender="M",
         year_pillar={"stem": "Jia", "branch": "Zi"},
         month_pillar={"stem": "Bing", "branch": "Yin"},

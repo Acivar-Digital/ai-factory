@@ -10,8 +10,8 @@
   },
   "test_user": {
     "chat_id": 999,
-    "name": "Francis Yap",
-    "alias": "FYCL",
+    "name": "Test Profile",
+    "alias": "TEST",
     "gender": "Male",
     "dob": "1977-04-28 11:51",
     "location": "Singapore"
@@ -60,7 +60,7 @@
     {
       "step": 4,
       "input": {
-        "text": "Name: Francis Yap, Alias: FYCL, Gender: Male"
+        "text": "Name: Test Profile, Alias: TEST, Gender: Male"
       },
       "expected": {
         "http_status": 200,
@@ -166,7 +166,7 @@
     {
       "step": 11,
       "input": {
-        "text": "Name: Francis Yap, Alias: FYCL, Gender: Male"
+        "text": "Name: Test Profile, Alias: TEST, Gender: Male"
       },
       "expected": {
         "http_status": 0,

@@ -50,7 +50,7 @@ async def test_simplify_advisory_shows_output():
     print(SAMPLE_TECHNICAL_ADVISORY)
     print("-"*80)
 
-    result = await simplify_advisory(SAMPLE_TECHNICAL_ADVISORY, alias="Francis")
+    result = await simplify_advisory(SAMPLE_TECHNICAL_ADVISORY, alias="Tester")
 
     print("\nOUTPUT (Plain English):")
     print(result)

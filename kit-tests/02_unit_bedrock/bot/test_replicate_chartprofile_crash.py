@@ -9,7 +9,7 @@ def test_replicate_chartprofile_crash():
     by ChartProfile.model_validate_json without throwing a ValidationError.
     """
     profile = UserProfile.model_validate({
-        "alias": "Francis",
+        "alias": "Tester",
         "gender": "M",
         "year_pillar": {"stem": "Ding", "branch": "Si"},
         "month_pillar": {"stem": "Jia", "branch": "Chen"},
@@ -22,7 +22,7 @@ def test_replicate_chartprofile_crash():
         "neutral_elements": ["Metal"]
     })
     
-    k3_data = map_profile_to_k3(profile, chat_id=187049734)
+    k3_data = map_profile_to_k3(profile, chat_id=999000001)
     json_str = json.dumps(k3_data)
     
     try:

@@ -5,7 +5,7 @@ Validate the end-to-end flow from receiving raw telegram inputs (bio + tailoring
 This plan specifically validates that the strict Pydantic V2 data pipeline correctly threads the `tailoring_concerns` and `tailoring_context` all the way from the user input down to the actual LLM prompt payload, without data loss or dict-fallback crashes.
 
 ## Biography Data
-*   **Alias:** Francis
+*   **Alias:** Tester
 *   **Gender:** Male
 *   **Year:** Ding Si (丁巳)
 *   **Month:** Jia Chen (甲辰)
@@ -31,7 +31,7 @@ This plan specifically validates that the strict Pydantic V2 data pipeline corre
 ## Test Execution Steps
 
 ### 1. Payload Construction & Intake (Including Tailoring)
-*   **Action:** Construct a dictionary payload mirroring Francis's bio data AND tailoring concerns.
+*   **Action:** Construct a dictionary payload mirroring Tester's bio data AND tailoring concerns.
 *   **Validation:**
     *   Verify `build_tailoring_context()` correctly converts the concerns into the markdown prompt block.
     *   Assert that `ChartProfile.model_validate(dict)` successfully captures `tailoring_context`. (Will require updating `ChartProfile`).

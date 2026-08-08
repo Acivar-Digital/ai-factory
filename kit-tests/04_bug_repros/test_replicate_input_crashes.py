@@ -14,7 +14,7 @@ async def test_replicate_classify_ge_ju_crash():
         step="COLLECTING",
         metadata=SessionMetadata(
             intake={
-                'alias': 'Francis', 
+                'alias': 'Tester', 
                 'gender': 'M', 
                 'year_pillar': 'Ding Si', 
                 'month_pillar': 'Jia Chen', 

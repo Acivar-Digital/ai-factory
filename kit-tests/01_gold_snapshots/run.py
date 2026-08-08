@@ -31,8 +31,8 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env", override=True)
 GOLD_DIR = PROJECT_ROOT / "TEST" / "GOLD"
 SERVER_URL = "http://127.0.0.1:8445"
-WEBHOOK_SECRET = "2f8a9d1c4e6b7f3a0d5c8b2e1f9a7d3c"
-BOT_TOKEN = "8583811308:AAG4U3yIYsQmIBt01JdkI8dyH5uzF41Bqg4"
+WEBHOOK_SECRET = "00000000000000000000000000000000"
+BOT_TOKEN = "1234567890:AAYourBotTokenHere"
 HEALTH_ENDPOINT = f"{SERVER_URL}/health"
 LOG_FILE = PROJECT_ROOT / "logs" / "bot_stdout.log"
 DB_FILE = PROJECT_ROOT / "bot.db"

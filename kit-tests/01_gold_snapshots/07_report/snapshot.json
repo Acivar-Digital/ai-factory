@@ -10,8 +10,8 @@
   },
   "test_user": {
     "chat_id": 999,
-    "name": "Francis Yap",
-    "alias": "FYCL"
+    "name": "Test Profile",
+    "alias": "TEST"
   },
   "steps": [
     {

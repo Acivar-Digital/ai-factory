@@ -19,7 +19,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 GOLD_DIR = PROJECT_ROOT / "TEST" / "GOLD"
 PARALLEL_DIR = GOLD_DIR / "_parallel"
 RESULTS_DIR = PARALLEL_DIR / "results"
-DEFAULT_WEBHOOK_SECRET = "2f8a9d1c4e6b7f3a0d5c8b2e1f9a7d3c"
+DEFAULT_WEBHOOK_SECRET = "00000000000000000000000000000000"
 
 WORKER_GROUPS = {
     1: ["02_auto", "04_daily", "05_forecast", "09_chrono_ask"],

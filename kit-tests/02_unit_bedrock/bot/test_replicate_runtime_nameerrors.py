@@ -41,7 +41,7 @@ async def test_handle_forecast_category_no_scored_to_dicts_nameerror():
         mock_record.hourly_scores = {}
         mock_get_rolling_30.return_value = [mock_record]
 
-        res = await handle_forecast_category(187049734, "career")
+        res = await handle_forecast_category(999000001, "career")
         assert res is not None
         assert "Top Days for" in res or "No Bazi profile" in res
 
@@ -61,5 +61,5 @@ async def test_intake_handle_start_command_no_do_start_nameerror():
         mock_session.conversation_history = []
         mock_get_session.return_value = mock_session
 
-        reply = await handle_intake(187049734, "/start")
+        reply = await handle_intake(999000001, "/start")
         assert reply is not None

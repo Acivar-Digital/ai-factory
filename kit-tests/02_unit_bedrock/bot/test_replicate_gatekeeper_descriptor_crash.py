@@ -11,7 +11,7 @@ def test_gatekeeper_ingress_payload_validation_success():
         "message": {
             "message_id": 4487,
             "from": {
-                "id": 187049734,
+                "id": 999000001,
                 "is_bot": False,
                 "first_name": "🅵🆁🅰🅽🅲🅸🆂",
                 "last_name": "🆈🅰🅿",
@@ -20,7 +20,7 @@ def test_gatekeeper_ingress_payload_validation_success():
                 "is_premium": True,
             },
             "chat": {
-                "id": 187049734,
+                "id": 999000001,
                 "first_name": "🅵🆁🅰🅽🅲🅸🆂",
                 "last_name": "🆈🅰🅿",
                 "username": "yapily",
@@ -36,13 +36,13 @@ def test_gatekeeper_ingress_payload_validation_success():
     ingress = IngressPayload.model_validate(payload)
     assert ingress.update_id == 802636213
     assert ingress.message is not None
-    assert ingress.message.chat.id == 187049734
+    assert ingress.message.chat.id == 999000001
 
     # 2. Gatekeeper validation succeeds
     res = Gatekeeper.validate(payload)
     assert res.is_valid is True
     assert res.extracted_text == "/start"
-    assert res.chat_id == 187049734
+    assert res.chat_id == 999000001
     assert res.error_msg is None
 
 
@@ -54,8 +54,8 @@ def test_gatekeeper_ingress_payload_edited_message_alias():
         "update_id": 802636214,
         "edited_message": {
             "message_id": 4488,
-            "from": {"id": 187049734, "is_bot": False, "first_name": "Francis"},
-            "chat": {"id": 187049734, "type": "private"},
+            "from": {"id": 999000001, "is_bot": False, "first_name": "Tester"},
+            "chat": {"id": 999000001, "type": "private"},
             "date": 1785374458,
             "text": "/help",
         },
@@ -64,4 +64,4 @@ def test_gatekeeper_ingress_payload_edited_message_alias():
     res = Gatekeeper.validate(payload)
     assert res.is_valid is True
     assert res.extracted_text == "/help"
-    assert res.chat_id == 187049734
+    assert res.chat_id == 999000001

@@ -42,14 +42,14 @@ Bot:  "✅ *Promo code accepted!* You can now generate your monthly forecast rep
 
 User: /input
 Bot:  "Please share your details in this format:
-       Name: Francis Yap
-       🏷️ Alias: FYCL
+       Name: Test Profile
+       🏷️ Alias: TEST
        👤 Gender: Male
        1️⃣ Year: Ding Si
        ..."
 
-User: Name: Francis Yap
-      🏷️ Alias: FYCL
+User: Name: Test Profile
+      🏷️ Alias: TEST
       👤 Gender: Male
       1️⃣ Year: Ding Si
       2️⃣ Month: Yi Si
@@ -63,7 +63,7 @@ User: Name: Francis Yap
 
 Bot:  "📋 *Here is what I understood:*
        🎂 Age: 49 yrs 2 mths
-       🏷️ Name/Alias: FYCL
+       🏷️ Name/Alias: TEST
        👤 Gender: Male
        1️⃣ Year: Ding Si
        2️⃣ Month: Yi Si

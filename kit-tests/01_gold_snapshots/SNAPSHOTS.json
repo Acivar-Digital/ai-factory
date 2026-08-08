@@ -1,10 +1,10 @@
 {
   "scenario": "full_auto_intake",
-  "description": "Complete E2E auto intake flow for Francis Yap (FYCL)",
+  "description": "Complete E2E auto intake flow for Test Profile (TEST)",
   "test_user": {
     "chat_id": 999,
-    "name": "Francis Yap",
-    "alias": "FYCL",
+    "name": "Test Profile",
+    "alias": "TEST",
     "gender": "Male",
     "dob": "1977-04-28 11:51",
     "location": "Singapore"
@@ -64,13 +64,13 @@
     {
       "rowid": 84,
       "role": "user",
-      "text": "Name: Francis Yap, Alias: FYCL, Gender: Male",
+      "text": "Name: Test Profile, Alias: TEST, Gender: Male",
       "timestamp": "2026-06-05 02:25:34"
     },
     {
       "rowid": 85,
       "role": "bot",
-      "text": "Thanks, Francis! Now, could you please provide your date and time of birth, as well as your place of birth?",
+      "text": "Thanks, Tester! Now, could you please provide your date and time of birth, as well as your place of birth?",
       "timestamp": "2026-06-05 02:25:34"
     },
     {
@@ -82,7 +82,7 @@
     {
       "rowid": 87,
       "role": "bot",
-      "text": "You provided: 1977-04-28 11:51 (Location: Singapore).\nThis is what we have generated based on what you have given us. Please confirm.\n\n📋 *Here is what I understood:*\n\n🎂 Age: 49 yrs 2 mths\n🏷️ Name/Alias: Francis Yap (FYCL)\n👤 Gender: Male\n1️⃣ Year: Ding Si\n2️⃣ Month: Jia Chen\n3️⃣ Day: Yi Mao\n4️⃣ Hour: Ren Wu\n5️⃣ Da Yun: Ji Hai\n6️⃣ Strength: Strong\n7️⃣ Favorable: Fire, Earth\n8️⃣ Unfavorable: Wood, Water\n9️⃣ Neutral: Metal\n\n⚠️ *Please verify this is correct.*\nReply *Yes* to proceed, or tell me what to fix.",
+      "text": "You provided: 1977-04-28 11:51 (Location: Singapore).\nThis is what we have generated based on what you have given us. Please confirm.\n\n📋 *Here is what I understood:*\n\n🎂 Age: 49 yrs 2 mths\n🏷️ Name/Alias: Test Profile (TEST)\n👤 Gender: Male\n1️⃣ Year: Ding Si\n2️⃣ Month: Jia Chen\n3️⃣ Day: Yi Mao\n4️⃣ Hour: Ren Wu\n5️⃣ Da Yun: Ji Hai\n6️⃣ Strength: Strong\n7️⃣ Favorable: Fire, Earth\n8️⃣ Unfavorable: Wood, Water\n9️⃣ Neutral: Metal\n\n⚠️ *Please verify this is correct.*\nReply *Yes* to proceed, or tell me what to fix.",
       "timestamp": "2026-06-05 02:26:26"
     },
     {
@@ -187,7 +187,7 @@
       "day_stem_stream": null,
       "structure": "普通格局",
       "domain_focus": "General",
-      "alias": "Francis Yap (FYCL)",
+      "alias": "Test Profile (TEST)",
       "name": null,
       "relation_category": null,
       "sexuality_dynamic": null
@@ -227,11 +227,11 @@
       },
       {
         "role": "user",
-        "content": "Name: Francis Yap, Alias: FYCL, Gender: Male"
+        "content": "Name: Test Profile, Alias: TEST, Gender: Male"
       },
       {
         "role": "assistant",
-        "content": "Thanks, Francis! Now, could you please provide your date and time of birth, as well as your place of birth?"
+        "content": "Thanks, Tester! Now, could you please provide your date and time of birth, as well as your place of birth?"
       },
       {
         "role": "user",

@@ -46,12 +46,12 @@
   - 🛑 **Context Lock:** Execute `bd` to log Phase 1 completion and lock the verified conversational state into memory.
 
 - [ ] **Phase 2: Auto Monthly Report E2E Validation (`auto_monthly.md`)**
-  - **Action:** Spawn a subagent to execute `[baziforecaster-only: TEST/GOLD/02_auto/agent_run/run_auto_pipeline.py not in kit download]`. Verify that `lunar-python` derives Francis's Day Master as "Mild Strong" (accepted drift), creates a valid `UserProfile`, injects `tailoring_concerns`, maps to `ChartProfile`, and includes `tailoring_context` in the prompt built by `prompt_maker.py`.
+  - **Action:** Spawn a subagent to execute `[baziforecaster-only: TEST/GOLD/02_auto/agent_run/run_auto_pipeline.py not in kit download]`. Verify that `lunar-python` derives Tester's Day Master as "Mild Strong" (accepted drift), creates a valid `UserProfile`, injects `tailoring_concerns`, maps to `ChartProfile`, and includes `tailoring_context` in the prompt built by `prompt_maker.py`.
   - **Validation:** Confirm the script completes with exit code 0 and generated `.yaml` prompt artifacts confirm `tailoring_context` presence across all 12 monthly evaluations.
   - 🛑 **Context Lock:** Execute `bd` to log Phase 2 completion and note any schema or prompt adjustments made.
   
 - [ ] **Phase 3: Input Monthly Report E2E Validation (`input_monthly.md`)**
-  - **Action:** Spawn a subagent to execute `[baziforecaster-only: TEST/GOLD/03_input/agent_run/run_pipeline.py not in kit download]`. Validate that manual dictionary input ingress (Francis's Ding Si / Jia Chen / Yi Mao / Ren Wu chart) passes through `map_profile_to_k3()`, builds `PillarMap` objects without dict-access crashes, and serializes all 12 monthly outputs into JSON.
+  - **Action:** Spawn a subagent to execute `[baziforecaster-only: TEST/GOLD/03_input/agent_run/run_pipeline.py not in kit download]`. Validate that manual dictionary input ingress (Tester's Ding Si / Jia Chen / Yi Mao / Ren Wu chart) passes through `map_profile_to_k3()`, builds `PillarMap` objects without dict-access crashes, and serializes all 12 monthly outputs into JSON.
   - **Validation:** Assert no silent exception swallowing occurred and inspect output JSON to confirm 12 monthly evaluations with tailoring context.
   - 🛑 **Context Lock:** Execute `bd` to log Phase 3 completion and verify Zero-Dicts adherence across all 12 monthly turns.
 

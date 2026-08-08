@@ -18,7 +18,7 @@ If any step in the report generation pipeline fails (e.g. LLM timeout, database 
 2. **User Notification**: The bot sends a system error message to the user's chat:
    - `⚠️ *Temporary System Error*`
 3. **Developer Telegram Alerts**:
-   - **Personal Alert**: A message with the exact error details and the traceback is sent directly to the developer chat (`187049734`).
+   - **Personal Alert**: A message with the exact error details and the traceback is sent directly to the developer chat (`999000001`).
    - **Progress Channel Alert**: The failure status is posted to the progress channel (`@yapily_qimen`).
 4. **Console & System Logging**:
    - The traceback is logged as `logger.error` in the system log (`logs/bot.log`) with the exact stack trace, ensuring it is highly auditable.

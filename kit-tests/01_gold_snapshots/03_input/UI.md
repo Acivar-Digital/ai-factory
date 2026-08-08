@@ -39,8 +39,8 @@ Please enter your promo code to generate your monthly forecast report.
 
 Please share your details in this format:
 
-Name: Francis Yap
-🏷️ Alias: FYCL
+Name: Test Profile
+🏷️ Alias: TEST
 👤 Gender: Male
 1️⃣ Year: Ding Si
 2️⃣ Month: Yi Si
@@ -53,8 +53,8 @@ Name: Francis Yap
 9️⃣ Neutral: Earth, Wood
 
 
---- STEP 5 (Name: Francis Yap
-🏷️ Alias: FYCL
+--- STEP 5 (Name: Test Profile
+🏷️ Alias: TEST
 👤 Gender: Male
 1️⃣ Year: Ding Zi
 2️⃣ Month: Yi Si
@@ -73,8 +73,8 @@ Name: Francis Yap
 Please correct these parameters and send again.
 
 
---- STEP 6 (Name: Francis Yap
-🏷️ Alias: FYCL
+--- STEP 6 (Name: Test Profile
+🏷️ Alias: TEST
 👤 Gender: Male
 1️⃣ Year: Ding Si
 2️⃣ Month: Jia Chou
@@ -93,8 +93,8 @@ Please correct these parameters and send again.
 Please correct these parameters and send again.
 
 
---- STEP 7 (Name: Francis Yap
-🏷️ Alias: FYCL
+--- STEP 7 (Name: Test Profile
+🏷️ Alias: TEST
 👤 Gender: Male
 1️⃣ Year: Ding Si
 2️⃣ Month: Yi Si
@@ -114,8 +114,8 @@ Please correct these parameters and send again.
 Please correct these parameters and send again.
 
 
---- STEP 8 (Name: Francis Yap
-🏷️ Alias: FYCL
+--- STEP 8 (Name: Test Profile
+🏷️ Alias: TEST
 👤 Gender: Male
 1️⃣ Year: Ding Si
 2️⃣ Month: Yi Si
@@ -135,8 +135,8 @@ Please correct these parameters and send again.
 Please correct these parameters and send again.
 
 
---- STEP 9 (Name: Francis Yap
-🏷️ Alias: FYCL
+--- STEP 9 (Name: Test Profile
+🏷️ Alias: TEST
 👤 Gender: Male
 1️⃣ Year: Dingg Sii
 2️⃣ Month: Yii Sii
@@ -150,7 +150,7 @@ Please correct these parameters and send again.
 
 📋 *Here is what I understood:*
 
-🏷️ Name/Alias: FYCL
+🏷️ Name/Alias: TEST
 👤 Gender: Male
 1️⃣ Year: Ding Si
 2️⃣ Month: Yi Si

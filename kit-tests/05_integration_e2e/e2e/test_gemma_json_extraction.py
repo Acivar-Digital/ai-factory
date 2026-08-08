@@ -55,10 +55,10 @@ class TestParseValidReplies:
 
     def test_parse_valid_replies_json_brackets(self):
         """Standard REPLY/JSON format with valid JSON."""
-        raw = _make_raw("Thanks! What is your birth date?", {"alias": "FYCL", "gender": "Male"}, False)
+        raw = _make_raw("Thanks! What is your birth date?", {"alias": "TEST", "gender": "Male"}, False)
         reply, extracted, all_collected = _parse_conductor_response(raw)
         assert reply == "Thanks! What is your birth date?"
-        assert extracted["alias"] == "FYCL"
+        assert extracted["alias"] == "TEST"
         assert extracted["gender"] == "Male"
         assert all_collected is False
 
@@ -66,11 +66,11 @@ class TestParseValidReplies:
         """User dumps alias + gender + DOB + location in one message."""
         raw = _make_raw(
             "Great, got it!",
-            {"alias": "FYCL", "gender": "Male", "dob": "1977-04-28 11:51", "location": "Singapore"},
+            {"alias": "TEST", "gender": "Male", "dob": "1977-04-28 11:51", "location": "Singapore"},
             False,
         )
         _, extracted, _ = _parse_conductor_response(raw)
-        assert extracted["alias"] == "FYCL"
+        assert extracted["alias"] == "TEST"
         assert extracted["gender"] == "Male"
         assert extracted["dob"] == "1977-04-28 11:51"
         assert extracted["location"] == "Singapore"
@@ -265,7 +265,7 @@ class TestGemmaIntakeExtraction:
 
     @pytest.mark.asyncio
     async def test_gemma_intake_extracts_alias_gender_from_natural_text(self):
-        """'I'm Francis, male' → extracted alias + gender."""
+        """'I'm Tester, male' → extracted alias + gender."""
         from src.engine.openrouter import call_openrouter_async_with_history
 
         system_prompt = """Collect the Bazi chart parameters from the user.
@@ -284,7 +284,7 @@ RULES:
 - Keep messages short.
 - Extract alias and gender from the user's message.
 """
-        messages = [{"role": "user", "content": "Hi, I'm Francis, male."}]
+        messages = [{"role": "user", "content": "Hi, I'm Tester, male."}]
 
         raw = await call_openrouter_async_with_history(
             messages=messages,
@@ -325,7 +325,7 @@ RULES:
 - Extract DOB in YYYY-MM-DD HH:MM format.
 - If time is given as am/pm, convert to 24-hour format.
 """
-        messages = [{"role": "user", "content": "I was born on April 28, 1977 at 11:51am."}]
+        messages = [{"role": "user", "content": "I was born on January 1, 1990 at 11:51am."}]
 
         raw = await call_openrouter_async_with_history(
             messages=messages,
@@ -404,7 +404,7 @@ RULES:
 """
         messages = [{
             "role": "user",
-            "content": "My name is Francis Yap, alias FYCL, male. Born 28 April 1977 at 11:51am in Singapore.",
+            "content": "My name is Test Profile, alias TEST, male. Born 01 January 1990 at 11:51am in Singapore.",
         }]
 
         raw = await call_openrouter_async_with_history(

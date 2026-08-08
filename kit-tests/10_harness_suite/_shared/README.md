@@ -18,7 +18,7 @@
 ## ⛔ FROZEN SUITE POLICY (read before touching anything)
 
 **Tests may NOT be dropped, disabled (`@pytest.mark.skip`), or have their
-assertions weakened unless Francis explicitly approves it in a chat message.**
+assertions weakened unless Tester explicitly approves it in a chat message.**
 
 Rationale: this suite is the only thing standing between a "passing" pipeline
 and a feature that quietly stopped working. A test that starts failing because
@@ -26,12 +26,12 @@ the feature regressed is a *success* — that is the test doing its job. The
 reflex to "fix the test because it's red" instead of "fix the feature" is the
 exact failure mode this policy bans.
 
-If you believe a test is wrong, you raise it with Francis. You do **not** edit
+If you believe a test is wrong, you raise it with Tester. You do **not** edit
 the test unilaterally. Approved removals/weakenings are recorded in
 `CHANGELOG.md` with the ticket id.
 
 **Consequence:** a green `run_all.py` is the go-live gate. A red run blocks
-ship until the feature is restored **or** Francis approves the change.
+ship until the feature is restored **or** Tester approves the change.
 
 ---
 

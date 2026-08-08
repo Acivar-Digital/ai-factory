@@ -29,7 +29,7 @@
 
 🔴 <i>EVENT ALERT: Reputation Event</i>
 
-# 📅 Hari ini adalah waktu yang tepat untuk Francis menyelesaikan tugas sulit karena Anda merasa lebih kuat dan stabil, namun berhati-hatilah dengan ucapan agar tidak merusak reputasi 🌟
+# 📅 Hari ini adalah waktu yang tepat untuk Tester menyelesaikan tugas sulit karena Anda merasa lebih kuat dan stabil, namun berhati-hatilah dengan ucapan agar tidak merusak reputasi 🌟
 
 • 💼 Karir | Lakukan: Selesaikan proyek berat yang tertunda | Hindari: Berdebat sengit dengan atasan 🚀
 • 💖 Hubungan | Lakukan: Berkolaborasi dengan rekan kerja | Hindari: Membicarakan hal sensitif yang bisa memicu gosip 🌸
@@ -40,7 +40,7 @@
 &#8203;
 
 <b>💼 Produktivitas Kerja</b>
-Francis, Anda memiliki energi yang sangat stabil hari ini, sehingga sangat cocok untuk mengambil keputusan penting atau menyelesaikan pekerjaan rumit yang selama ini Anda hindari. Manfaatkan rasa percaya diri yang meningkat ini untuk menunjukkan kemampuan terbaik Anda, tetapi ingatlah untuk tetap rendah hati dan hindari sikap terlalu mendominasi agar tidak menciptakan ketegangan dengan rekan kerja 🚀
+Tester, Anda memiliki energi yang sangat stabil hari ini, sehingga sangat cocok untuk mengambil keputusan penting atau menyelesaikan pekerjaan rumit yang selama ini Anda hindari. Manfaatkan rasa percaya diri yang meningkat ini untuk menunjukkan kemampuan terbaik Anda, tetapi ingatlah untuk tetap rendah hati dan hindari sikap terlalu mendominasi agar tidak menciptakan ketegangan dengan rekan kerja 🚀
 
 <b>💖 Reputasi &amp; Sosial</b>
 Ada peluang besar untuk memperluas jaringan pertemanan dan mendapatkan dukungan sosial, namun ada risiko kecil terjadinya kesalahpahaman yang bisa mencoreng nama baik Anda. Bersikaplah diplomatis dan ramah kepada semua orang, serta hindari terlibat dalam drama atau percakapan sensitif yang berpotensi menjadi skandal karena kata-kata Anda bisa disalahtafsirkan hari ini 🌸
@@ -62,7 +62,7 @@ Anda merasa lebih didukung oleh lingkungan sekitar, yang memberikan kekuatan men
 
 🔴 <i>EVENT ALERT: Reputation Event</i>
 
-# 📅 Hari ini adalah waktu yang tepat untuk Francis menyelesaikan tugas sulit karena Anda merasa lebih kuat dan stabil, namun berhati-hatilah dengan ucapan agar tidak merusak reputasi 🌟
+# 📅 Hari ini adalah waktu yang tepat untuk Tester menyelesaikan tugas sulit karena Anda merasa lebih kuat dan stabil, namun berhati-hatilah dengan ucapan agar tidak merusak reputasi 🌟
 
 • 💼 Karir | Lakukan: Selesaikan proyek berat yang tertunda | Hindari: Berdebat sengit dengan atasan 🚀
 • 💖 Hubungan | Lakukan: Berkolaborasi dengan rekan kerja | Hindari: Membicarakan hal sensitif yang bisa memicu gosip 🌸
@@ -73,7 +73,7 @@ Anda merasa lebih didukung oleh lingkungan sekitar, yang memberikan kekuatan men
 &#8203;
 
 <b>💼 Produktivitas Kerja</b>
-Francis, Anda memiliki energi yang sangat stabil hari ini, sehingga sangat cocok untuk mengambil keputusan penting atau menyelesaikan pekerjaan rumit yang selama ini Anda hindari. Manfaatkan rasa percaya diri yang meningkat ini untuk menunjukkan kemampuan terbaik Anda, tetapi ingatlah untuk tetap rendah hati dan hindari sikap terlalu mendominasi agar tidak menciptakan ketegangan dengan rekan kerja 🚀
+Tester, Anda memiliki energi yang sangat stabil hari ini, sehingga sangat cocok untuk mengambil keputusan penting atau menyelesaikan pekerjaan rumit yang selama ini Anda hindari. Manfaatkan rasa percaya diri yang meningkat ini untuk menunjukkan kemampuan terbaik Anda, tetapi ingatlah untuk tetap rendah hati dan hindari sikap terlalu mendominasi agar tidak menciptakan ketegangan dengan rekan kerja 🚀
 
 <b>💖 Reputasi &amp; Sosial</b>
 Ada peluang besar untuk memperluas jaringan pertemanan dan mendapatkan dukungan sosial, namun ada risiko kecil terjadinya kesalahpahaman yang bisa mencoreng nama baik Anda. Bersikaplah diplomatis dan ramah kepada semua orang, serta hindari terlibat dalam drama atau percakapan sensitif yang berpotensi menjadi skandal karena kata-kata Anda bisa disalahtafsirkan hari ini 🌸
@@ -172,7 +172,7 @@ Namun, terdapat energi yang menimbulkan gesekan. Kondisi ini menciptakan kecende
 
 🔴 <i>EVENT ALERT: Reputation Event</i>
 
-# 📅 Hari ini adalah waktu yang tepat untuk Francis menyelesaikan tugas sulit karena Anda merasa lebih kuat dan stabil, namun berhati-hatilah dengan ucapan agar tidak merusak reputasi 🌟
+# 📅 Hari ini adalah waktu yang tepat untuk Tester menyelesaikan tugas sulit karena Anda merasa lebih kuat dan stabil, namun berhati-hatilah dengan ucapan agar tidak merusak reputasi 🌟
 
 • 💼 Karir | Lakukan: Selesaikan proyek berat yang tertunda | Hindari: Berdebat sengit dengan atasan 🚀
 • 💖 Hubungan | Lakukan: Berkolaborasi dengan rekan kerja | Hindari: Membicarakan hal sensitif yang bisa memicu gosip 🌸
@@ -183,7 +183,7 @@ Namun, terdapat energi yang menimbulkan gesekan. Kondisi ini menciptakan kecende
 &#8203;
 
 <b>💼 Produktivitas Kerja</b>
-Francis, Anda memiliki energi yang sangat stabil hari ini, sehingga sangat cocok untuk mengambil keputusan penting atau menyelesaikan pekerjaan rumit yang selama ini Anda hindari. Manfaatkan rasa percaya diri yang meningkat ini untuk menunjukkan kemampuan terbaik Anda, tetapi ingatlah untuk tetap rendah hati dan hindari sikap terlalu mendominasi agar tidak menciptakan ketegangan dengan rekan kerja 🚀
+Tester, Anda memiliki energi yang sangat stabil hari ini, sehingga sangat cocok untuk mengambil keputusan penting atau menyelesaikan pekerjaan rumit yang selama ini Anda hindari. Manfaatkan rasa percaya diri yang meningkat ini untuk menunjukkan kemampuan terbaik Anda, tetapi ingatlah untuk tetap rendah hati dan hindari sikap terlalu mendominasi agar tidak menciptakan ketegangan dengan rekan kerja 🚀
 
 <b>💖 Reputasi &amp; Sosial</b>
 Ada peluang besar untuk memperluas jaringan pertemanan dan mendapatkan dukungan sosial, namun ada risiko kecil terjadinya kesalahpahaman yang bisa mencoreng nama baik Anda. Bersikaplah diplomatis dan ramah kepada semua orang, serta hindari terlibat dalam drama atau percakapan sensitif yang berpotensi menjadi skandal karena kata-kata Anda bisa disalahtafsirkan hari ini 🌸

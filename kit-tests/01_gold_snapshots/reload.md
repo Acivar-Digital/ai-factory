@@ -17,7 +17,7 @@ We just completed a major codebase auditing phase and organized the codebase hyg
   ```python
   model_name = "nvidia/qwen/qwen3-next-80b-a3b-instruct"
   base_url = "http://localhost:7766/v1"
-  api_key = "sk-lr-8f2a9e3b1c4d7e5f"
+  api_key = "sk-REPLACE_ME_WITH_REAL_KEY"
   ```
 
 ### 2. Hardened Score Validators

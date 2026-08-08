@@ -6,7 +6,7 @@ from src2.engine.prompt_maker import make_month
 
 def test_tailoring_threaded():
     raw_payload = {
-        "alias": "Francis",
+        "alias": "Tester",
         "day_pillar": {"stem": "Yi", "branch": "Mao"},
         "year_pillar": {"stem": "Ding", "branch": "Si"},
         "month_pillar": {"stem": "Jia", "branch": "Chen"},

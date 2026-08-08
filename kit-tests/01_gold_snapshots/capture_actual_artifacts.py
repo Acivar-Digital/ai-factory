@@ -10,7 +10,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SERVER_URL = os.getenv("GOLD_SERVER_URL", "http://127.0.0.1:8445").rstrip("/")
-WEBHOOK_SECRET = os.getenv("GOLD_WEBHOOK_SECRET") or os.getenv("TELEGRAM_WEBHOOK_SECRET") or "2f8a9d1c4e6b7f3a0d5c8b2e1f9a7d3c"
+WEBHOOK_SECRET = os.getenv("GOLD_WEBHOOK_SECRET") or os.getenv("TELEGRAM_WEBHOOK_SECRET") or "00000000000000000000000000000000"
 DB_URL = os.getenv("DATABASE_URL") or "postgresql+psycopg2://postgres:postgres@localhost:5432/baziforecaster"
 CHAT_ID = int(os.getenv("GOLD_CHAT_ID", "999"))
 # [baziforecaster-only: TEST/GOLD/actual_artifacts directory not in kit download]
@@ -120,7 +120,7 @@ def main():
         "02_auto_capture": {
             "steps": [
                 "/auto",
-                "Name: Francis Yap, Alias: FYCL, Gender: Male",
+                "Name: Test Profile, Alias: TEST, Gender: Male",
                 "DOB: 1977-04-28 11:51, Location: Singapore",
                 "Yes",
                 "Yes",

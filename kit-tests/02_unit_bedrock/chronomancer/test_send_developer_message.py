@@ -10,13 +10,13 @@ from src2.interfaces.telegram.utils import send_developer_message
 async def test_send_developer_message_skips_user_dm():
     with patch.dict(os.environ, {
         "REPORT_PROGRESS_CHANNEL_ID": "-1003630017817",
-        "DEVELOPER_CHAT_ID": "187049734"
+        "DEVELOPER_CHAT_ID": "999000001"
     }):
         with patch("src2.interfaces.telegram.utils.send_telegram_message", new_callable=AsyncMock) as mock_send:
             await send_developer_message("❌ *CRITICAL: Forecast Webhook Failed*\nStack Trace: ...")
 
             # Must send to progress channel (-1003630017817)
-            # Must NOT send to personal user DM (187049734)
+            # Must NOT send to personal user DM (999000001)
             mock_send.assert_called_once()
             args, _ = mock_send.call_args
             assert args[0] == "-1003630017817"

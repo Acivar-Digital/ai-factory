@@ -25,7 +25,7 @@ async def test_handle_ask_30day_gating_rejects_past_date():
     """Verify handle_ask returns 30-day window nudge when query date is in the past."""
     mock_session = MagicMock()
     mock_session.profile.day_pillar = "Wu Shen"
-    mock_session.profile.alias = "Francis"
+    mock_session.profile.alias = "Tester"
     mock_session.conversation_history = []
 
     past_date = date(2024, 8, 6)
@@ -49,7 +49,7 @@ async def test_handle_ask_30day_gating_rejects_far_future_date():
     """Verify handle_ask returns 30-day window nudge when query date is beyond 30 days."""
     mock_session = MagicMock()
     mock_session.profile.day_pillar = "Wu Shen"
-    mock_session.profile.alias = "Francis"
+    mock_session.profile.alias = "Tester"
     mock_session.conversation_history = []
 
     today = date.today()
@@ -74,7 +74,7 @@ async def test_handle_ask_30day_gating_handles_datetime_objects():
     """Verify handle_ask normalizes datetime objects to date without raising TypeError."""
     mock_session = MagicMock()
     mock_session.profile.day_pillar = "Wu Shen"
-    mock_session.profile.alias = "Francis"
+    mock_session.profile.alias = "Tester"
     mock_session.conversation_history = []
 
     today_dt = datetime.now()

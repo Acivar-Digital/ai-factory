@@ -4,8 +4,8 @@
 Validate the end-to-end flow from receiving raw telegram `/auto` inputs (DOB, Time, Location) to generating the 12-month live narrative output.
 This plan validates that the `lunar-python` based auto-calculation correctly creates a strict `UserProfile` and properly threads the `tailoring_concerns` and `tailoring_context` all the way down to the final LLM prompt.
 
-## Biography Data (Francis)
-*   **Alias:** Francis
+## Biography Data (Tester)
+*   **Alias:** Tester
 *   **Gender:** Male
 *   **DOB:** 1977-04-28 11:51
 *   **Location:** Singapore
@@ -25,7 +25,7 @@ This plan validates that the `lunar-python` based auto-calculation correctly cre
 ## Test Execution Steps
 
 ### 1. Payload Construction & Intake (Including Tailoring)
-*   **Action:** Construct a mock Telegram `Session` with Francis's DOB and metadata. Call `_run_auto_engine()` to compute the pillars and strength dynamically.
+*   **Action:** Construct a mock Telegram `Session` with Tester's DOB and metadata. Call `_run_auto_engine()` to compute the pillars and strength dynamically.
 *   **Validation:**
     *   Assert `session.profile` is a valid `UserProfile`.
     *   Verify `build_tailoring_context()` converts the concerns correctly and is injected into the payload via `map_profile_to_k3()`.
