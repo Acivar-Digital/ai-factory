@@ -2,6 +2,8 @@
 
 > **Not slop. This is a production-grade technical debt scanner.**
 
+> **Related docs:** `GUIDE.md` (install & configure) · `FAQ.md` (troubleshooting & cost) · `orchestrator_hygiene.md` (CI orchestration)
+
 This is a **hybrid static-analysis + LLM-audit pipeline** that detects real bugs — swallowed exceptions, schema hazards, circular imports, hardcoded secrets, async deadlocks, and more — across any Python codebase.
 
 ## What problem does this solve?
@@ -53,6 +55,7 @@ kit-hygiene/
 ├── .env.example          # All config knobs (copy to .env, never commit .env)
 ├── README.md             # This file — what it is, why it exists
 ├── GUIDE.md              # How to install, configure, and run on your repo
+├── FAQ.md                # Troubleshooting, cost, CI/CD, and model configuration
 ├── control.py            # Runtime settings loader (reads KIT_* env vars)
 ├── requirements.txt      # Python deps for full mode
 ├── run-registry-scan.sh  # tmux wrapper for long-running registry scans
@@ -88,4 +91,5 @@ uv run kit-hygiene/scanners/run_all.py --scripts
 # 4. Review reports in kit-hygiene/reports/
 ```
 
-See **[GUIDE.md](./GUIDE.md)** for full installation, LLM configuration, and advanced usage.
+See **[GUIDE.md](./GUIDE.md)** for full installation, LLM configuration, and advanced usage.  
+Common questions answered in **[FAQ.md](./FAQ.md)**.
