@@ -1,6 +1,6 @@
 # 🧹 Codebase Hygiene Suite
 
-This directory contains the automated code hygiene suite for `baziforecaster`. It uses a **Hybrid Static Analysis + LLM Auditing** approach to detect, analyze, and report technical debt, logical errors, and styling violations across the active `src2/` directory.
+This directory contains the automated code hygiene suite. It uses a **Hybrid Static Analysis + LLM Auditing** approach to detect, analyze, and report technical debt, logical errors, and styling violations across the target repository's source directory.
 
 ---
 
@@ -65,17 +65,17 @@ All scanners should be run from the repository root using `uv run`.
 
 ```bash
 # Run a specific hybrid scanner (invokes static check + LLM confirmation)
-uv run admin/code_hygiene/scanners/find_silent_killers.py
+uv run kit-hygiene/scanners/find_silent_killers.py
 
 # Run all 11 scanners in sequence
-uv run admin/code_hygiene/scanners/run_all.py
+uv run kit-hygiene/scanners/run_all.py
 ```
 
 ---
 
 ## 💾 Caching & Cache Management
 
-To preserve execution state and prevent redundant LLM queries, bot-driven scanners (and some static scanners) leverage an incremental JSON cache located in `admin/code_hygiene/reports/`.
+To preserve execution state and prevent redundant LLM queries, bot-driven scanners (and some static scanners) leverage an incremental JSON cache located in `kit-hygiene/reports/`.
 
 ### How Caching Works
 1. When running the audit, the scanner loads existing results from the respective JSON file.
@@ -87,7 +87,7 @@ To preserve execution state and prevent redundant LLM queries, bot-driven scanne
 When you modify or refactor engine logic, the cache still holds the old verdict. You must invalidate the cache for those files.
 
 To force the scanner to re-audit only the modified files:
-1. Open the respective JSON report in [reports/](file:///home/yapilwsl/arthityap/baziforecaster/WIP/code_hygiene/reports/).
+1. Open the respective JSON report in [reports/](./reports/).
 2. Locate and delete the entries in `audit_results` whose `"file_path"` matches the modified files.
 3. Save the JSON file.
 4. Rerun the scanner. It will skip all other unchanged files but re-audit the modified ones.
@@ -99,7 +99,7 @@ To force the scanner to re-audit only the modified files:
 If a bot-driven scanner execution fails or is aborted (due to network timeout, API limits, or credentials):
 1. **Incremental Save Safety**: The script writes back to the JSON file **after every individual LLM response**. You will never lose progress.
 2. **Resuming**: Simply run the command again. It will automatically skip already audited functions and pick up exactly where it was interrupted.
-3. **Model Selection**: If the LLM throws a model error or API failure, verify the model settings in [admin/controls/controls.py](file:///home/yapilwsl/arthityap/baziforecaster/WIP/controls/controls.py) and check that your API keys (e.g. `GEMINI_API_KEY`) are correctly exported in your shell environment.
+3. **Model Selection**: If the LLM throws a model error or API failure, verify the model settings in [control.py](./control.py) and check that your API keys (e.g. `KIT_API_KEY`) are correctly exported in your shell environment.
 
 ---
 

@@ -9,7 +9,7 @@ if os.getenv("KIT_ENABLE_REGISTRY_CLASHES", "false").lower() == "true" and not m
 
 def load_config():
     """Return (base_url, api_key, model) from environment. Stdlib os only; no new deps."""
-    base_url = os.getenv("KIT_BASE_URL", "http://localhost:40142")
+    base_url = os.getenv("KIT_BASE_URL", "")
     api_key = os.getenv("KIT_API_KEY")
     model = os.getenv("KIT_MODEL")
     if os.getenv("KIT_ENABLE_REGISTRY_CLASHES", "false").lower() == "true" and not api_key:

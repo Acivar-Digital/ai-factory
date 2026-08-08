@@ -5,7 +5,7 @@
 1. **Read the room:** Read `kit-hygiene/orchestrator_hygiene.md` + the gap inventory in `kit-hygiene/reports/chunks/README.md`. Confirm `target_repo root = ai-factory`, `src2/` is the scan target (data, not dependency).
 2. **Understand the target:** Every `kit-hygiene/scanners/*.py`, `kit-hygiene/daily/*.py`, `kit-hygiene/control.py`, `kit-hygiene/run-registry-scan.sh`, `kit-hygiene/.env.example`. Current reality: 14 scanners hard-import the phantom `admin.code_hygiene.scanners.*` / `admin.controls.controls` (phantom — the real modules `utils.py`, `virtual_ast_buffer.py`, `control.py` already live inside kit-hygiene); runners point at `admin/code_hygiene/scanners/...`; `.env.example` omits `HYGIENE_FILES_TO_SCAN` and `SCAN_ROOTS`; no `requirements.txt`/`.python-version`; **`utils.get_src2_files` hardcodes `src2/` and ignores `SCAN_ROOTS`, so a user cannot point it at their own repo.**
 3. **Assign & perform:** Assign 🎟️ Tickets 1–4 to 4 subagents (deployment plan §6). Execute their tasks; run Ticket 4's gate at the end.
-   - **CRITICAL:** Do NOT alter verdict/scanner logic in `src2/` (baziforecaster target). Edits are import-path + runner-path + config only, **inside kit-hygiene/**. Fail-loud on any missing required `KIT_*` env at import → `RuntimeError` naming the var.
+   - **CRITICAL:** Do NOT alter verdict/scanner logic in `src2/` (target repo). Edits are import-path + runner-path + config only, **inside kit-hygiene/**. Fail-loud on any missing required `KIT_*` env at import → `RuntimeError` naming the var.
 4. **Capture decisions:** `bd remember "Hardened kit-hygiene portability [clone+.env+run]. Asserted 0 admin/code_hygiene refs, every scanner imports, disabled run exit=0, ruff E9/F63/F7/F82 clean, factory/ tests/ gate clean."`
 5. **Close the ticket:** Mark complete when the Ticket 4 gate prints green/end-to-end.
 
@@ -55,7 +55,7 @@ ESCALATE before gating — do NOT hand off to SD.
 * `control.py` exposes `ControlSheet`/`SystemSettings` but 13 scanners import the name **`CONTROL_SHEET`** (legacy). Runners hardcode `admin/code_hygiene/scanners/...` and tell users to read `admin/code_hygiene/reports/`.
 * **Strategy:**
   - `control.py`: ADD `CONTROL_SHEET = ControlSheet` alias (fail-fast already enforces `KIT_*` when `KIT_ENABLE_REGISTRY_CLASHES=true`).
-  - `run_all.py`: `base_dir = Path(__file__).resolve().parents[1]` (was `parents[3]` baziforecaster root); strip `admin/code_hygiene/` prefix from the 11-entry scanner list → `scanners/find_<x>.py`; fix L61 `admin/code_hygiene/reports/` → `kit-hygiene/reports/`.
+  - `run_all.py`: `base_dir = Path(__file__).resolve().parents[1]` (was `parents[3]` pointing at the target repo root); strip phantom `admin/code_hygiene/` prefix from the 11-entry scanner list → `scanners/find_<x>.py`; fix reports path → `kit-hygiene/reports/`.
   - `run-registry-scan.sh`: `SCANNER_SCRIPT="kit-hygiene/scanners/find_registry_clashes.py"`; source `./kit-hygiene/.env` (guarded by `[ -f ]`).
 * **Properties to Assert:**
   1. `grep -nE "admin/code_hygiene|admin\.controls" kit-hygiene/scanners/run_all.py kit-hygiene/run-registry-scan.sh | wc -l` → **0**.

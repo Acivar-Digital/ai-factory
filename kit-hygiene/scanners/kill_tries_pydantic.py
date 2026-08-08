@@ -69,7 +69,7 @@ def get_timestamp() -> str:
 
 def get_model_provider_name(model: Any) -> str:
     base_url = getattr(getattr(model, "provider", None), "base_url", "")
-    if "antigravity" in base_url or "localhost:8045" in base_url:
+    if "antigravity" in base_url or ":8045" in base_url:
         return "antigravity_manager"
     if "literouter" in base_url or base_url.endswith(":7766/v1"):
         return "literouter"
