@@ -1,6 +1,6 @@
 # Community Test-Kit
 
-Curated, **runnable slices** of the `your-repo` test suite — extracted so
+Curated, **runnable slices** of the `baziforecaster` test suite — extracted so
 an engineer can drop a real, production-grade test in front of a candidate or a
 community member and say: *"here — clone, run, go."*
 
@@ -10,7 +10,7 @@ community member and say: *"here — clone, run, go."*
 
 ## The problem (90-second story)
 
-`your-repo` has a huge, deeply coupled test suite. That is a strength in CI
+`baziforecaster` has a huge, deeply coupled test suite. That is a strength in CI
 and a liability in an interview: the candidate stares at `src2/` and an
 `ImportError` instead of practicing **test design**. The suite, though, contains
 exactly the thing you want students to see — frozen-clock tests, golden
@@ -55,10 +55,10 @@ KIT_LIVE=false uv run pytest examples -q        # runs the 7 cloner-safe online 
 ```
 
 > `uv run pytest -q` runs the **same** thing: `pyproject.toml` pins `testpaths = ["examples"]`,
-> so an unqualified `uv run pytest -q` collects `examples/` only (the 10 your-repo-only
+> so an unqualified `uv run pytest -q` collects `examples/` only (the 10 baziforecaster-only
 > dirs are excluded — see the callout below).
 
-### What is NOT cloner-runnable (your-repo-only, ignored by default)
+### What is NOT cloner-runnable (baziforecaster-only, ignored by default)
 
 The `01_gold_snapshots` through `10_harness_suite` dirs are **NOT in the download's
 run surface**. They hardcode `TEST`/`GOLD` or import `src2.*`, and are excluded by:
@@ -68,11 +68,11 @@ run surface**. They hardcode `TEST`/`GOLD` or import `src2.*`, and are excluded 
 - `kit-tests/conftest.py` — `collect_ignore` lists every `0N_*` dir (defense-in-depth).
 
 `math_chapters/` and `param_flows/` are also optional in-kit slices that import
-`src2.*` and need your-repo's source tree (plus `sqlalchemy`) installed — they
+`src2.*` and need baziforecaster's source tree (plus `sqlalchemy`) installed — they
 are outside the download run surface and never collected by default.
 
 ```bash
-# or, full included suite (your-repo-only slices are auto-ignored):
+# or, full included suite (baziforecaster-only slices are auto-ignored):
 KIT_LIVE=false uv run pytest -q
 ```
 
@@ -112,41 +112,6 @@ These two knobs control **separate** layers and are NOT collapsed into one value
 They default to distinct mock names (`mock-chrono-model` / `mock-mem0-model`) so
 granularity is observable. `examples/06_kit_mem0_model.py` exercises this contract.
 
-## FAQ (for the TL;DR crowd)
-
-**Q: Is this AI-generated slop?**
-No. Each file in `examples/` is 30–70 lines, hand-curated from a real production
-test suite, with a docstring explaining exactly what technique it demonstrates.
-
-**Q: Do I need to install anything?**
-Just Python 3.11+ and [`uv`](https://docs.astral.sh/uv/). One command:
-`uv run pytest examples -q`. No virtualenv, no Docker, no API keys.
-
-**Q: I cloned the repo and ran `uv run pytest` — why did nothing run (or it hung)?**
-By design, only `examples/` is collected. Run `uv run pytest examples -q`. The
-`01_gold_snapshots/`–`10_harness_suite/` folders need the full your-repo
-source tree to even import.
-
-**Q: What's a quick win? I just want to learn one thing fast.**
-Read [`examples/05_hypothesis_fuzz.py`](examples/05_hypothesis_fuzz.py). It
-catches real numeric bugs (NaN, Inf, zero-division) in 30 lines using
-`hypothesis` property-based testing.
-
-**Q: What's with all the `KIT_*` env vars? I'm scared.**
-`KIT_LIVE=false` (the default) = everything is mocked, runs offline, no `.env`
-required. `KIT_LIVE=true` only if you have a real LLM endpoint — it then
-fail-fast-errors if `KIT_PATH`, `KIT_BASE_URL`, `KIT_MODEL`, or `KIT_API_KEY`
-is missing.
-
-**Q: I'm a your-repo dev. How do I run the full suite?**
-`cp .env.example .env`, set `KIT_LIVE=true` + `KIT_PATH=/path/to/your-repo`,
-then run layers explicitly: `uv run pytest 01_gold_snapshots/ 04_bug_repros/ -q`.
-
-**Q: Can I build my own kit from a different codebase?**
-Yes — read [`orchestrator.md`](orchestrator.md) for the reproducible recipe,
-then adapt: swap `your-repo/` for your repo, adjust the `0N_*` layer names,
-keep `examples/` as your cloner-runnable gate.
-
 ## Want to extend it?
 
 Read [`orchestrator.md`](orchestrator.md) (reproducible build recipe) and
@@ -156,7 +121,7 @@ Drop a new slice → `ruff` it → `pytest --collect-only` → add a layer.
 ## Note on source
 
 This kit is a **one-way extraction**. It reads from staging mirrors and never
-writes back upstream. The `your-repo` repository is not modified by building this kit.
+writes back upstream. The `baziforecaster` repository is not modified by building this kit.
 
 ### `10_harness_suite/` — ai-factory self-tests (Phase 2)
 

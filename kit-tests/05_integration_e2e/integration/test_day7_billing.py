@@ -17,7 +17,7 @@ from src.services.billing import (
     validate_promo_code,
 )
 
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/your-repo"
+DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/baziforecaster"
 
 
 @pytest_asyncio.fixture
