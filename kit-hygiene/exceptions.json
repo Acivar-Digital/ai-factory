@@ -1,0 +1,4 @@
+[
+  "admin/check_codebase_indexing_alive.py",
+  "kit-hygiene/daily/dailygit-check.py"
+]
