@@ -1,8 +1,0 @@
-openai
-instructor
-pydantic
-pydantic-ai
-radon
-tenacity
-logfire
-PyYAML
