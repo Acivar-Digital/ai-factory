@@ -426,6 +426,7 @@ class OrchestratorState(BaseModel):
     audit: AuditResult | None = None
     git: GitResult | None = None
     timestamp: str = ""
+    consolidation_offset: int = 0  # nanobot Session.last_consolidated pattern
 
 
 # ── Sub-Agent Dependency & Yield Tracking ─────────────────────

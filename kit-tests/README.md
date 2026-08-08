@@ -112,6 +112,41 @@ These two knobs control **separate** layers and are NOT collapsed into one value
 They default to distinct mock names (`mock-chrono-model` / `mock-mem0-model`) so
 granularity is observable. `examples/06_kit_mem0_model.py` exercises this contract.
 
+## FAQ (for the TL;DR crowd)
+
+**Q: Is this AI-generated slop?**
+No. Each file in `examples/` is 30–70 lines, hand-curated from a real production
+test suite, with a docstring explaining exactly what technique it demonstrates.
+
+**Q: Do I need to install anything?**
+Just Python 3.11+ and [`uv`](https://docs.astral.sh/uv/). One command:
+`uv run pytest examples -q`. No virtualenv, no Docker, no API keys.
+
+**Q: I cloned the repo and ran `uv run pytest` — why did nothing run (or it hung)?**
+By design, only `examples/` is collected. Run `uv run pytest examples -q`. The
+`01_gold_snapshots/`–`10_harness_suite/` folders need the full baziforecaster
+source tree to even import.
+
+**Q: What's a quick win? I just want to learn one thing fast.**
+Read [`examples/05_hypothesis_fuzz.py`](examples/05_hypothesis_fuzz.py). It
+catches real numeric bugs (NaN, Inf, zero-division) in 30 lines using
+`hypothesis` property-based testing.
+
+**Q: What's with all the `KIT_*` env vars? I'm scared.**
+`KIT_LIVE=false` (the default) = everything is mocked, runs offline, no `.env`
+required. `KIT_LIVE=true` only if you have a real LLM endpoint — it then
+fail-fast-errors if `KIT_PATH`, `KIT_BASE_URL`, `KIT_MODEL`, or `KIT_API_KEY`
+is missing.
+
+**Q: I'm a baziforecaster dev. How do I run the full suite?**
+`cp .env.example .env`, set `KIT_LIVE=true` + `KIT_PATH=/path/to/baziforecaster`,
+then run layers explicitly: `uv run pytest 01_gold_snapshots/ 04_bug_repros/ -q`.
+
+**Q: Can I build my own kit from a different codebase?**
+Yes — read [`orchestrator.md`](orchestrator.md) for the reproducible recipe,
+then adapt: swap `baziforecaster/` for your repo, adjust the `0N_*` layer names,
+keep `examples/` as your cloner-runnable gate.
+
 ## Want to extend it?
 
 Read [`orchestrator.md`](orchestrator.md) (reproducible build recipe) and

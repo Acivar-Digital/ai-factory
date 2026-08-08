@@ -369,23 +369,32 @@ def calculate_tokens(text: str) -> int:
 
 
 async def compact_context_if_needed(prompt_text: str, model=None) -> str:
+    from factory.infra.control import COMPACTION_CONFIG
+
     token_count = calculate_tokens(prompt_text)
-    if token_count > 100_000:
-        from pydantic_ai import Agent
-        from pydantic_ai.settings import ModelSettings
-        summarizer_model = model if model is not None else compact_model
-        summary_agent = Agent(
-            summarizer_model,
-            output_type=str,
-            model_settings=ModelSettings(parallel_tool_calls=False),
-        )
-        summary = await summary_agent.run(
-            "Summarize the following context concisely into an execution summary. "
-            "Include key decisions, file changes, and remaining action items. "
-            "Omit verbatim file contents unless they contain critical details."
-        )
-        return f"[COMPACTED CONTEXT SUMMARY]\n{summary.output}\n\n{prompt_text}"
-    return prompt_text
+    fraction = COMPACTION_CONFIG.compact_at_fraction
+    hard_max = COMPACTION_CONFIG.hard_max_tokens
+    budget = int(COMPACTION_CONFIG.CONTEXT_COMPACT_CEILING * fraction)
+    budget = min(budget, hard_max)
+    if token_count <= budget:
+        return prompt_text
+    from pydantic_ai import Agent
+    from pydantic_ai.settings import ModelSettings
+
+    summarizer_model = model if model is not None else compact_model
+    summary_agent = Agent(
+        summarizer_model,
+        output_type=str,
+        model_settings=ModelSettings(parallel_tool_calls=False),
+    )
+    summary = await summary_agent.run(
+        "Summarize the following context concisely into an execution summary. "
+        "Include key decisions, file changes, and remaining action items. "
+        "Omit verbatim file contents unless they contain critical details."
+    )
+    return f"[COMPACTED CONTEXT SUMMARY]\n{summary.output}\n\n{prompt_text}"
+
+
 
 
 def _dep_pointers_for(file_paths: list[str]) -> list[str]:

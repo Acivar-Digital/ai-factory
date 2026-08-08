@@ -1,0 +1,33 @@
+rules:
+  - id: mutable-default-argument
+    message: >-
+      Mutable default argument detected. Use None as the default and create the
+      object inside the function body instead.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: "def $FUNC(..., $ARG=[]):"
+      - pattern: "def $FUNC(..., $ARG={}):"
+
+  - id: for-loop-to-list-comprehension
+    message: >-
+      A for loop only appends to an empty list. Simplify to a list comprehension:
+      [$EXPR for $X in $ITER].
+    severity: WARNING
+    languages: [python]
+    pattern: |
+      $LIST = []
+      for $X in $ITER:
+          $LIST.append($EXPR)
+
+  - id: simplify-assign-if-exp
+    message: >-
+      An if/else that assigns two different values to the same variable can be
+      simplified to: $VAR = $VAL1 if $COND else $VAL2
+    severity: WARNING
+    languages: [python]
+    pattern: |
+      if $COND:
+          $VAR = $VAL1
+      else:
+          $VAR = $VAL2
