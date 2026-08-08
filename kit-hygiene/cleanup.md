@@ -1,6 +1,6 @@
 # 🧹 Codebase Hygiene Cleanup Plan
 
-This plan details the step-by-step strategy to eliminate the **252 codebase hygiene violations** across the active `src2/` directory without manual overhead or token exhaustion.
+This plan details the step-by-step strategy to eliminate the **252 codebase hygiene violations** across the active `TARGET_REPO/` directory without manual overhead or token exhaustion.
 
 ---
 
@@ -37,12 +37,12 @@ A two-phased **AST-First + Studio-Tranches** pipeline:
 
 We run local scripts under `scratch/` to execute:
 
-1. **Env Drift Auto-Sync:** Extract all `getenv`/`environ` usage in `src2/` and automatically append missing keys to `.env.example`.
+1. **Env Drift Auto-Sync:** Extract all `getenv`/`environ` usage in `TARGET_REPO/` and automatically append missing keys to `.env.example`.
 2. **Dead Code Stripper:** Use `ast`/`libcst` to prune functions/classes explicitly verified as `CONFIRMED_DEAD` in the JSON reports.
 
 ### Phase 2: Studio Tranches (Surgical Refactoring)
 
-For Async and Schema hazards, we stage files in `admin/studio/upload/`, write a targeted prompt in `prompt.md`, get the fix in `check.md`, and apply it to `src2/`.
+For Async and Schema hazards, we stage files in `<target-repo>/studio/upload/`, write a targeted prompt in `prompt.md`, get the fix in `check.md`, and apply it to `TARGET_REPO/`.
 
 - **Tranche 1 (Core Memory):** `mem0_store.py`, `memory_manager.py`, `storage.py`, `rotator.py`
 - **Tranche 2 (Core Platforms):** `valkey.py`, `telegram.py`, `identity/service.py`
@@ -60,8 +60,8 @@ For Async and Schema hazards, we stage files in `admin/studio/upload/`, write a 
 
 _If the agent loses context or the session resets, paste the following message to restore execution:_
 
-> Hey my trustworthy assistant, this is what we are doing: We are executing the codebase hygiene cleanup plan documented in [cleanup.md](file:///home/yapilwsl/arthityap/baziforecaster/WIP/code_hygiene/cleanup.md). Do NOT run any scanner tools (e.g. `run_all.py`). We are currently executing:
+> Hey my trustworthy assistant, this is what we are doing: We are executing the codebase hygiene cleanup plan documented in [cleanup.md](./cleanup.md). Do NOT run any scanner tools (e.g. `run_all.py`). We are currently executing:
 >
 > **Current Stage:** [Specify: e.g., Phase 1 - Env Drift Auto-Sync / Phase 2 - Tranche 1]
 >
-> Please read the current state of files in `admin/code_hygiene/reports/` and check what needs to be done next.
+> Please read the current state of files in `kit-hygiene/reports/` and check what needs to be done next.

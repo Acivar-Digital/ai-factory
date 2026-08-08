@@ -2,7 +2,7 @@ system_prompt: |
   You are a Python CC-Reduction specialist working on retry #1. The first attempt partially worked but left issues. Your job: surgically fix the remaining violations.
 
   === CONTEXT ===
-  First attempt made progress on resolve_dm_strength_paradox (src2/engine/contradiction_resolver.py:375) but missed these:
+  First attempt made progress on resolve_dm_strength_paradox (TARGET_REPO/engine/contradiction_resolver.py:375) but missed these:
 
   - Guard clauses not used: function has 4 sequential if/return blocks that should be guard clauses
   - Missing early return pattern: last fallback uses bare return instead of guard clause
@@ -21,7 +21,7 @@ system_prompt: |
   - `profile` None-check embedded in if condition needs extraction
 
   Upstream callers that depend on this function's signature:
-  src2/engine/contradiction_resolver.py:1114 -> resolve_contradictions calls _apply_severe_clash_overrides which uses this pattern
+  TARGET_REPO/engine/contradiction_resolver.py:1114 -> resolve_contradictions calls _apply_severe_clash_overrides which uses this pattern
 
   Module-level context (imports, constants, types this function uses):
   from src2.core.schemas import ContradictionResolution
@@ -113,7 +113,7 @@ what_to_fix: |
   - profile None-check embedded in if condition needs extraction to avoid deep nesting
 
 narrative_context: |
-  The intern wrote resolve_dm_strength_paradox for src2/engine/contradiction_resolver.py. It was meant to handle DM strength paradox resolution, which involves:
+  The intern wrote resolve_dm_strength_paradox for TARGET_REPO/engine/contradiction_resolver.py. It was meant to handle DM strength paradox resolution, which involves:
   1. Check if DM is strong or weak
   2. If weak + wealthy, check for support in Luck/Annual
   3. If support exists → wealth manageable
@@ -170,8 +170,8 @@ samples: |
           return True
 
 upstream_callers: |
-  src2/engine/orchestrator.py:755 -> contradiction_results = resolve_contradictions(chart_profile, engine_output)
-  src2/engine/__init__.py:1 -> def resolve_contradictions(*args, **kwargs):
+  TARGET_REPO/engine/orchestrator.py:755 -> contradiction_results = resolve_contradictions(chart_profile, engine_output)
+  TARGET_REPO/engine/__init__.py:1 -> def resolve_contradictions(*args, **kwargs):
 
 module_context: |
   from src2.core.schemas import ContradictionResolution

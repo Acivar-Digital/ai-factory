@@ -31,7 +31,7 @@ system_prompt: |
   - CC not reduced despite changes: the transformation strategy was wrong — switch to a different pattern
 
 system_instruction: |
-  The intern wrote this function for src2/engine/contradiction_resolver.py. It was meant to handle
+  The intern wrote this function for TARGET_REPO/engine/contradiction_resolver.py. It was meant to handle
   resolve_contradictions logic, which involves:
 
   7-step Contradiction Resolution Protocol:
@@ -82,8 +82,8 @@ narrative_context: |
   {narrative}
 
 upstream_callers: |
-  src2/engine/orchestrator.py:755 -> contradiction_results = resolve_contradictions(chart_profile, engine_output)
-  src2/engine/__init__.py:1 -> def resolve_contradictions(*args, **kwargs):
+  TARGET_REPO/engine/orchestrator.py:755 -> contradiction_results = resolve_contradictions(chart_profile, engine_output)
+  TARGET_REPO/engine/__init__.py:1 -> def resolve_contradictions(*args, **kwargs):
 
 module_context: |
   from typing import Any
