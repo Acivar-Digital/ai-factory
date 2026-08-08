@@ -59,6 +59,6 @@ See `.env.example`. Key ones:
 
 ## Decoupled
 
-All `admin.controls.controls.CONTROL_SHEET` and `infrastructure.*` imports have
-been replaced with environment variables. Set `RAG_DATA_DIR` to bundle your own
+All internal repo coupling has been removed. Configuration flows entirely from
+`.env` / environment variables. Set `RAG_DATA_DIR` to bundle your own
 classical texts and data directory.
