@@ -62,3 +62,9 @@ See `.env.example`. Key ones:
 All internal repo coupling has been removed. Configuration flows entirely from
 `.env` / environment variables. Set `RAG_DATA_DIR` to bundle your own
 classical texts and data directory.
+
+## See also
+
+- [FAQ.md](FAQ.md) — SEO-friendly Q&A for common questions
+- [GUIDE.md](../GUIDE.md) — unified quick-start with codebase tools
+- [codebase/](../codebase/) — portable codebase search/analyze tools

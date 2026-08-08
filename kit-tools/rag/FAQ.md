@@ -131,3 +131,9 @@ grep -rn "from admin\.\|from TEST\.\|from infra\.codebase" kit-tools/rag/
 uv run ruff check kit-tools/rag/
 ```
 All should return clean when run from any directory.
+
+## See also
+
+- [README.md](README.md) — installation, setup, and architecture overview
+- [GUIDE.md](../GUIDE.md) — unified quick-start with codebase search tools
+- [codebase/](../codebase/) — portable codebase search/analyze tools

@@ -3,6 +3,9 @@
 Community-facing utility scripts extracted into `ai-factory/kit-tools/`.
 Runs inside `ai-factory`: `uv run python kit-tools/<tool>.py "args"`.
 
+> **New:** Fully portable versions live in `codebase/` and `rag/`. See
+> [GUIDE.md](GUIDE.md) for quick-start cross-references.
+
 ## Portability
 
 `kit-tools/` is fully portable via `KIT_*` environment variables (see `.env.example`).
@@ -38,3 +41,11 @@ uv run python investigate.py --filename src/main.py --query "issues?"
 ## rag/
 
 Domain-specific RAG demonstration (BaziRAG). See `rag/README.md`.
+
+## See also
+
+- [GUIDE.md](GUIDE.md) — unified quick-start spanning `codebase/` + `rag/`
+- [codebase/README.md](codebase/README.md) — portable codebase search/analyze tools
+- [codebase/FAQ.md](codebase/FAQ.md) — FAQ for codebase tools
+- [rag/README.md](rag/README.md) — portable BaziRAG demo
+- [rag/FAQ.md](rag/FAQ.md) — FAQ for RAG tools

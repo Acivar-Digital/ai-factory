@@ -59,3 +59,9 @@ python investigate.py --filename src/main.py --query "any issues?"
 
 All tools resolve paths via `KIT_TARGET_ROOT` — run from any directory.
 The `_codebase_common.py` module enforces path escaping (paths cannot leave `KIT_TARGET_ROOT`).
+
+## See also
+
+- [FAQ.md](FAQ.md) — frequently asked questions
+- [GUIDE.md](../GUIDE.md) — unified quick-start with RAG tools
+- [rag/](../rag/) — portable BaziRAG demonstration
