@@ -1,6 +1,6 @@
 {
   "scenario": "chrono_ask",
-  "description": "Tests multi-turn Chronomancer conversation, memory ingestion, and recall for user Francis (chat_id 999)",
+  "description": "Tests multi-turn Chronomancer conversation, memory ingestion, and recall for user Tester (chat_id 999)",
   "prerequisites": {
     "server_running": true,
     "webhook_configured": true,

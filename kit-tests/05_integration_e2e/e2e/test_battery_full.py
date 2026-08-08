@@ -39,9 +39,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("battery")
 
-# ── Test subject: Francis Yap's real profile ──────────────────────────────────
+# ── Test subject: Test Profile's real profile ──────────────────────────────────
 FRANCIS_PROFILE = {
-    "alias": "Francis YCL",
+    "alias": "Tester YCL",
     "gender": "M",
     "year_pillar": {"stem": "Bing", "branch": "Chen"},
     "month_pillar": {"stem": "Geng", "branch": "Xu"},
@@ -327,7 +327,7 @@ def step6_summarizer(master_path: Path, tmp_dir: Path):
         check("6e_has_monthly_calendar", "Monthly Strategy Calendar" in content, "Monthly Strategy Calendar present")
         check("6f_has_monthly_analysis", "Monthly Strategic Analysis" in content, "Monthly Strategic Analysis present")
         check("6g_has_12_months_table", content.count("Feb") + content.count("Mar") >= 2, "Calendar rows present")
-        check("6h_francis_in_report", "Francis" in content, "Subject name in report")
+        check("6h_francis_in_report", "Tester" in content, "Subject name in report")
         logger.info(f"  📄 Report size: {size_kb:.1f} KB")
 
     if exec_json_path.exists():

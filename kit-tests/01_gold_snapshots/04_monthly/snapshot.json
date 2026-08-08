@@ -65,7 +65,7 @@
     {
       "step": 5,
       "input": {
-        "text": "Name: Francis Yap\n\ud83c\udff7\ufe0f Alias: FYCL\n\ud83d\udc64 Gender: Male\n1\ufe0f\u20e3 Year: Dingg Sii\n2\ufe0f\u20e3 Month: Yii Sii\n3\ufe0f\u20e3 Day: Gengg Chenn\n4\ufe0f\u20e3 Hour: Dingg Chouu\n5\ufe0f\u20e3 Da Yun: Gengg Zii\n6\ufe0f\u20e3 Strength: Weakk\n7\ufe0f\u20e3 Favorable: Metall, Watr\n8\ufe0f\u20e3 Unfavorable: Firee\n9\ufe0f\u20e3 Neutral: Earthh, Woodd",
+        "text": "Name: Test Profile\n\ud83c\udff7\ufe0f Alias: TEST\n\ud83d\udc64 Gender: Male\n1\ufe0f\u20e3 Year: Dingg Sii\n2\ufe0f\u20e3 Month: Yii Sii\n3\ufe0f\u20e3 Day: Gengg Chenn\n4\ufe0f\u20e3 Hour: Dingg Chouu\n5\ufe0f\u20e3 Da Yun: Gengg Zii\n6\ufe0f\u20e3 Strength: Weakk\n7\ufe0f\u20e3 Favorable: Metall, Watr\n8\ufe0f\u20e3 Unfavorable: Firee\n9\ufe0f\u20e3 Neutral: Earthh, Woodd",
         "chat_id": 999
       },
       "expected": {

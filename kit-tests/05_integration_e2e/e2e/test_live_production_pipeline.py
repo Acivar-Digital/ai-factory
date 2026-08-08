@@ -40,10 +40,10 @@ async def test_live_production_pipeline():
         return
 
     # 1. SETUP DATA
-    chat_id = 187049734
+    chat_id = 999000001
     profile = UserProfile(
-        name="Francis Yap",
-        alias="Francis",
+        name="Test Profile",
+        alias="Tester",
         gender="M",
         year_pillar={"stem": "Ding", "branch": "Si"},
         month_pillar={"stem": "Jia", "branch": "Chen"},
@@ -75,7 +75,7 @@ async def test_live_production_pipeline():
     final_html_path = artifact_dir / "final_report_live.html"
 
     # Save the profile for the pipeline to load
-    k3_profile = map_profile_to_k3(profile, chat_id, dob="1977-05-05", tailoring_concerns=tailoring_concerns)
+    k3_profile = map_profile_to_k3(profile, chat_id, dob="1990-01-01", tailoring_concerns=tailoring_concerns)
     with open(profile_path, "w", encoding="utf-8") as f:
         json.dump(k3_profile, f, indent=2, ensure_ascii=False)
 

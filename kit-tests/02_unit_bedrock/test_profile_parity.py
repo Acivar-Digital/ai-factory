@@ -2,7 +2,7 @@
 # Run with: uv run pytest tests/test_profile_parity.py -v
 #
 # SET 1 — Auto / Input Parity
-# Reference subject: Francis Yap
+# Reference subject: Test Profile
 #   DOB : 1977-04-28 11:51 SGT (local clock, no TST correction)
 #   Sex : Male
 #
@@ -143,7 +143,7 @@ class TestInputMode:
     """
     /input path: user manually provides all 9 fields.
     Simulates what the bot receives when user types each value.
-    Tests that a manually built profile with Francis’s known values
+    Tests that a manually built profile with Tester’s known values
     produces an identical effective profile to the auto-computed one.
     """
 
@@ -200,7 +200,7 @@ class TestParityAutoVsInput:
     """
     The critical parity test:
     The effective profile from /auto must equal the effective profile
-    from /input when both use Francis’s identical values.
+    from /input when both use Tester’s identical values.
     """
 
     @pytest.fixture(scope="class")

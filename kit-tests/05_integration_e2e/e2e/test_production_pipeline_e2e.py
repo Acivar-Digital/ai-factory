@@ -24,10 +24,10 @@ async def test_full_production_pipeline():
     print("🚀 --- SIMULATING FULL PRODUCTION PIPELINE (ENTRY TO HTML) ---")
 
     # 1. DATA COLLECTION (Intake simulation)
-    chat_id = 187049734
+    chat_id = 999000001
     profile = UserProfile(
-        name="Francis Yap",
-        alias="Francis",
+        name="Test Profile",
+        alias="Tester",
         gender="M",
         year_pillar={"stem": "Ding", "branch": "Si"},
         month_pillar={"stem": "Jia", "branch": "Chen"},
@@ -51,7 +51,7 @@ async def test_full_production_pipeline():
 
     # 2. ENTRY POINT BRIDGE
     print("[1/6] Mapping profile to K3 Bridge format...")
-    k3_profile = map_profile_to_k3(profile, chat_id, dob="1977-05-05", tailoring_concerns=tailoring_concerns)
+    k3_profile = map_profile_to_k3(profile, chat_id, dob="1990-01-01", tailoring_concerns=tailoring_concerns)
 
     # Setup directories
     artifact_dir = Path("TEST/reports/production_test")

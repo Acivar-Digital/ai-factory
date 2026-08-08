@@ -1,4 +1,4 @@
-_prd/users/SGUSD0000999/reports/1/BaziForecast_2026_FYCL_20260629_1_master.json
+_prd/users/SGUSD0000999/reports/1/BaziForecast_2026_TEST_20260629_1_master.json
 fuck if this is the latest file
 we have dropped so much rich features
 
@@ -26,7 +26,7 @@ so inside the pydantic sheet just need to point to that yaml file
 the yaml file will be saved together with the JSON output
 > why yaml half way house between JSDON and
 
-save the YAML file in the same folder as _prd/users/SGUSD0000999/reports/1/BaziForecast_2026_FYCL_20260629_1_master.json
+save the YAML file in the same folder as _prd/users/SGUSD0000999/reports/1/BaziForecast_2026_TEST_20260629_1_master.json
 
 metadata:
   model: gemini-1.5-pro

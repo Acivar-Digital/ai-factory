@@ -23,7 +23,7 @@ def make_update(chat_id: int, text: str):
 SCENARIOS = {
     "TC01": {
         "name": "Happy Path AUTO",
-        "steps": ["/start", "/auto", "Francis", "Male", "1988-08-08 12:30", "Singapore", "Ren Chen", "Yes"],
+        "steps": ["/start", "/auto", "Tester", "Male", "1988-08-08 12:30", "Singapore", "Ren Chen", "Yes"],
         "expected_final_step": "COMPLETE",
     },
     "TC02": {
@@ -31,7 +31,7 @@ SCENARIOS = {
         "steps": [
             "/start",
             "/input",
-            "Francis",
+            "Tester",
             "Male",
             "Geng Chen",
             "Ji Chou",
@@ -51,7 +51,7 @@ SCENARIOS = {
         "steps": [
             "/start",
             "/input",
-            "Francis",
+            "Tester",
             "男",  # Male in Chinese
             "Jia Zi",  # Correct
             "Ding Meow",  # Typo for Mao
@@ -64,7 +64,7 @@ SCENARIOS = {
         "steps": [
             "/start",
             "/input",
-            "Name: Francis, Gender: Male, Year: Geng Chen, Month: Ji Chou, Day: Bing Shen, Hour: Jia Wu, Da Yun: Ren Chen, Strength: Strong, Fav: Fire, Wood",
+            "Name: Tester, Gender: Male, Year: Geng Chen, Month: Ji Chou, Day: Bing Shen, Hour: Jia Wu, Da Yun: Ren Chen, Strength: Strong, Fav: Fire, Wood",
         ],
         "expected_final_step": "CONFIRM",
     },
@@ -73,7 +73,7 @@ SCENARIOS = {
         "steps": [
             "/start",
             "/auto",
-            "Francis",
+            "Tester",
             "Male",
             "1988-08-08 12:30",
             "Singapore",
@@ -83,17 +83,17 @@ SCENARIOS = {
     },
     "TC06": {
         "name": "Incomplete / 'I don't know'",
-        "steps": ["/start", "/input", "Francis", "Male", "I don't know my year pillar"],
+        "steps": ["/start", "/input", "Tester", "Male", "I don't know my year pillar"],
         "expected_not_stuck": True,
     },
     "TC07": {
         "name": "/reset mid-flow",
-        "steps": ["/start", "/auto", "Francis", "/reset", "/start"],
+        "steps": ["/start", "/auto", "Tester", "/reset", "/start"],
         "check_session": {"step": "CHOOSING"},
     },
     "TC08": {
         "name": "Invalid gender 'helicopter'",
-        "steps": ["/start", "/auto", "Francis", "helicopter"],
+        "steps": ["/start", "/auto", "Tester", "helicopter"],
         "expected_step": "COLLECTING",  # Should not advance to pillars
     },
     "TC09": {
@@ -101,7 +101,7 @@ SCENARIOS = {
         "steps": [
             "/start",
             "/input",
-            "Francis",
+            "Tester",
             "Male",
             "Geng Chen",
             "Ji Chou",
@@ -119,7 +119,7 @@ SCENARIOS = {
     },
     "TC10": {
         "name": "Gibberish/emoji/off-topic",
-        "steps": ["/start", "/auto", "😂👍", "What's the weather like?", "Francis"],
+        "steps": ["/start", "/auto", "😂👍", "What's the weather like?", "Tester"],
         "expected_not_crash": True,
     },
 }

@@ -135,12 +135,12 @@ class TestManualIntakeScenario:
                 "hour_pillar": hp,
                 "da_yun_pillar": dyp,
                 "gender": "M",
-                "alias": "FYCL",
+                "alias": "TEST",
                 "day_master_strength": "Weak",
             }
         )
         assert profile.profile_id == "test-uuid-123"
-        assert profile.alias == "FYCL"
+        assert profile.alias == "TEST"
         assert profile.day_pillar.stem == "Jia"
         assert profile.day_pillar.branch == "Zi"
 
@@ -163,9 +163,9 @@ class TestManualIntakeScenario:
                 "hour_pillar": hp,
                 "da_yun_pillar": dyp,
                 "gender": "M",
-                "alias": "FYCL",
+                "alias": "TEST",
                 "day_master_strength": "Weak",
             }
         )
         assert isinstance(profile, UserProfile)
-        assert profile.alias == "FYCL"
+        assert profile.alias == "TEST"

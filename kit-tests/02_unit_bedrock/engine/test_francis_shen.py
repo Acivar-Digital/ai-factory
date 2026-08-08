@@ -3,12 +3,12 @@ import unittest
 from src.engine.shen_classifier import classify_shen
 
 
-class TestFrancisShen(unittest.TestCase):
+class TestTesterShen(unittest.TestCase):
     def setUp(self):
-        # Francis Yap's profile as provided by the user
+        # Test Profile's profile as provided by the user
         # 1) Year: Ding Si, 2) Month: Jia Chen, 3) Day: Yi Mao, 4) Hour: Ren Wu
         self.profile = {
-            "name": "Francis Yap",
+            "name": "Test Profile",
             "gender": "M",
             "year_pillar": {"stem": "Ding", "branch": "Si"},
             "month_pillar": {"stem": "Jia", "branch": "Chen"},

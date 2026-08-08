@@ -34,9 +34,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Mock data ──────────────────────────────────────────────────────────────
-# Francis Yap's real chart (from _prd/users/99999/)
+# Test Profile's real chart (from _prd/users/99999/)
 MOCK_PROFILE = UserProfile(
-    alias="Francis Yap",
+    alias="Test Profile",
     gender="M",
     day_pillar=Pillar(stem="Ren", branch="Chen"),
     month_pillar=Pillar(stem="Yi", branch="Si"),
@@ -49,7 +49,7 @@ MOCK_PROFILE = UserProfile(
     unfavorable_elements=["Fire", "Earth"],
 )
 
-MOCK_CHAT_ID = 99999  # Francis Yap's real Telegram chat_id
+MOCK_CHAT_ID = 99999  # Test Profile's real Telegram chat_id
 
 
 async def setup_mock_session(chat_id: int, profile: UserProfile) -> None:

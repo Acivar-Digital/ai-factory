@@ -28,7 +28,7 @@ def mock_db():
 async def test_get_monthly_context_no_reports(mock_db):
     mock_db.get_reports_for_alias.return_value = []
     with patch("src.bot.chronomancer_handler.db", mock_db):
-        res = await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Francis")
+        res = await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Tester")
         assert res is None
 
 
@@ -59,7 +59,7 @@ async def test_get_monthly_context_modern_happy_path(mock_db):
             {"master_json_path": temp_path, "summary_path": "/dummy/summary.md"}
         ]
         with patch("src.bot.chronomancer_handler.db", mock_db):
-            res = await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Francis")
+            res = await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Tester")
             assert res is not None
             assert res["month_name"] == "Gui Si"
             assert res["score"] == 68
@@ -94,7 +94,7 @@ async def test_get_monthly_context_legacy_happy_path(mock_db):
             {"master_json_path": temp_path, "summary_path": "/dummy/summary.md"}
         ]
         with patch("src.bot.chronomancer_handler.db", mock_db):
-            res = await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Francis")
+            res = await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Tester")
             assert res is not None
             assert res["month_name"] == "Gui Si"
             assert res["score"] == 75
@@ -131,7 +131,7 @@ async def test_get_monthly_context_missing_narrative_fails_loudly(mock_db):
         ]
         with patch("src.bot.chronomancer_handler.db", mock_db):
             with pytest.raises(ValueError) as excinfo:
-                await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Francis")
+                await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Tester")
             assert "Monthly narrative for 'Gui Si' is empty or missing" in str(excinfo.value)
     finally:
         if os.path.exists(temp_path):
@@ -163,7 +163,7 @@ async def test_get_monthly_context_missing_score_fails_loudly(mock_db):
         ]
         with patch("src.bot.chronomancer_handler.db", mock_db):
             with pytest.raises(ValueError) as excinfo:
-                await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Francis")
+                await _get_monthly_context(user_id=123, target_date=date(2026, 5, 22), alias="Tester")
             assert "Monthly structural score for 'Gui Si' is missing" in str(excinfo.value)
     finally:
         if os.path.exists(temp_path):

@@ -13,7 +13,7 @@ Two independent traffic sources hit this one server **concurrently**:
 
 | Source | Route | Channel name | Platform ID (`PlatformAccount.platform`) | DB isolation key |
 |---|---|---|---|---|
-| **You (Francis)** — Telegram app | `POST /webhook` | `telegram` | `telegram` | `(telegram, 187049734)` |
+| **You (Tester)** — Telegram app | `POST /webhook` | `telegram` | `telegram` | `(telegram, 999000001)` |
 | **Gold Test Runner** — channel 01 | `POST /webhook/test` (+ header `X-Test-Channel: test_telegram01`) | **`test_telegram01`** | **`test_telegram01`** | `(test_telegram01, 999001001)` |
 | Future channels 02..50 | `POST /webhook/test` (+ header `X-Test-Channel: test_telegramNN`) | `test_telegramNN` | `test_telegramNN` | `(test_telegramNN, ...)` |
 

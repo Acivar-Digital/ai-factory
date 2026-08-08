@@ -103,7 +103,7 @@ We inject a mock error midway through report generation during an E2E run:
 To resolve issue #3 (stupid/generic RAG queries), we have introduced `test_RAG.py` to run diagnostic tests on the RAG pipeline for Month 1.
 
 ### Setup and Requirements:
-- **Profile Details**: Francis Yap (User 999), Day Master `Yi Mao`, Day Master Strength `Strong`.
+- **Profile Details**: Test Profile (User 999), Day Master `Yi Mao`, Day Master Strength `Strong`.
 - **Target Month**: Month 1: `GengYin` (庚寅).
 - **User Focus**:
   - Career: Job change, promotion, career transition

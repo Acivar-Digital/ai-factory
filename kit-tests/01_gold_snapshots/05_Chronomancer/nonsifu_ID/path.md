@@ -75,7 +75,7 @@ The UAT script [`test.py`](file:///home/yapilwsl/arthityap/baziforecaster/[bazif
 * **Turn 0: Bootstrapping**:
   - Initializes session for user `999` and dynamically seeds `semantic_id` as `SGUSD0000999` at database creation.
   - Deletes any old database data and clears vector memories in Qdrant.
-  - Saves Francis Yap's Bazi profile to disk and session storage.
+  - Saves Test Profile's Bazi profile to disk and session storage.
 
 * **Turn 1: Language Preference Selection (`/lang`)**:
   - Simulates the `/lang` command where the user selects Indonesian (`ID`).

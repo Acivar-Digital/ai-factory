@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def mock_francis_session(user_id: int):
-    # Mock Francis' profile directly into the database
+    # Mock Tester' profile directly into the database
     from src2.interfaces.telegram.db import Database
     db = Database("bot.db")
 
@@ -37,7 +37,7 @@ def mock_francis_session(user_id: int):
         day_pillar=ValidatedPillar(stem="Bing", branch="Yin"),
         hour_pillar=ValidatedPillar(stem="Jia", branch="Wu"),
         gender="M",
-        alias="Francis",
+        alias="Tester",
         day_master_strength="Strong",
         favorable_elements=["Water", "Metal"],
         unfavorable_elements=["Wood", "Fire"]

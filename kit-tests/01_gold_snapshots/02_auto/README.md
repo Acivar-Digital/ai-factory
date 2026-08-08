@@ -12,8 +12,8 @@ Complete end-to-end automated intake: LLM conductor collects bio data → Bazi e
 | Field | Value |
 |-------|-------|
 | chat_id | 999 |
-| Name | Francis Yap |
-| Alias | FYCL |
+| Name | Test Profile |
+| Alias | TEST |
 | Gender | Male |
 | DOB | 1977-04-28 11:51 |
 | Location | Singapore |
@@ -51,8 +51,8 @@ Bot:  "✅ Promo code accepted! You can now generate your monthly forecast repor
 User: /auto
 Bot:  "Sure! To compute your Bazi chart, could you please provide your alias, gender..."
 
-User: "Name: Francis Yap, Alias: FYCL, Gender: Male"
-Bot:  "Thanks, FYCL. Could you please provide your date of birth..."
+User: "Name: Test Profile, Alias: TEST, Gender: Male"
+Bot:  "Thanks, TEST. Could you please provide your date of birth..."
 
 User: "DOB: 1977-04-28 11:51, Location: Singapore"
 Bot:  [Playback with all computed pillars — see snapshot.json]
@@ -76,8 +76,8 @@ Bot:  "✅ Promo code accepted! You can now generate your monthly forecast repor
 User: /auto
 Bot:  "Sure! To compute your Bazi chart, could you please provide your alias, gender..."
 
-User: "Name: Francis Yap, Alias: FYCL, Gender: Male"
-Bot:  "Thanks, FYCL. Could you please provide your date of birth..."
+User: "Name: Test Profile, Alias: TEST, Gender: Male"
+Bot:  "Thanks, TEST. Could you please provide your date of birth..."
 
 User: "DOB: 1977-04-28 11:51, Location: Singapore"
 Bot:  [Playback with all computed pillars — see snapshot.json]
@@ -147,12 +147,12 @@ This is the exact logical step-by-step sequence when a user triggers the `/auto`
 
 ### Phase 2: Providing Bio Details
 1. **Step 4 (Providing Name/Alias & Gender)**:
-   - The user sends: `Name: Francis Yap, Alias: FYCL, Gender: Male`.
+   - The user sends: `Name: Test Profile, Alias: TEST, Gender: Male`.
    - `intake.py` sees `session.step == "COLLECTING"` and invokes `run_conductor(session, text)`.
-   - `auto_agent` parses the text, extracts `alias="FYCL"` and `gender="M"`, and writes them to the structured `AutoResult`.
+   - `auto_agent` parses the text, extracts `alias="TEST"` and `gender="M"`, and writes them to the structured `AutoResult`.
    - `_apply_extracted` commits these details into `session.metadata["intake"]`.
    - `run_conductor` evaluates missing fields. Since `dob` and `location` are still missing, it generates a conversational follow-up:
-     > *"Thanks, FYCL. Could you please provide your date of birth (YYYY-MM-DD HH:MM) and birth location?"*
+     > *"Thanks, TEST. Could you please provide your date of birth (YYYY-MM-DD HH:MM) and birth location?"*
 
 ### Phase 3: Calculation and Confirmation
 1. **Step 5 (Providing DOB & Location)**:

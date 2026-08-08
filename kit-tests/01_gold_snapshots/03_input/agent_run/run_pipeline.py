@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 async def main():
     # 1. Pre-parsed Dictionary (Anti-Corruption Seam Test)
-    # Mirroring Francis's Bio Data
+    # Mirroring Tester's Bio Data
     raw_payload = {
-        "alias": "Francis",
+        "alias": "Tester",
         "gender": "M",
         "day_master_strength": "Strong",
         "favorable_elements": ["Fire", "Earth"],

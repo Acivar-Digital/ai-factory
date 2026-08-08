@@ -14,7 +14,7 @@ from src2.interfaces.telegram.session import Session, SessionMetadata
 def test_parse_manual_template_success():
     """Test deterministic regex parser for manual templates."""
     text = """
-    Alias: Francis
+    Alias: Tester
     Gender: M
     Year: Geng Chen
     Month: Xin Si
@@ -26,7 +26,7 @@ def test_parse_manual_template_success():
     extracted = _parse_manual_template(text)
 
     assert extracted is not None
-    assert extracted["alias"] == "Francis"
+    assert extracted["alias"] == "Tester"
     assert extracted["gender"] == "M"
     assert extracted["year_pillar"] == "Geng Chen"
     assert extracted["month_pillar"] == "Xin Si"

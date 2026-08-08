@@ -38,7 +38,7 @@ SCENARIOS = [
     {
         "id": 1,
         "label": "Alias + Gender (minimal)",
-        "user_input": "Hi, I'm Francis, male.",
+        "user_input": "Hi, I'm Tester, male.",
         "system_prompt": """Collect the Bazi chart parameters from the user.
 
 RESPONSE FORMAT:
@@ -63,7 +63,7 @@ RULES:
     {
         "id": 2,
         "label": "DOB extraction",
-        "user_input": "I was born on April 28, 1977 at 11:51am.",
+        "user_input": "I was born on January 1, 1990 at 11:51am.",
         "system_prompt": """Collect the Bazi chart parameters from the user.
 
 RESPONSE FORMAT:
@@ -115,7 +115,7 @@ RULES:
     {
         "id": 4,
         "label": "All fields (power user)",
-        "user_input": "My name is Francis Yap, alias FYCL, male. Born 28 April 1977 at 11:51am in Singapore.",
+        "user_input": "My name is Test Profile, alias TEST, male. Born 01 January 1990 at 11:51am in Singapore.",
         "system_prompt": """Collect the Bazi chart parameters from the user.
 
 RESPONSE FORMAT:

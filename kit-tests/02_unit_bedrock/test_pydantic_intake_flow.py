@@ -16,17 +16,17 @@ from poc_intake_flow import IntakeExtraction, run_pydantic_intake
 def test_intake_extraction_schema_validation():
     # Valid output structure must pass
     valid_data = IntakeExtraction(
-        extracted_fields={"alias": "FYCL", "gender": "M"},
+        extracted_fields={"alias": "TEST", "gender": "M"},
         next_question="What is your location of birth?",
         all_collected=False
     )
     assert valid_data.all_collected is False
-    assert valid_data.extracted_fields["alias"] == "FYCL"
+    assert valid_data.extracted_fields["alias"] == "TEST"
 
     # Missing next_question field must raise ValidationError (unless all_collected is true/nullable)
     with pytest.raises(ValidationError):
         IntakeExtraction(
-            extracted_fields={"alias": "FYCL"},
+            extracted_fields={"alias": "TEST"},
             all_collected=False
             # next_question omitted
         )
@@ -45,7 +45,7 @@ async def test_run_pydantic_intake_auto_mode():
     }
 
     # 1. User volunteers name
-    res1 = await run_pydantic_intake(session_metadata, "My name is FYCL and I am a Male.")
+    res1 = await run_pydantic_intake(session_metadata, "My name is TEST and I am a Male.")
     assert res1["all_collected"] is False
     assert "alias" in res1["metadata"]["collected"]
     assert "gender" in res1["metadata"]["collected"]
@@ -76,7 +76,7 @@ async def test_user_rubbish_input_handling():
     # Start intake session
     session_metadata = {
         "intake_mode": "auto",
-        "collected": {"alias": "FYCL", "gender": "M"}
+        "collected": {"alias": "TEST", "gender": "M"}
     }
 
     # User responds with absolute gibberish

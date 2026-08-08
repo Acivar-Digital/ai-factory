@@ -39,7 +39,7 @@ def setup_test_user_and_stakeholder(user_id: int = 999998):
         day_pillar=ValidatedPillar(stem="Bing", branch="Yin"),
         hour_pillar=ValidatedPillar(stem="Jia", branch="Wu"),
         gender="M",
-        alias="Francis",
+        alias="Tester",
         day_master_strength="Strong",
         favorable_elements=["Water", "Metal"],
         unfavorable_elements=["Wood", "Fire"],

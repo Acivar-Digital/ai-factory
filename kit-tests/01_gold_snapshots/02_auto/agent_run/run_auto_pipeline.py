@@ -32,7 +32,7 @@ async def main():
     session.metadata = SessionMetadata()
     session.metadata.dob = "1977-04-28 11:51"
     session.metadata.location = "Singapore"
-    session.metadata.intake = {"gender": "M", "alias": "Francis"}
+    session.metadata.intake = {"gender": "M", "alias": "Tester"}
     
     tailoring_concerns = {
         "career": "Is this a good year to seek a promotion or salary raise in my current role?",
