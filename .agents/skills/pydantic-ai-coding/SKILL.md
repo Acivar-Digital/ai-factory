@@ -61,6 +61,7 @@ model = OpenAIChatModel(model_name="deepseek-chat", provider=provider)
 | Multi-agent graphs, direct API, A2A, durable exec, evals | `references/ORCHESTRATION-AND-INTEGRATIONS.md` |
 | Common task recipes | `references/COMMON-TASKS.md` |
 | Full architecture / mental model | `references/ARCHITECTURE.md` |
+| Kit assembly / parallel multi-source gather (dup-check → audit → tidy) orchestrators | `kit-tests/orchestrator_parallel.md` (generic template) and `kit-hygiene/orchestrator_hygiene.md` (kit-hygiene flavor; placeholder payloads, fail-loud gates) |
 
 ---
 

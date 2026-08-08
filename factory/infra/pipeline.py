@@ -1189,3 +1189,30 @@ def load_checkpoint(checkpoint_file: Path | str) -> dict[str, Any]:
     except Exception:
         return {}
 
+
+def revert_state(checkpoint_file: Path | str | None = None) -> dict[str, Any]:
+    """Restore orchestrator state from the last crash-resume checkpoint.
+
+    Mirrors ``_persist_checkpoint``: reads ``factory/orch/reports/checkpoint_state.json``
+    (atomically written via ``os.replace``) and returns the persisted dict containing
+    ``locked_functions``, ``staged_path`` and ``function_name``.
+
+    Contract (consistent with ``load_checkpoint``):
+      - Missing file -> ``{}`` (no checkpoint has been persisted yet).
+      - Stale file (older than ``CHECKPOINT_TTL_SECONDS``) -> ``{}``.
+      - Corrupt JSON -> raises ``json.JSONDecodeError`` (fail loudly; never silently swallowed).
+    """
+    if checkpoint_file is None:
+        checkpoint_file = REPO_ROOT / "factory" / "orch" / "reports" / "checkpoint_state.json"
+    path = Path(checkpoint_file)
+    if not path.exists():
+        return {}
+    mtime = path.stat().st_mtime
+    if time.time() - mtime > CHECKPOINT_TTL_SECONDS:
+        return {}
+    raw = path.read_text(encoding="utf-8")
+    state = json.loads(raw)
+    if not isinstance(state, dict):
+        raise ValueError(f"[checkpoint] {path} did not contain a JSON object")
+    return state
+

@@ -16,7 +16,6 @@ Configure the paths at the top of the __main__ block below.
 import ast
 import importlib
 import sys
-from typing import Optional
 
 
 def extract_model_field_usage(filepath: str) -> dict:

@@ -28,13 +28,13 @@ deterministic Python script — NO LLM orchestrator, NO delegation of orchestrat
 ### 1. Interaction & Planning
 
 - **Style**: Direct. Concise. No plan blocks in chat for simple edits.
-- **Planning & Execution**: Mandatory plan ahead. Use TODO lists for all tasks. Unless told to run autonomously or in YOLO mode, it is mandatory to use the `/grill-me` skill when planning or executing user instructions.
-- **Execution**: Use `bd` for long-running tasks and subagent orchestration within TODOs.
+- **Planning & Execution**: Mandatory plan ahead. Use `bd` for all task tracking (prohibited: TodoWrite, TaskCreate, markdown files for task tracking). Unless told to run autonomously or in YOLO mode, it is mandatory to use the `/grill-me` skill when planning or executing user instructions.
+- **Execution**: Use `bd` for long-running tasks and subagent orchestration within beads issues.
 
 ### 2. Task Tracking (BEADS)
 
-- **Requirement**: Mandatory for code/edits. `bd prime` $\rightarrow$ `bd ready` $\rightarrow$ `bd close`.
-- **Close Protocol**: `bd close <id> --reason "completed"` $→$ commit local changes $→$ Forget it.
+- **Requirement**: Mandatory for code/edits. `bd ready` → `bd close`. (`bd prime` is automated via OpenCode plugin and Claude/Gemini/Codex hooks — agents do not need to run it manually.)
+- **Close Protocol**: `bd close <id> --reason "completed"` → `bd dolt commit` (sync Dolt changes) → Forget it. Do NOT `git push` unless user explicitly types `git-push-remote`.
 
 ### 3. Codebase Indexing
 
@@ -63,15 +63,26 @@ deterministic Python script — NO LLM orchestrator, NO delegation of orchestrat
 - **Fail Loudly**: Full tracebacks. No `except: pass`.
 - **Fail Cheaply**: Cheap assertions before expensive LLM calls.
 
-## Mandatory Pre-Flight Plan
+## Pre-Flight Planning (role-scoped ⚠️)
 
-Every agent is **strictly forbidden** from executing any tool (search, read, edit, etc.) until it has called the `remember` tool to record its concrete, step-by-step strategy. This is enforced as a **hard gate** inside `GuardToolset` (`factory/infra/tools_guard.py`):
+> There are **two** different `remember` mechanisms in this repo. Use the wrong
+> one for your role and you will stall searching for a tool that does not exist
+> for you.
 
-1. The `call_tool` method intercepts every tool call. If the tool name is not `remember`, `final_result`, or `keep_memory`, and the agent has not yet called `remember`, the call is **blocked** and a nudge string is returned to the LLM.
-2. After **3 blocked attempts**, the gate raises `RuntimeError("[HALT] Model attempted to bypass mandatory planning (remember tool) 3 times. Fail loudly.")` — the run fails loudly rather than silently looping.
-3. The `remember` tool itself is exempt — calling it sets `_has_planned = True`, after which all other tools are permitted.
+- **`bd remember "<key>" "<value>"`** — the Beads **CLI** command (run via `bash`).
+  This is what a generic/OpenCode agent (the role you are in right now) should use
+  to record a plan and track tasks. There is no `bd` MCP tool — invoke it through
+  `bash`.
+- **`remember(note: str)`** — a Pydantic-AI **tool** defined in
+  `factory/infra/tools_memory.py` and registered **only** for the factory's
+  internal worker agents. It is enforced by `GuardToolset.call_tool`
+  (`factory/infra/tools_guard.py`: the `_has_planned` gate) and declared in each
+  worker YAML (`factory/infra/agents/{intern,engineer,senior}.yaml`).
 
-This prevents "tool thrashing" (endlessly looping on discovery tools without a plan). The directive is also injected into every agent YAML's `hard_rules` section.
+**Factory worker agents must call the `remember` tool before editing. A
+generic/OpenCode agent has NO such tool — do NOT look for it. Record your plan
+with `bd remember "<key>" "<value>"` (via bash) or state it inline, then proceed
+with edits.**
 
 ### Critical: `temp/` Path Resolution
 
