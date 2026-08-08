@@ -1,40 +1,40 @@
 # kit-tools
 
-Community-facing utility scripts (flat layout, 39 `.py` + `web.sh` + `test/`),
-extracted from `baziforecaster/tools/` into `ai-factory/kit-tools/` (sibling of `kit-tests/`).
+Community-facing utility scripts extracted into `ai-factory/kit-tools/`.
 Runs inside `ai-factory`: `uv run python kit-tools/<tool>.py "args"`.
 
-## Portability & Coupling
+## Portability
 
-**10 of the 39 root tools are *not* standalone-runnable** — they import the ai-factory
-runtime (`admin.*`, `infra.*`, `src2.*`, `TEST.*`) or hardcode `/home/.../infra/codebase`.
-They are kept (factory-integrated utilities) but will `ImportError` on a bare laptop.
+`kit-tools/` is fully portable via `KIT_*` environment variables (see `.env.example`).
+Each tool declares its required env vars at the top. If a tool needs internal infra
+that isn't available locally, it raises a clear `RuntimeError` rather than failing silently.
 
-| file | coupling | runs where |
+| category | tools | notes |
 |---|---|---|
-| `graph_health.py`, `index_repository.py`, `verify_file_path.py`, `query_knowledge_graph.py` | `from infra.codebase.mcp_codebase import …` + `sys.path.append("/home/…/infra/codebase")` | ai-factory checkout |
-| `web.py` | `from admin.controls.controls import …` (factory `settings`) | ai-factory checkout |
-| `search.py`, `investigate.py` | `from admin.controls.controls import …` | ai-factory checkout |
-| `_test_tools.py` | `from admin.tools.mcp_git_guardrail import …` | ai-factory checkout |
-| `mcp_git_guardrail.py` | `from TEST.agent_guardrail import …` | ai-factory checkout |
-| `rewrite_mod6.py` | `from src2.core.schemas…` / `src2.engine.bazi_math` (baziforecaster bazi engine) | baziforecaster checkout |
+| **Codebase search & analysis** | `search.py`, `investigate.py`, `grep_codebase.py`, `read_file.py`, `list_files.py`, `get_file_symbols.py`, `get_repo_structure.py`, `query_knowledge_graph.py`, `graph_health.py` | Semantic search, file discovery, code hierarchy. Requires `KIT_TARGET_ROOT`. |
+| **Code modification (AST)** | `add_function.py`, `add_class.py`, `add_constant.py`, `add_import.py`, `replace_function.py`, `replace_text.py`, `move_symbol.py`, `rename_file.py`, `delete_file.py`, `write_file.py`, `repair_imports.py` | Surgical edits via AST. Requires `KIT_TARGET_ROOT`. |
+| **Index & collection management** | `index_repository.py`, `verify_file_path.py`, `load_schema_gate.py` | One-shot indexing, path validation, schema gates. Requires `KIT_TARGET_ROOT`, `KIT_COLLECTION_NAME`. |
+| **DevOps / system** | `web.sh`, `mcp_git_guardrail.py`, `guardrail_check.py`, `smoke_test.py` | Git guardrails, smoke tests, web launcher. |
+| **Utility / self-tests** | `_codebase_common.py`, `_fix_preprocess2.py`, `_gen_utils.py`, `_test_tools.py`, `control.py` | Shared helpers, env control, cleanup scripts. |
+| **RAG demonstration** | `rag/bazirag.py`, `rag/mcp_bazirag.py`, `rag/query_cli.py`, `rag/redis_cache.py`, `rag/run_rag_pipeline.py` | Domain-specific RAG demo (see `rag/README.md`). |
 
-**Standalone-portable** (import only stdlib + sibling `_codebase_common`, +pydantic in `load_schema_gate.py`):
-`add_class.py, add_constant.py, add_function.py, add_import.py, fix_midfile_imports.py,
-flatten_scripts_agents.py, get_file_symbols.py, get_repo_structure.py, grep_codebase.py,
-list_files.py, load_schema_gate.py, move_symbol.py, read_file.py, rename_file.py,
-repair_imports.py, replace_function.py, replace_text.py, restore_missing_unified.py,
-restore_missing_unified2.py, rewrite_mod12.py, rewrite_module6.py, smoke_test.py,
-update_scoring_output.py, update_scoring_output2.py, write_file.py, _codebase_common.py,
-_fix_preprocess2.py, _gen_utils.py` → these `python kit-tools/<tool>.py` runs anywhere.
+## Quick start (anywhere)
+
+```bash
+cd /path/to/kit-tools
+cp .env.example .env
+# edit .env: set KIT_TARGET_ROOT to your target repository
+uv venv
+uv pip install python-dotenv pydantic-ai httpx qdrant-client numpy trafilatura pyyaml fastmcp
+python control.py                          # verify config
+uv run python search.py "query"            # semantic search
+uv run python investigate.py --filename src/main.py --query "issues?"
+```
 
 ## test/
-`run_all.py` + `test_discovery.py, test_indexing.py, test_knowledge.py, test_modifications.py` —
-kit self-tests. `cd kit-tools && uv run pytest test/ -q`.
 
-## Origin note
-`ai-factory/tools_repo/` (13 files) were staged-then-dropped: they are **ai-factory's own
-infra tooling**, not community tools. The 4 names shared with `baziforecaster/tools`
-(`graph_health`, `index_repository`, `verify_file_path`, `web`) differ in content; the
-baziforecaster variant is canonical here. Want the `ai_factory` variant mirrored under
-`kit-tools/_vendor/ai_factory/` for provenance? Say so.
+`run_all.py` + self-tests for kit-tools. `cd kit-tools && uv run pytest test/ -q`.
+
+## rag/
+
+Domain-specific RAG demonstration (BaziRAG). See `rag/README.md`.
