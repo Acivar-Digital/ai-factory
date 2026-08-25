@@ -11,7 +11,13 @@ venv/
 
 # Environment & local state
 .env
-.env.local
+.env.*
+**/.env*
+*.env
+*.pem
+*.key
+*.secret
+*.credentials
 orch/logs/
 temp/
 .checkpoints/
